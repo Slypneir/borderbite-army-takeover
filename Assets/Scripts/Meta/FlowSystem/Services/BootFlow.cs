@@ -22,6 +22,10 @@ namespace Meta.FlowSystem.Services
 
         public async UniTask StartAsync(CancellationToken ct)
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Unity must not swallow keys in the page: Playables forbids preventDefault on Esc
+            WebGLInput.captureAllKeyboardInput = false;
+#endif
             await UniTask.NextFrame(ct);
             await _platform.InitializeAsync(ct);
             _platform.SignalFirstFrame();

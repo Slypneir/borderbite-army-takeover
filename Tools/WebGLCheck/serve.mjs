@@ -26,6 +26,7 @@ createServer(async (req, res) => {
       headers['Content-Type'] = types[extname(inner)] || 'application/octet-stream';
     }
   }
+  headers['Content-Length'] = body.length;
   res.writeHead(200, headers);
   res.end(body);
 }).listen(Number(portArg), '127.0.0.1', () => console.log(`serving ${dir} on http://127.0.0.1:${portArg}/ (${mode})`));

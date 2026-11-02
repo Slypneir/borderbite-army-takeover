@@ -18,6 +18,7 @@ namespace Core.EditorTools
     public static class PlatformBuild
     {
         private const string SummaryFile = "Logs/build_summary.json";
+        private const string UnityBotList = "slurp|yandex";
 
         /// <summary>The profile being built; the scene processor reads it.</summary>
         public static PlatformBuildProfile Current { get; private set; }
@@ -30,6 +31,10 @@ namespace Core.EditorTools
 
         [MenuItem("Tools/Build/Web for Yandex Games")]
         public static void BuildYandex() => Build(PlatformBuildProfile.Yandex.Id);
+
+        /// <summary>Playables with Brotli and the fallback decompressor, only to compare the numbers: Docs/PLATFORM_REQUIREMENTS.md.</summary>
+        [MenuItem("Tools/Build/Measure Playables with Brotli")]
+        public static void BuildYouTubeBrotliForMeasure() => Build(PlatformBuildProfile.YouTube.Id, WebGLCompressionFormat.Brotli, "Build/PlayablesBrotli");
 
         public static void BuildFromCommandLine()
         {
@@ -150,7 +155,10 @@ namespace Core.EditorTools
             return line;
         }
 
-        /// <summary>The files of an uncompressed build must hold no word of another platform; a compressed one is checked at the page.</summary>
+        /// <summary>
+        /// The files of a build must hold no word of another platform. A quick check of what is not compressed; Tools/WebGLCheck/build_report.mjs
+        /// also looks inside the packed data.
+        /// </summary>
         private static List<string> FindForbidden(string outDir, PlatformBuildProfile profile)
         {
             var found = new List<string>();
@@ -159,7 +167,8 @@ namespace Core.EditorTools
                 if (!IsPlainFile(file))
                     continue;
 
-                var text = Encoding.GetEncoding(28591).GetString(File.ReadAllBytes(file));
+                // the only allowed hit: the list of search bots in the loader of Unity, not code of a platform
+                var text = Encoding.GetEncoding(28591).GetString(File.ReadAllBytes(file)).Replace(UnityBotList, "");
                 foreach (var word in profile.Forbidden)
                 {
                     if (text.Contains(word))

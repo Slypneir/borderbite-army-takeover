@@ -38,6 +38,7 @@ namespace Core.EditorTools
             Set(so, "m_SupportsTerrainHoles", false);
             Set(so, "m_ReflectionProbeBlending", false);
             Set(so, "m_ReflectionProbeBoxProjection", false);
+            Set(so, "m_AdditionalLightsCookieFormat", 3); // no gray cookie format on WebGL 2: its warning would be in the console
             var volumeProfile = so.FindProperty("m_VolumeProfile");
             if (volumeProfile != null)
                 volumeProfile.objectReferenceValue = null;
