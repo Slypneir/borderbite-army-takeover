@@ -33,7 +33,7 @@
 - Локализация с первого дня: английский и русский, язык — из SDK площадки.
 - Правила показа рекламы — отдельно для каждой площадки (`Assets/ScriptableObjects/Platform/AdPolicy_*.asset`).
 - Вес: начальная загрузка Playables < 15 МиБ, вся игра ≤ 20 МБ до первого боя.
-- Сжатие: CrazyGames и Яндекс — Brotli + Decompression Fallback; Playables — без сжатия Unity, сжимает сервер YouTube (Google не поддерживает Brotli, причины и цифры — `Docs/PLATFORM_REQUIREMENTS.md`).
+- Сжатие на всех площадках — Brotli + Decompression Fallback. На Playables это решение владельца вопреки FAQ сертификации Google; риск и запасной вариант — `Docs/PLATFORM_REQUIREMENTS.md`.
 
 ## Открытые вопросы
 

@@ -32,10 +32,6 @@ namespace Core.EditorTools
         [MenuItem("Tools/Build/Web for Yandex Games")]
         public static void BuildYandex() => Build(PlatformBuildProfile.Yandex.Id);
 
-        /// <summary>Playables with Brotli and the fallback decompressor, only to compare the numbers: Docs/PLATFORM_REQUIREMENTS.md.</summary>
-        [MenuItem("Tools/Build/Measure Playables with Brotli")]
-        public static void BuildYouTubeBrotliForMeasure() => Build(PlatformBuildProfile.YouTube.Id, WebGLCompressionFormat.Brotli, "Build/PlayablesBrotli");
-
         public static void BuildFromCommandLine()
         {
             var summary = Build(Arg("-platform", PlatformBuildProfile.YouTube.Id));
@@ -66,12 +62,7 @@ namespace Core.EditorTools
         }
 
         /// <summary>Builds and returns a one-line summary (also written to Logs/build_summary.json).</summary>
-        public static string Build(string platform) => Build(platform, null, null);
-
-        /// <summary>
-        /// A variant of the build for measuring: other compression and output folder, the same everything else.
-        /// </summary>
-        public static string Build(string platform, WebGLCompressionFormat? compression, string outputDir)
+        public static string Build(string platform)
         {
             var profile = PlatformBuildProfile.Find(platform);
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
@@ -85,10 +76,10 @@ namespace Core.EditorTools
             {
                 Current = profile;
                 PlayerSettings.WebGL.template = profile.Template;
-                PlayerSettings.WebGL.compressionFormat = compression ?? profile.Compression;
+                PlayerSettings.WebGL.compressionFormat = profile.Compression;
                 PlayerSettings.WebGL.dataCaching = profile.DataCaching;
                 SelectJslib(profile.Jslib);
-                return BuildPlayer(profile, outputDir ?? profile.OutputDir);
+                return BuildPlayer(profile, profile.OutputDir);
             }
             finally
             {

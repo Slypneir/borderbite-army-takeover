@@ -4,7 +4,7 @@ namespace Core.EditorTools
 {
     /// <summary>
     /// What makes the build of one platform: its symbol (the C# adapter), jslib, page template, ad policy and compression.
-    /// Compression differs by the rules of the platforms: Docs/PLATFORM_REQUIREMENTS.md.
+    /// Brotli on Playables is the choice of the owner, against the certification FAQ: Docs/PLATFORM_REQUIREMENTS.md.
     /// </summary>
     public sealed class PlatformBuildProfile
     {
@@ -34,7 +34,7 @@ namespace Core.EditorTools
             Template = "PROJECT:Playables",
             AdPolicy = PolicyFolder + "AdPolicy_YouTube.asset",
             OutputDir = "Build/Playables",
-            Compression = WebGLCompressionFormat.Disabled,
+            Compression = WebGLCompressionFormat.Brotli,
             DataCaching = false,
             Forbidden = new[] { "crazygames", "CrazyGames", "yandex", "Yandex", "YaGames", "ysdk", "sdk.js" },
         };
