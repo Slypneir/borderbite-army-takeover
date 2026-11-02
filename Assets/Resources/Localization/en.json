@@ -1,0 +1,6 @@
+{
+  "strings": [
+    { "key": "boot.title", "text": "Borderbite" },
+    { "key": "boot.status", "text": "Ready for battle" }
+  ]
+}
