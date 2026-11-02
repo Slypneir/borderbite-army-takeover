@@ -1,0 +1,5 @@
+<linker>
+  <!-- High managed stripping must keep the code VContainer reaches by reflection and the types of JsonUtility. -->
+  <assembly fullname="Assembly-CSharp" preserve="all" />
+  <assembly fullname="VContainer" preserve="all" />
+</linker>
