@@ -1,0 +1,9 @@
+*.png binary
+*.ttf binary
+*.otf binary
+*.dll binary
+*.wasm binary
+# scripts for the browser and node stay LF whatever core.autocrlf
+*.jslib text eol=lf
+*.mjs text eol=lf
+Assets/WebGLTemplates/** text eol=lf

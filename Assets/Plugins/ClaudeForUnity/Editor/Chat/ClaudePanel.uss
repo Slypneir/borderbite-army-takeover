@@ -1,0 +1,313 @@
+/* Claude for Unity — panel styling. Authentic Claude palette ported to UI Toolkit.
+   USS has no gap/box-shadow/gradients, so spacing uses margins and surfaces are solid. */
+
+.claude-root {
+    --paper: rgb(250, 249, 245);
+    --panel: rgb(240, 238, 230);
+    --panel-2: rgb(234, 231, 221);
+    --ink: rgb(26, 25, 21);
+    --ink-soft: rgb(115, 114, 108);
+    --ink-faint: rgb(156, 154, 146);
+    --clay: rgb(217, 119, 87);
+    --clay-deep: rgb(190, 93, 66);
+    --line: rgb(230, 228, 218);
+    --line-strong: rgb(219, 216, 204);
+    --ok: rgb(91, 138, 90);
+    --deny: rgb(180, 74, 59);
+
+    flex-grow: 1;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-size: 13px;
+}
+
+.claude-root.dark {
+    --paper: rgb(38, 38, 36);
+    --panel: rgb(31, 30, 29);
+    --panel-2: rgb(52, 51, 47);
+    --ink: rgb(245, 244, 238);
+    --ink-soft: rgb(167, 165, 156);
+    --ink-faint: rgb(119, 117, 108);
+    --clay: rgb(224, 132, 99);
+    --clay-deep: rgb(201, 106, 72);
+    --line: rgb(56, 55, 52);
+    --line-strong: rgb(70, 68, 63);
+    --ok: rgb(122, 170, 120);
+    --deny: rgb(206, 106, 92);
+}
+
+/* ---------- titlebar ---------- */
+.titlebar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 10px 12px;
+    background-color: var(--panel);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--line);
+}
+.spark { width: 20px; height: 20px; margin-right: 8px; }
+.wordmark {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+.tag {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--ink-soft);
+    background-color: transparent;
+    border-width: 1px;
+    border-color: var(--line-strong);
+    border-radius: 999px;
+    padding: 2px 7px;
+    margin-left: 8px;
+}
+.grow { flex-grow: 1; }
+.conn { flex-direction: row; align-items: center; margin-right: 4px; }
+.conn-label { font-size: 12px; color: var(--ink-soft); }
+.dot { width: 7px; height: 7px; border-radius: 999px; background-color: var(--ok); margin-right: 6px; }
+.dot-off { background-color: var(--ink-faint); }
+
+.iconbtn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background-color: transparent;
+    border-width: 0;
+    -unity-text-align: middle-center;
+    color: var(--ink-soft);
+    margin-left: 2px;
+    padding: 0;
+}
+.iconbtn:hover { background-color: var(--panel-2); color: var(--ink); }
+.iconbtn > .ico { width: 16px; height: 16px; }
+
+/* ---------- toolbar ---------- */
+.toolbar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    background-color: var(--paper);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--line);
+}
+.pill {
+    flex-direction: row;
+    align-items: center;
+    font-size: 12px;
+    color: var(--ink);
+    background-color: var(--panel);
+    border-width: 1px;
+    border-color: var(--line-strong);
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin-right: 8px;
+}
+.pill:hover { border-color: var(--ink-faint); }
+.pill .k { color: var(--ink-soft); margin-right: 5px; }
+.pill .caret { width: 12px; height: 12px; margin-left: 5px; }
+
+.newbtn {
+    flex-direction: row;
+    align-items: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background-color: transparent;
+    border-width: 0;
+    padding: 4px 6px;
+    border-radius: 8px;
+}
+.newbtn:hover { background-color: var(--panel); color: var(--ink); }
+
+/* ---------- thread ---------- */
+/* min-height:0 lets the ScrollView shrink to available space and scroll internally
+   instead of expanding to content height and pushing the fixed rows out of place. */
+.thread { flex-grow: 1; flex-shrink: 1; min-height: 0; background-color: var(--paper); }
+.thread-content { padding: 16px 14px; }
+
+.turn { margin-bottom: 16px; }
+
+/* user turn */
+.user {
+    align-self: flex-end;
+    max-width: 88%;
+    background-color: var(--panel);
+    border-width: 1px;
+    border-color: var(--line);
+    border-radius: 14px;
+    border-bottom-right-radius: 4px;
+    padding: 10px 12px;
+}
+.user .msgtext { font-size: 13px; color: var(--ink); white-space: normal; }
+
+/* assistant turn */
+.assistant { flex-direction: row; align-items: flex-start; }
+.mark {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background-color: var(--panel);
+    border-width: 1px;
+    border-color: var(--line);
+    margin-right: 9px;
+    -unity-text-align: middle-center;
+}
+.mark > .ico { width: 14px; height: 14px; }
+.assistant .body { flex-grow: 1; flex-shrink: 1; }
+.assistant .msgtext { font-size: 13px; color: var(--ink); white-space: normal; }
+
+/* tool card */
+.tool {
+    border-width: 1px;
+    border-color: var(--line);
+    border-radius: 11px;
+    background-color: var(--paper);
+    margin-top: 8px;
+    overflow: hidden;
+}
+.tool-head { flex-direction: row; align-items: center; padding: 8px 10px; }
+.tool-head-btn:hover { background-color: var(--panel); }
+.tool-chevron { margin-right: 8px; color: var(--ink-faint); font-size: 11px; }
+.tool-ic { width: 15px; height: 15px; margin-right: 8px; }
+.tool-name { font-size: 12px; -unity-font-style: bold; color: var(--ink); }
+
+.tool-details { padding: 2px 10px 9px 29px; }
+.tool-detail-cap { font-size: 10px; -unity-font-style: bold; color: var(--ink-faint); margin-top: 6px; margin-bottom: 2px; }
+.tool-detail-text { font-size: 11px; color: var(--ink-soft); white-space: normal; }
+.tool-arg { font-size: 11px; color: var(--ink-soft); margin-left: 8px; flex-shrink: 1; overflow: hidden; }
+.status { flex-direction: row; align-items: center; font-size: 11px; -unity-font-style: bold; }
+.status .ico { width: 12px; height: 12px; margin-right: 4px; }
+.status-done { color: var(--ok); }
+.status-run { color: var(--clay); }
+.status-err { color: var(--deny); }
+
+/* inline screenshot */
+.shot { margin-top: 8px; border-width: 1px; border-color: var(--line); border-radius: 11px; overflow: hidden; }
+.shot .img { width: 100%; height: 180px; background-color: rgb(16, 20, 28); }
+.shot .cap {
+    flex-direction: row; align-items: center;
+    font-size: 11px; color: var(--ink-soft);
+    padding: 6px 10px;
+    background-color: var(--paper);
+    border-top-width: 1px; border-top-color: var(--line);
+}
+
+/* permission request */
+.perm {
+    border-width: 1px;
+    border-color: var(--clay);
+    border-radius: 11px;
+    background-color: var(--panel);
+    margin-top: 8px;
+    overflow: hidden;
+}
+.perm-head {
+    flex-direction: row; align-items: center;
+    padding: 10px 12px 6px;
+    font-size: 12px; -unity-font-style: bold; color: var(--clay-deep);
+}
+.perm-head .ico { width: 15px; height: 15px; margin-right: 7px; }
+.perm-body { padding: 0 12px 10px; }
+.perm-kv {
+    background-color: var(--paper);
+    border-width: 1px; border-color: var(--line-strong);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 6px 0 10px;
+}
+.perm-kv .kv { flex-direction: row; margin-bottom: 2px; }
+.perm-kv .kk { color: var(--ink-soft); width: 66px; font-size: 11px; }
+.perm-kv .vv { color: var(--ink); font-size: 11px; flex-shrink: 1; white-space: normal; }
+.perm-actions { flex-direction: row; align-items: center; }
+
+/* resolved permission — slim inline confirmation, no big box */
+.perm-resolved { padding: 2px 2px; margin-top: 6px; }
+.resolved-ok { font-size: 12px; color: var(--ok); }
+.resolved-deny { font-size: 12px; color: var(--deny); }
+
+.btn { font-size: 12px; -unity-font-style: bold; border-radius: 8px; padding: 7px 14px; border-width: 1px; border-color: transparent; margin-right: 8px; }
+.btn-primary { background-color: var(--clay); color: rgb(255, 255, 255); }
+.btn-primary:hover { background-color: var(--clay-deep); }
+.btn-ghost { background-color: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn-ghost:hover { background-color: var(--panel-2); }
+
+/* working indicator */
+.working { flex-direction: row; align-items: center; margin-top: 10px; }
+.working .msgtext { font-size: 12px; color: var(--ink-soft); }
+.working .spin { width: 12px; height: 12px; margin-right: 7px; }
+
+/* empty-state greeting */
+.greeting { align-items: center; padding-top: 56px; padding-bottom: 20px; }
+.greeting-title { font-size: 16px; -unity-font-style: bold; color: var(--ink); margin-top: 12px; }
+.greeting-sub { font-size: 12px; color: var(--ink-soft); -unity-text-align: middle-center; white-space: normal; margin-top: 6px; max-width: 250px; }
+
+/* system / status line */
+.sysline { font-size: 11px; color: var(--ink-faint); -unity-font-style: italic; margin-bottom: 8px; -unity-text-align: middle-center; }
+.errline { font-size: 12px; color: var(--deny); margin-bottom: 8px; }
+
+/* ---------- composer ---------- */
+.composer {
+    flex-shrink: 0;
+    background-color: var(--panel);
+    border-top-width: 1px;
+    border-top-color: var(--line);
+    padding: 10px 12px 10px;
+}
+.chips { flex-direction: row; flex-wrap: wrap; margin-bottom: 6px; }
+.chip {
+    flex-direction: row; align-items: center;
+    font-size: 11px; color: var(--ink-soft);
+    background-color: var(--paper);
+    border-width: 1px; border-color: var(--line-strong);
+    border-radius: 7px;
+    padding: 3px 7px;
+    margin-right: 6px; margin-bottom: 6px;
+}
+.chip .cico { width: 12px; height: 12px; margin-right: 5px; }
+.chip .cx { color: var(--ink-faint); margin-left: 6px; }
+.chip .cx:hover { color: var(--deny); }
+
+.box {
+    background-color: var(--paper);
+    border-width: 1px; border-color: var(--line-strong);
+    border-radius: 11px;
+    padding: 8px 10px;
+}
+.box:focus-within { border-color: var(--clay); }
+.field-wrap { position: relative; }
+.ph-over { position: absolute; left: 4px; top: 4px; color: var(--ink-faint); font-size: 13px; }
+.input { font-size: 13px; color: var(--ink); background-color: transparent; border-width: 0; white-space: normal; min-height: 22px; margin: 0; }
+.input > .unity-text-element { color: var(--ink); }
+#input-field .unity-base-text-field__input { background-color: transparent; border-width: 0; padding: 2px 3px; }
+
+.box-tools { flex-direction: row; align-items: center; margin-top: 8px; }
+.round {
+    width: 28px; height: 28px; border-radius: 8px;
+    border-width: 1px; border-color: var(--line-strong);
+    background-color: var(--paper); color: var(--ink-soft);
+    -unity-text-align: middle-center; padding: 0;
+}
+.round:hover { color: var(--ink); border-color: var(--ink-faint); }
+.round .ico { width: 15px; height: 15px; }
+.modepill {
+    flex-direction: row; align-items: center;
+    font-size: 11px; color: var(--ink-soft);
+    background-color: var(--paper);
+    border-width: 1px; border-color: var(--line-strong);
+    border-radius: 999px; padding: 4px 10px;
+    margin-left: 8px;
+}
+.modepill:hover { border-color: var(--ink-faint); }
+.modepill .ico { width: 12px; height: 12px; margin-right: 5px; }
+.send {
+    width: 30px; height: 30px; border-radius: 8px; border-width: 0;
+    background-color: var(--clay); color: rgb(255, 255, 255);
+    -unity-text-align: middle-center; padding: 0;
+}
+.send:hover { background-color: var(--clay-deep); }
+.send:disabled { background-color: var(--line-strong); color: var(--ink-faint); }
+.send .ico { width: 16px; height: 16px; }
+.send-stop { background-color: var(--deny); font-size: 12px; }
+.send-stop:hover { background-color: var(--deny); }
+
+.hint { font-size: 10px; color: var(--ink-faint); margin-top: 7px; -unity-text-align: middle-center; }

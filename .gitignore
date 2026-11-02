@@ -1,0 +1,39 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.vs/
+.idea/
+.gradle/
+ExportedObj/
+.consulo/
+crashlytics-build.properties
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+# EditorBridge runtime files (instructions/results/screens)
+/EditorBridge/
+# Unity crash recovery copies of scenes
+/Assets/_Recovery/
+/Assets/_Recovery.meta
