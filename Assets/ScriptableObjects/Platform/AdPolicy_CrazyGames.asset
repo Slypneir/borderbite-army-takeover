@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cffc2e9d7ba9ce44b00f916e0d277aa, type: 3}
+  m_Name: AdPolicy_CrazyGames
+  m_EditorClassIdentifier: Assembly-CSharp::Core.PlatformSystem.Configuration.AdPolicyConfig
+  adsEnabled: 1
+  interstitialOnTransition: 1
+  interstitialOnNextOrRetry: 1
+  interstitialOnNavigation: 0
+  firstInterstitialAfterBattles: 4
+  minSecondsBetweenInterstitials: 0
+  rewardedEnabled: 1
+  rewardedExcludesInterstitial: 1
