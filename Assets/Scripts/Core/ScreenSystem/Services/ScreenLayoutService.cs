@@ -39,8 +39,7 @@ namespace Core.ScreenSystem.Services
             _width = Screen.width;
             _height = Screen.height;
             Shape = CameraFit.ShapeOf(_width, _height);
-            var margin = Shape == ScreenShape.Portrait ? _config.PortraitMargin : _config.LandscapeMargin;
-            _camera.orthographicSize = CameraFit.OrthographicSize(_config.MapWidth, _config.MapHeight, margin, Shape, (float)_width / Mathf.Max(1, _height));
+            _camera.orthographicSize = CameraFit.OrthographicSize(_config.VisibleShortSide, _config.Tilt, (float)_width / Mathf.Max(1, _height));
             Debug.Log($"[ScreenLayoutService] {_width}x{_height} {Shape}, camera size {_camera.orthographicSize:0.00}");
             OnChanged?.Invoke();
         }

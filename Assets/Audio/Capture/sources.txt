@@ -1,0 +1,2 @@
+capture.wav — synthesized for Borderbite by the Unity developer agent (Python, three sine notes E5-A5-E6 with decay), 2026-11-03.
+No third-party source; free to use in the game.

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Core.BattleSystem.Enums;
 using Core.BattleSystem.Services;
 using Core.BattleSystem.Structs;
 using FluentAssertions;
@@ -10,14 +11,18 @@ namespace Tests.BattleSystem.Editor
     public sealed class BattleDeterminismTests
     {
         private const int Ticks = 3000;
-        private const int TicksPerSecond = 30;
 
-        private static BattleSettings Settings(uint seed = 777) => new BattleSettings(TicksPerSecond, 12, 3, 10, 30, 60, 15, seed);
+        /// <summary>The numbers of the stage 1 spec in units: 64 cells, 5 m/s at 30 ticks and 0.5 m cells is 333 units a tick.</summary>
+        public static BattleSettings Settings(uint seed = 777, int enclosureEveryTicks = 1, int maxEnclosurePermille = 1000) =>
+            new BattleSettings(30, 64, 6, 8, 333, 600, 2000, enclosureEveryTicks, maxEnclosurePermille, 700, seed);
 
+        /// <summary>A walk that turns every 13 ticks and crosses the map: paints, encloses, hits the edges.</summary>
         private static void EnqueueScript(BattleSimulation simulation)
         {
-            for (var tick = 7; tick < Ticks - 100; tick += 13)
-                simulation.Enqueue(new BattleCommand(tick, tick % 3, tick % 12, (tick * 5 + 1) % 12));
+            int[] xs = { 1000, 700, 0, -1000, -300, 0, 600 };
+            int[] ys = { 0, 700, 1000, 200, -1000, -1000, 300 };
+            for (var tick = 1; tick < Ticks - 100; tick += 13)
+                simulation.Enqueue(new BattleCommand(tick, Side.Player, xs[tick % 7], ys[tick % 7]));
         }
 
         /// <summary>Runs on frames of the given lengths and returns the hash after every tick.</summary>
@@ -30,7 +35,7 @@ namespace Tests.BattleSystem.Editor
             foreach (var frame in frames)
             {
                 runner.Advance(frame);
-                if (hashes.Count >= Ticks)
+                if (hashes.Count >= Ticks || runner.Simulation.Result != BattleResult.None)
                     break;
             }
 
@@ -50,7 +55,7 @@ namespace Tests.BattleSystem.Editor
             var at144 = Run(Frames(144));
             var at165 = Run(Frames(165));
 
-            at60.Count.Should().BeGreaterOrEqualTo(Ticks);
+            at60.Count.Should().BeGreaterThan(300);
             at144.Take(Ticks).Should().Equal(at60.Take(Ticks));
             at165.Take(Ticks).Should().Equal(at60.Take(Ticks));
         }
@@ -71,12 +76,10 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Run_OtherSeed_OtherResult()
+        public void Run_OtherSeed_OtherHash()
         {
             var one = new BattleSimulation(Settings(1));
             var two = new BattleSimulation(Settings(2));
-            one.Enqueue(new BattleCommand(1, 0, 0, 1));
-            two.Enqueue(new BattleCommand(1, 0, 0, 1));
             one.Step();
             two.Step();
 
@@ -89,8 +92,8 @@ namespace Tests.BattleSystem.Editor
             var simulation = new BattleSimulation(Settings());
             simulation.Step();
 
-            simulation.Enqueue(new BattleCommand(1, 0, 0, 1)).Should().BeFalse();
-            simulation.Enqueue(new BattleCommand(2, 0, 0, 1)).Should().BeTrue();
+            simulation.Enqueue(new BattleCommand(1, Side.Player, 1000, 0)).Should().BeFalse();
+            simulation.Enqueue(new BattleCommand(2, Side.Player, 1000, 0)).Should().BeTrue();
         }
 
         [Test]

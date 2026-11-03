@@ -9,15 +9,17 @@ namespace Meta.FlowSystem.Services
 {
     /// <summary>
     /// From the first frame to the moment the player can act: the SDK, the language from the SDK, the save, the signals of the
-    /// platform in the order it asks for. The check of a build waits for the line «[BootFlow] ready».
+    /// platform in the order it asks for, then straight into the battle. The check of a build waits for the line «[BootFlow] ready».
     /// </summary>
     public sealed class BootFlow : IAsyncStartable
     {
         private readonly IPlatform _platform;
+        private readonly BattleFlow _battle;
 
-        public BootFlow(IPlatform platform)
+        public BootFlow(IPlatform platform, BattleFlow battle)
         {
             _platform = platform;
+            _battle = battle;
         }
 
         public async UniTask StartAsync(CancellationToken ct)
@@ -36,6 +38,7 @@ namespace Meta.FlowSystem.Services
 
             _platform.SignalReady();
             Debug.Log($"[BootFlow] ready, language {Loc.Language}");
+            _battle.Begin();
         }
     }
 }

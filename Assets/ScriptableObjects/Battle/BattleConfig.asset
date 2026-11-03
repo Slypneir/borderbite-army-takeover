@@ -14,9 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Meta.BattleSystem.Configuration.BattleConfig
   ticksPerSecond: 30
   maxStepsPerFrame: 8
-  zoneCount: 12
-  factionCount: 3
-  startTroops: 10
-  productionPeriodTicks: 30
-  waveTravelTicks: 60
-  waveTravelJitterTicks: 15
+  mapCells: 64
+  cellSize: 0.5
+  startRadius: 6
+  startOffset: 8
+  heroSpeed: 5
+  heroRadius: 0.3
+  heroBrush: 2
+  enclosureEveryTicks: 1
+  maxEnclosureShare: 100
+  victoryShare: 70

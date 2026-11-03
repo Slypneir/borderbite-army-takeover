@@ -1,6 +1,9 @@
 {
   "strings": [
     { "key": "boot.title", "text": "Borderbite" },
-    { "key": "boot.status", "text": "Готово к бою" }
+    { "key": "boot.status", "text": "Готово к бою" },
+    { "key": "results.victory", "text": "Победа" },
+    { "key": "results.defeat", "text": "Поражение" },
+    { "key": "results.retry", "text": "Ещё раз" }
   ]
 }

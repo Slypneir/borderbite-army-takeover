@@ -1,9 +1,12 @@
+using System;
+using Core.BattleSystem.Enums;
 using Core.BattleSystem.Services;
 
 namespace Meta.BattleSystem.Interfaces
 {
     /// <summary>
-    /// Runs a battle on the frames of the engine, in real time and only while the game is not frozen.
+    /// Runs a battle on the frames of the engine, in real time and only while the game is not frozen, and feeds it the direction
+    /// of the player as commands.
     /// </summary>
     public interface IBattleDriver
     {
@@ -21,5 +24,15 @@ namespace Meta.BattleSystem.Interfaces
         /// Stops the battle
         /// </summary>
         void StopBattle();
+
+        /// <summary>
+        /// A battle began: the views take the new one
+        /// </summary>
+        event Action<BattleRunner> OnStarted;
+
+        /// <summary>
+        /// The current battle ended with a victory or a defeat
+        /// </summary>
+        event Action<BattleResult> OnFinished;
     }
 }

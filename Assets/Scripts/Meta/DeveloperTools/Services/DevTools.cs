@@ -2,6 +2,8 @@
 using Core.PlatformSystem.Interfaces;
 using Core.ScreenSystem.Interfaces;
 using Meta.BattleSystem.Interfaces;
+using Meta.BattleSystem.Services;
+using Meta.FlowSystem.Services;
 using VContainer.Unity;
 
 namespace Meta.DeveloperTools.Services
@@ -14,17 +16,22 @@ namespace Meta.DeveloperTools.Services
         private readonly IScreenLayout _layout;
         private readonly IBattleDriver _battle;
         private readonly IAdService _ads;
+        private readonly BattleDebug _debug;
+        private readonly BattleFlow _flow;
 
-        public DevTools(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads)
+        public DevTools(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads,
+            BattleDebug debug, BattleFlow flow)
         {
             _platform = platform;
             _gate = gate;
             _layout = layout;
             _battle = battle;
             _ads = ads;
+            _debug = debug;
+            _flow = flow;
         }
 
-        public void Start() => DevBridge.Bind(_platform, _gate, _layout, _battle, _ads);
+        public void Start() => DevBridge.Bind(_platform, _gate, _layout, _battle, _ads, _debug, _flow);
     }
 }
 #endif

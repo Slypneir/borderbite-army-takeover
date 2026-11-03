@@ -12,7 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2646e1bdc36c5dd47a97c4bddc6fa87f, type: 3}
   m_Name: ScreenLayoutConfig
   m_EditorClassIdentifier: Assembly-CSharp::Core.ScreenSystem.Configuration.ScreenLayoutConfig
-  mapWidth: 10
-  mapHeight: 10
-  portraitMargin: 2
-  landscapeMargin: 2
+  visibleShortSide: 16
+  tilt: 60

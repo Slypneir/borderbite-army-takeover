@@ -1,4 +1,7 @@
 using System.IO;
+using Core.AudioManagement.Configuration;
+using Core.AudioManagement.Enums;
+using Core.InputManagement.Configuration;
 using Core.PlatformSystem.Configuration;
 using Core.ScreenSystem.Configuration;
 using Meta.BattleSystem.Configuration;
@@ -17,7 +20,15 @@ namespace Core.EditorTools
         public const string PlatformConfigs = "Assets/ScriptableObjects/Platform/";
         public const string EditorPolicy = PlatformConfigs + "AdPolicy_Editor.asset";
         public const string BattleConfigPath = "Assets/ScriptableObjects/Battle/BattleConfig.asset";
+        public const string BattleViewConfigPath = "Assets/ScriptableObjects/Battle/BattleViewConfig.asset";
         public const string ScreenConfigPath = "Assets/ScriptableObjects/Screen/ScreenLayoutConfig.asset";
+        public const string MoveStickConfigPath = "Assets/ScriptableObjects/Input/MoveStickConfig.asset";
+        public const string SoundVolumesPath = "Assets/ScriptableObjects/Audio/SoundVolumes.asset";
+        public const string CirclePath = "Assets/Sprites/UI/Placeholder/Circle.png";
+
+        private const string CellsMaterialPath = "Assets/Materials/Battle/Cells.mat";
+        private const string FlatMaterialPath = "Assets/Materials/Placeholder/FlatShaded.mat";
+        private const string CaptureSoundPath = "Assets/Audio/Capture/capture.wav";
         public const string FontAsset = "Assets/Fonts/PTSans-Regular SDF.asset";
 
         private const string FontSource = "Assets/Fonts/PTSans-Regular.ttf";
@@ -56,7 +67,86 @@ namespace Core.EditorTools
             Policy("AdPolicy_Editor", true, true, false, 0f, false);
             Create<BattleConfig>(BattleConfigPath);
             Create<ScreenLayoutConfig>(ScreenConfigPath);
+            Create<MoveStickConfig>(MoveStickConfigPath);
+            BattleView();
+            Sounds();
+            Circle();
             AssetDatabase.SaveAssets();
+            // fields a config no longer has leave the files; the values the owner set stay
+            AssetDatabase.ForceReserializeAssets(new[] { BattleConfigPath, BattleViewConfigPath, ScreenConfigPath, MoveStickConfigPath, SoundVolumesPath });
+        }
+
+        private static void BattleView()
+        {
+            var cells = MaterialAsset(CellsMaterialPath, "Borderbite/Map/Cells");
+            var flat = MaterialAsset(FlatMaterialPath, "Borderbite/Placeholder/Flat Shaded");
+            Create<BattleViewConfig>(BattleViewConfigPath);
+            var config = AssetDatabase.LoadAssetAtPath<BattleViewConfig>(BattleViewConfigPath);
+            if (config.CellsMaterial != null && config.FlatMaterial != null)
+                return;
+
+            config.InitForEditor(config.CellsMaterial != null ? config.CellsMaterial : cells, config.FlatMaterial != null ? config.FlatMaterial : flat);
+            EditorUtility.SetDirty(config);
+        }
+
+        private static Material MaterialAsset(string path, string shader)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null)
+                return material;
+
+            Folder(path);
+            material = new Material(Shader.Find(shader));
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
+        /// <summary>The table of sounds gets a row for every sound that has none; the percents the owner set stay.</summary>
+        private static void Sounds()
+        {
+            Create<SoundVolumes>(SoundVolumesPath);
+            var volumes = AssetDatabase.LoadAssetAtPath<SoundVolumes>(SoundVolumesPath);
+            if (volumes.EnsureRow(Sfx.Capture, AssetDatabase.LoadAssetAtPath<AudioClip>(CaptureSoundPath)))
+                EditorUtility.SetDirty(volumes);
+        }
+
+        /// <summary>A soft white circle for the placeholder of the stick, until the kit of the interface.</summary>
+        private static void Circle()
+        {
+            if (AssetDatabase.LoadAssetAtPath<Sprite>(CirclePath) != null)
+                return;
+
+            const int size = 256;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var dx = x + 0.5f - size / 2f;
+                var dy = y + 0.5f - size / 2f;
+                var alpha = Mathf.Clamp01(size / 2f - 1f - Mathf.Sqrt(dx * dx + dy * dy));
+                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+
+            Folder(CirclePath);
+            File.WriteAllBytes(CirclePath, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(CirclePath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(CirclePath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
+        }
+
+        private static void Folder(string assetPath)
+        {
+            var folder = Path.GetDirectoryName(assetPath)?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(folder) || AssetDatabase.IsValidFolder(folder))
+                return;
+
+            Folder(folder);
+            AssetDatabase.CreateFolder(Path.GetDirectoryName(folder)?.Replace('\\', '/'), Path.GetFileName(folder));
         }
 
         private static void Policy(string name, bool transition, bool nextOrRetry, bool navigation, float minSeconds, bool rewardedExcludes)
@@ -72,8 +162,11 @@ namespace Core.EditorTools
 
         private static void Create<T>(string path) where T : ScriptableObject
         {
-            if (AssetDatabase.LoadAssetAtPath<T>(path) == null)
-                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<T>(), path);
+            if (AssetDatabase.LoadAssetAtPath<T>(path) != null)
+                return;
+
+            Folder(path);
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<T>(), path);
         }
 
         private static bool ImportTmpEssentials()

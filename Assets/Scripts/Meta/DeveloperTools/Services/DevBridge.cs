@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections.Generic;
+using Core.BattleSystem.Enums;
 using Core.BattleSystem.Services;
 using Core.BattleSystem.Structs;
 using Core.PlatformSystem.Enums;
@@ -7,6 +8,8 @@ using Core.PlatformSystem.Interfaces;
 using Core.ScreenSystem.Interfaces;
 using Cysharp.Threading.Tasks;
 using Meta.BattleSystem.Interfaces;
+using Meta.BattleSystem.Services;
+using Meta.FlowSystem.Services;
 using Meta.LocalizationSystem.Services;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -21,21 +24,27 @@ namespace Meta.DeveloperTools.Services
     public static class DevBridge
     {
         private const int CheckTick = 300;
+        private static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
 
         private static IPlatform _platform;
         private static IPlaybackGate _gate;
         private static IScreenLayout _layout;
         private static IBattleDriver _battle;
         private static IAdService _ads;
+        private static BattleDebug _debug;
+        private static BattleFlow _flow;
         private static readonly Dictionary<int, ulong> Hashes = new Dictionary<int, ulong>();
 
-        public static void Bind(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads)
+        public static void Bind(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads,
+            BattleDebug debug, BattleFlow flow)
         {
             _platform = platform;
             _gate = gate;
             _layout = layout;
             _battle = battle;
             _ads = ads;
+            _debug = debug;
+            _flow = flow;
         }
 
         public static string State() =>
@@ -48,15 +57,109 @@ namespace Meta.DeveloperTools.Services
             return Loc.Language;
         }
 
-        /// <summary>Starts a battle with fixed commands at a frame rate; <see cref="BattleCheckResult"/> gives the hash at tick 300.</summary>
+        /// <summary>The battle now: tick, result, shares in permille, the hero in cells, the count of enclosures.</summary>
+        public static string Battle()
+        {
+            var simulation = _battle?.Current?.Simulation;
+            if (simulation == null)
+                return "no battle";
+
+            var hero = simulation.Heroes[0];
+            const float unit = BattleSettings.UnitsPerCell;
+            return $"tick {simulation.Tick}, result {simulation.Result}, player {simulation.Grid.Permille(Side.Player)} permille, " +
+                   $"enemy {simulation.Grid.Permille(Side.Enemy)} permille, hero {(hero.X / unit).ToString("0.00", Inv)};{(hero.Y / unit).ToString("0.00", Inv)} cells, " +
+                   $"captures {simulation.Captures.Count}";
+        }
+
+        /// <summary>Starts the level anew, as «Again» does.</summary>
+        public static string Restart()
+        {
+            _flow.Begin();
+            return Battle();
+        }
+
+        /// <summary>The hero of the player walks this way from the next tick, (0, 0) stops it; the keys or the stick override it.</summary>
+        public static string Walk(int x, int y)
+        {
+            var simulation = _battle.Current.Simulation;
+            simulation.Enqueue(new BattleCommand(simulation.Tick + 1, Side.Player, x, y));
+            return Battle();
+        }
+
+        /// <summary>The hero of the player walks this way for exactly this many ticks, then stands: exact paths despite the bridge.</summary>
+        public static string WalkTicks(int x, int y, int ticks)
+        {
+            var simulation = _battle.Current.Simulation;
+            simulation.Enqueue(new BattleCommand(simulation.Tick + 1, Side.Player, x, y));
+            simulation.Enqueue(new BattleCommand(simulation.Tick + 1 + ticks, Side.Player, 0, 0));
+            return Battle();
+        }
+
+        /// <summary>The hero walks legs one after another, "x,y,ticks;x,y,ticks;…", then stands.</summary>
+        public static string WalkPath(string legs)
+        {
+            var simulation = _battle.Current.Simulation;
+            var tick = simulation.Tick + 1;
+            foreach (var leg in legs.Split(';'))
+            {
+                var parts = leg.Split(',');
+                simulation.Enqueue(new BattleCommand(tick, Side.Player, int.Parse(parts[0]), int.Parse(parts[1])));
+                tick += int.Parse(parts[2]);
+            }
+
+            simulation.Enqueue(new BattleCommand(tick, Side.Player, 0, 0));
+            return Battle() + ", path ends at tick " + tick;
+        }
+
+        /// <summary>Paints a rectangle of cells, corners included, for a side: Player, Enemy or Neutral.</summary>
+        public static string PaintRect(string side, int x0, int y0, int x1, int y1)
+        {
+            _battle.Current.Simulation.PaintRect(SideOf(side), x0, y0, x1, y1);
+            return Battle();
+        }
+
+        /// <summary>Gives a side cells until it has this percent of the map.</summary>
+        public static string FillShare(string side, int percent)
+        {
+            _battle.Current.Simulation.FillShare(SideOf(side), percent * 10);
+            return Battle();
+        }
+
+        /// <summary>Ends the battle at once: Victory or Defeat.</summary>
+        public static string ForceResult(string result)
+        {
+            _battle.Current.Simulation.ForceResult((BattleResult)System.Enum.Parse(typeof(BattleResult), result));
+            return Battle();
+        }
+
+        /// <summary>The grid of cells and the line of ticks and frames, as F1.</summary>
+        public static string ShowDebug(bool shown)
+        {
+            _debug.ShowDebug = shown;
+            return "debug " + shown;
+        }
+
+        /// <summary>The camera shows the whole map from straight above, or follows the hero again.</summary>
+        public static string Overview(bool shown)
+        {
+            _debug.Overview = shown;
+            return "overview " + shown;
+        }
+
+        /// <summary>
+        /// Starts a battle where the hero walks a fixed square spiral at a frame rate; <see cref="BattleCheckResult"/> gives the
+        /// hash at tick 300. The stick and the keys must stay untouched meanwhile.
+        /// </summary>
         public static string BattleCheckStart(int frameRate)
         {
             Application.targetFrameRate = frameRate;
             QualitySettings.vSyncCount = 0;
             Hashes.Clear();
             var runner = _battle.StartBattle(12345);
-            for (var tick = 10; tick < CheckTick; tick += 10)
-                runner.Simulation.Enqueue(new BattleCommand(tick, tick % 3, tick / 10 % 12, (tick / 10 + 5) % 12));
+            int[] xs = { 1000, 0, -1000, 0 };
+            int[] ys = { 0, 1000, 0, -1000 };
+            for (var leg = 0; leg * 15 + 1 < CheckTick; leg++)
+                runner.Simulation.Enqueue(new BattleCommand(leg * 15 + 1, Side.Player, xs[leg % 4] + leg * 20, ys[leg % 4] + 300));
             runner.OnStep += () => Remember(runner);
             return "started at " + frameRate;
         }
@@ -76,6 +179,8 @@ namespace Meta.DeveloperTools.Services
             _ads.TryShowInterstitialAsync(kind).ContinueWith(shown => Debug.Log($"[DevBridge] interstitial {placement}: {shown}")).Forget();
             return "asked";
         }
+
+        private static Side SideOf(string side) => (Side)System.Enum.Parse(typeof(Side), side);
 
         private static void Remember(BattleRunner runner)
         {
@@ -100,6 +205,28 @@ namespace Meta.DeveloperTools.Services
         {
             ((EditorPlatform)_platform).SimulateFocus(focused);
             return State();
+        }
+
+        /// <summary>
+        /// The next enclosure pauses the game this many seconds after it, as the platform would: the wave and «+N%» stay on the
+        /// screen for a screenshot despite the slow bridge. SimulatePause(false) goes on.
+        /// </summary>
+        public static string FreezeAfterCapture(float seconds)
+        {
+            var runner = _battle.Current;
+            var seen = runner.Simulation.Captures.Count;
+            void Check()
+            {
+                if (runner.Simulation.Captures.Count == seen)
+                    return;
+
+                runner.OnStep -= Check;
+                UniTask.Delay(System.TimeSpan.FromSeconds(seconds), DelayType.Realtime)
+                    .ContinueWith(() => ((EditorPlatform)_platform).SimulatePause(true)).Forget();
+            }
+
+            runner.OnStep += Check;
+            return "waiting for a capture";
         }
 #endif
     }
