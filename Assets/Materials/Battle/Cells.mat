@@ -29,11 +29,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Bevel: 0.14
-    - _BevelShade: 0.28
     - _Cells: 64
     - _GridStrength: 0
-    - _Noise: 0.04
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
