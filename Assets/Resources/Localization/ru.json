@@ -4,6 +4,8 @@
     { "key": "boot.status", "text": "Готово к бою" },
     { "key": "results.victory", "text": "Победа" },
     { "key": "results.defeat", "text": "Поражение" },
-    { "key": "results.retry", "text": "Ещё раз" }
+    { "key": "results.retry", "text": "Ещё раз" },
+    { "key": "hud.build", "text": "{0} дерева" },
+    { "key": "hud.hire", "text": "{0} золота — {1}/{2}" }
   ]
 }

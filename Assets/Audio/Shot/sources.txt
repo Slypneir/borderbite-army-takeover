@@ -1,0 +1,2 @@
+shot.wav — synthesized for Borderbite by the Unity developer agent (Python: tones and filtered noise), 2026-11-03.
+No third-party source; a placeholder until real sounds; free to use in the game.

@@ -45,6 +45,13 @@ namespace Core.EditorTools
         private const int DebugSize = 24;
         private static readonly Color TextColor = new Color(0.96f, 0.96f, 0.92f);
         private const int BarPadding = 6;
+        private const int CounterHeight = 44;
+        private const int CounterWidth = 150;
+        private const int CounterTextSize = 30;
+        private const int RingSize = 56;
+        private const int LabelTextSize = 26;
+        private const int HealthWidth = 90;
+        private const int HealthHeight = 12;
         private const float TitleHeight = 0.72f;
         private static readonly Color BarBackColor = new Color(0.32f, 0.33f, 0.31f);
         private static readonly Color BarBaseColor = new Color(0.1f, 0.11f, 0.14f);
@@ -104,8 +111,34 @@ namespace Core.EditorTools
             hero.SetParent(go.transform, false);
             var body = Mesh(hero, "Body", "Capsule.fbx");
             var nose = Mesh(hero, "Nose", "Cube.fbx");
+            var templates = new GameObject("Templates").transform;
+            templates.SetParent(go.transform, false);
 
             var serialized = new SerializedObject(world);
+            serialized.FindProperty("soldierTemplate").objectReferenceValue = Template(templates, "Soldier",
+                // the built-in capsule mesh is 2 × 4 × 2 units: a soldier 0.45 m wide and 0.7 m tall
+                ("Body", "Capsule.fbx", new Vector3(0f, 0.35f, 0f), new Vector3(0.225f, 0.175f, 0.225f)),
+                ("Nose", "Cube.fbx", new Vector3(0f, 0.5f, 0.22f), Vector3.one * 0.18f));
+            serialized.FindProperty("goldTemplate").objectReferenceValue = Template(templates, "Gold",
+                ("Coin0", "Cube.fbx", new Vector3(-0.1f, 0.1f, -0.05f), Vector3.one * 0.22f),
+                ("Coin1", "Cube.fbx", new Vector3(0.12f, 0.1f, 0.06f), Vector3.one * 0.22f),
+                ("Coin2", "Cube.fbx", new Vector3(0.02f, 0.3f, 0f), Vector3.one * 0.2f));
+            serialized.FindProperty("woodTemplate").objectReferenceValue = Template(templates, "Wood",
+                ("Log0", "Cube.fbx", new Vector3(0f, 0.08f, -0.09f), new Vector3(0.6f, 0.15f, 0.15f)),
+                ("Log1", "Cube.fbx", new Vector3(0f, 0.08f, 0.09f), new Vector3(0.6f, 0.15f, 0.15f)),
+                ("Log2", "Cube.fbx", new Vector3(0f, 0.23f, 0f), new Vector3(0.6f, 0.15f, 0.15f)));
+            // a place is 1 x 1 here; the view scales it to 3 cells. Child 0 is the rim, child 1 the pad
+            serialized.FindProperty("siteTemplate").objectReferenceValue = Template(templates, "Site",
+                ("Rim", "Cube.fbx", new Vector3(0f, 0.01f, 0f), new Vector3(1f, 0.02f, 1f)),
+                ("Pad", "Cube.fbx", new Vector3(0f, 0.015f, 0f), new Vector3(0.84f, 0.03f, 0.84f)));
+            serialized.FindProperty("barracksTemplate").objectReferenceValue = Template(templates, "Barracks",
+                ("Body", "Cube.fbx", new Vector3(0f, 0.45f, 0f), new Vector3(1.3f, 0.9f, 1.3f)),
+                ("Roof", "Cube.fbx", new Vector3(0f, 1f, 0f), new Vector3(1.45f, 0.22f, 1.45f)),
+                ("Door", "Cube.fbx", new Vector3(0f, 0.3f, -0.62f), new Vector3(0.4f, 0.6f, 0.1f)));
+            serialized.FindProperty("debrisTemplate").objectReferenceValue = Template(templates, "Debris",
+                ("Cube", "Cube.fbx", Vector3.zero, Vector3.one));
+            serialized.FindProperty("shotTemplate").objectReferenceValue = Template(templates, "Shot",
+                ("Trace", "Cube.fbx", Vector3.zero, Vector3.one));
             serialized.FindProperty("surface").objectReferenceValue = surface;
             serialized.FindProperty("island").objectReferenceValue = island;
             serialized.FindProperty("water").objectReferenceValue = water;
@@ -114,6 +147,22 @@ namespace Core.EditorTools
             serialized.FindProperty("heroNose").objectReferenceValue = nose;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return world;
+        }
+
+        /// <summary>An inactive placeholder of boxes and capsules; the views copy it and colour it.</summary>
+        private static Transform Template(Transform parent, string name, params (string Name, string Mesh, Vector3 Position, Vector3 Scale)[] parts)
+        {
+            var root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            foreach (var part in parts)
+            {
+                var renderer = Mesh(root, part.Name, part.Mesh);
+                renderer.transform.localPosition = part.Position;
+                renderer.transform.localScale = part.Scale;
+            }
+
+            root.gameObject.SetActive(false);
+            return root;
         }
 
         private static MeshRenderer Mesh(Transform parent, string name, string builtin)
@@ -162,11 +211,14 @@ namespace Core.EditorTools
             go.AddComponent<GraphicRaycaster>();
             var root = (RectTransform)go.transform;
 
+            BuildWorldLabels(root);
+            BuildHeroBar(root, view);
             BuildPopups(root);
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
             BuildBar(area, view);
+            BuildCounters(area, view);
             BuildDebug(area);
             results = BuildResults(area);
             return go;
@@ -230,6 +282,79 @@ namespace Core.EditorTools
             return mark;
         }
 
+        /// <summary>Gold, wood and the army in a row under the bar; a gain like +5 next to a counter after a pickup.</summary>
+        private static void BuildCounters(RectTransform area, BattleViewConfig view)
+        {
+            var row = Rect(area, "Counters", new Vector2(0f, 1f), new Vector2(0f, 1f));
+            row.pivot = new Vector2(0f, 1f);
+            row.anchoredPosition = new Vector2(EdgeMargin, -EdgeMargin * 2 - BarHeight);
+            row.sizeDelta = new Vector2(CounterWidth * 3, CounterHeight);
+            Picture(row, null, BarBaseColor);
+
+            var gold = Counter(row, "Gold", 0, view.GoldColor, out var goldGain);
+            var wood = Counter(row, "Wood", 1, view.WoodColor, out var woodGain);
+            var army = Counter(row, "Army", 2, view.PlayerSoldierColor, out _);
+            Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
+                ("goldGain", goldGain), ("woodGain", woodGain));
+        }
+
+        private static TMP_Text Counter(RectTransform row, string name, int index, Color color, out TMP_Text gain)
+        {
+            var cell = Rect(row, name, new Vector2(index / 3f, 0f), new Vector2((index + 1) / 3f, 1f));
+            var icon = Rect(cell, "Icon", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+            icon.pivot = new Vector2(0f, 0.5f);
+            icon.anchoredPosition = new Vector2(10f, 0f);
+            icon.sizeDelta = Vector2.one * (CounterHeight - 16);
+            Picture(icon, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), color);
+            var label = Text(cell, "Value", CounterTextSize, TextAlignmentOptions.Left);
+            ((RectTransform)label.transform).offsetMin = new Vector2(CounterHeight, 0f);
+            gain = Text(cell, "Gain", CounterTextSize, TextAlignmentOptions.Right);
+            ((RectTransform)gain.transform).offsetMax = new Vector2(-8f, 0f);
+            gain.alpha = 0f;
+            return label;
+        }
+
+        /// <summary>A label with a ring of progress, copied over each place of the player.</summary>
+        private static void BuildWorldLabels(RectTransform root)
+        {
+            var go = new GameObject("WorldLabels", typeof(RectTransform), typeof(WorldLabelsView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var template = Rect((RectTransform)go.transform, "Template", Vector2.zero, Vector2.zero);
+            template.pivot = new Vector2(0.5f, 0f);
+            template.sizeDelta = new Vector2(280f, RingSize + LabelTextSize * 1.4f);
+            var ring = Rect(template, "Ring", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            ring.pivot = new Vector2(0.5f, 1f);
+            ring.sizeDelta = Vector2.one * RingSize;
+            var image = Picture(ring, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), new Color(1f, 1f, 1f, 0.85f));
+            image.type = Image.Type.Filled;
+            image.fillMethod = Image.FillMethod.Radial360;
+            image.fillOrigin = (int)Image.Origin360.Top;
+            image.fillClockwise = true;
+            var label = Text(template, "Price", LabelTextSize, TextAlignmentOptions.Bottom);
+            label.fontStyle = FontStyles.Bold;
+            label.outlineWidth = 0.25f;
+            label.outlineColor = new Color32(20, 20, 30, 255);
+            Wire(go.GetComponent<WorldLabelsView>(), ("template", template));
+        }
+
+        private static void BuildHeroBar(RectTransform root, BattleViewConfig view)
+        {
+            var go = new GameObject("HeroBar", typeof(RectTransform), typeof(HeroBarView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var bar = Rect((RectTransform)go.transform, "Bar", Vector2.zero, Vector2.zero);
+            bar.pivot = new Vector2(0.5f, 0f);
+            bar.sizeDelta = new Vector2(HealthWidth, HealthHeight);
+            Picture(bar, null, BarBaseColor);
+            var fill = Rect(bar, "Fill", Vector2.zero, Vector2.one);
+            fill.offsetMin = new Vector2(2f, 2f);
+            fill.offsetMax = new Vector2(-2f, -2f);
+            // light, not blue: the bar hangs over blue land
+            Picture(fill, null, TextColor);
+            Wire(go.GetComponent<HeroBarView>(), ("bar", bar), ("fill", fill));
+        }
+
         private static void BuildDebug(RectTransform area)
         {
             var go = new GameObject("BattleDebug", typeof(RectTransform), typeof(BattleDebugView));
@@ -238,8 +363,8 @@ namespace Core.EditorTools
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0f, 1f);
-            rect.offsetMin = new Vector2(EdgeMargin, -EdgeMargin * 2 - BarHeight - DebugSize * 1.5f);
-            rect.offsetMax = new Vector2(-EdgeMargin, -EdgeMargin * 2 - BarHeight);
+            rect.offsetMin = new Vector2(EdgeMargin, -EdgeMargin * 3 - BarHeight - CounterHeight - DebugSize * 1.5f);
+            rect.offsetMax = new Vector2(-EdgeMargin, -EdgeMargin * 3 - BarHeight - CounterHeight);
             var label = Text(rect, "Line", DebugSize, TextAlignmentOptions.TopLeft);
             Wire(go.GetComponent<BattleDebugView>(), ("label", label));
         }

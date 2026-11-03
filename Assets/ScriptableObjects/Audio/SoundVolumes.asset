@@ -16,3 +16,24 @@ MonoBehaviour:
   - sound: 0
     clip: {fileID: 8300000, guid: 71e4a401162496940908a77b34ff33b7, type: 3}
     percent: 100
+  - sound: 1
+    clip: {fileID: 8300000, guid: 7e7b2fdfab2fc6c478116c1f775fa999, type: 3}
+    percent: 100
+  - sound: 2
+    clip: {fileID: 8300000, guid: 45e4de6abe7bc254eafe518baf214b04, type: 3}
+    percent: 100
+  - sound: 3
+    clip: {fileID: 8300000, guid: cd5cf45b3f0598843bc1f7bd07e8d600, type: 3}
+    percent: 100
+  - sound: 4
+    clip: {fileID: 8300000, guid: bcf24ec3218221a44b2e9f6a4e43d78b, type: 3}
+    percent: 100
+  - sound: 5
+    clip: {fileID: 8300000, guid: 748c8431f98091445b6d68adf5ad9062, type: 3}
+    percent: 100
+  - sound: 6
+    clip: {fileID: 8300000, guid: 30746ac700eecf349a2acc72f47d31aa, type: 3}
+    percent: 100
+  - sound: 7
+    clip: {fileID: 8300000, guid: 5a1b6b0f594e44d45b7fbc2bace1ffd9, type: 3}
+    percent: 100

@@ -65,10 +65,17 @@ namespace Meta.DeveloperTools.Services
                 return "no battle";
 
             var hero = simulation.Heroes[0];
+            var purse = simulation.SideOf(Side.Player);
             const float unit = BattleSettings.UnitsPerCell;
+            var barracks = 0;
+            foreach (var site in simulation.Sites)
+                barracks += site.Built ? 1 : 0;
+
             return $"tick {simulation.Tick}, result {simulation.Result}, player {simulation.Grid.Permille(Side.Player)} permille, " +
                    $"enemy {simulation.Grid.Permille(Side.Enemy)} permille, hero {(hero.X / unit).ToString("0.00", Inv)};{(hero.Y / unit).ToString("0.00", Inv)} cells, " +
-                   $"captures {simulation.Captures.Count}";
+                   $"health {hero.Health / 10}{(hero.Alive ? "" : " dead")}, captures {simulation.Captures.Count}, gold {purse.Gold}, wood {purse.Wood}, " +
+                   $"army {simulation.ArmyOf(Side.Player)} vs {simulation.ArmyOf(Side.Enemy)}, barracks {barracks}, " +
+                   $"piles {simulation.Resources.Count}";
         }
 
         /// <summary>Starts the level anew, as «Again» does.</summary>
@@ -109,6 +116,43 @@ namespace Meta.DeveloperTools.Services
 
             simulation.Enqueue(new BattleCommand(tick, Side.Player, 0, 0));
             return Battle() + ", path ends at tick " + tick;
+        }
+
+        /// <summary>Adds gold and wood to a side.</summary>
+        public static string Give(string side, int gold, int wood)
+        {
+            _battle.Current.Simulation.Give(SideOf(side), gold, wood);
+            return Battle();
+        }
+
+        /// <summary>Puts soldiers of a side around a cell; without a hero they keep to it.</summary>
+        public static string Soldiers(string side, int count, int x, int y)
+        {
+            const int unit = BattleSettings.UnitsPerCell;
+            _battle.Current.Simulation.AddSoldiers(SideOf(side), count, x * unit + unit / 2, y * unit + unit / 2);
+            return Battle();
+        }
+
+        /// <summary>Builds a barracks of a side on a place (0–5) at once, free.</summary>
+        public static string Build(string side, int site)
+        {
+            _battle.Current.Simulation.BuildBarracks(site, SideOf(side));
+            return Battle();
+        }
+
+        /// <summary>The places to build: centre cell, owner by colour, barracks and its health, progress of building.</summary>
+        public static string Sites()
+        {
+            var simulation = _battle.Current.Simulation;
+            var lines = new System.Text.StringBuilder();
+            for (var i = 0; i < simulation.Sites.Count; i++)
+            {
+                var site = simulation.Sites[i];
+                lines.Append($"{i}: {site.CenterX};{site.CenterY} owner {simulation.Grid.At(site.CenterX, site.CenterY)}, " +
+                             $"barracks {site.Barracks} {site.Health / 10}, progress {site.BuildProgress}; ");
+            }
+
+            return lines.ToString();
         }
 
         /// <summary>Paints a rectangle of cells, corners included, for a side: Player, Enemy or Neutral.</summary>
@@ -205,6 +249,14 @@ namespace Meta.DeveloperTools.Services
         {
             ((EditorPlatform)_platform).SimulateFocus(focused);
             return State();
+        }
+
+        /// <summary>Pauses the game as the platform would, this many real seconds from now: a moment kept for a screenshot.</summary>
+        public static string FreezeIn(float seconds)
+        {
+            UniTask.Delay(System.TimeSpan.FromSeconds(seconds), DelayType.Realtime)
+                .ContinueWith(() => ((EditorPlatform)_platform).SimulatePause(true)).Forget();
+            return "pause in " + seconds;
         }
 
         /// <summary>

@@ -4,6 +4,8 @@
     { "key": "boot.status", "text": "Ready for battle" },
     { "key": "results.victory", "text": "Victory" },
     { "key": "results.defeat", "text": "Defeat" },
-    { "key": "results.retry", "text": "Again" }
+    { "key": "results.retry", "text": "Again" },
+    { "key": "hud.build", "text": "{0} wood" },
+    { "key": "hud.hire", "text": "{0} gold — {1}/{2}" }
   ]
 }

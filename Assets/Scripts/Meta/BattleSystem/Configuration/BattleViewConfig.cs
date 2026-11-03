@@ -19,6 +19,27 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The hero of the player, a placeholder. Starting value: dark blue.")]
         [SerializeField] private Color playerHeroColor = new Color(0.1f, 0.25f, 0.7f);
 
+        [Tooltip("Soldiers of the player, placeholders. Starting value: blue.")]
+        [SerializeField] private Color playerSoldierColor = new Color(0.2f, 0.4f, 0.88f);
+
+        [Tooltip("Soldiers of the enemy, placeholders. Starting value: red.")]
+        [SerializeField] private Color enemySoldierColor = new Color(0.8f, 0.2f, 0.17f);
+
+        [Tooltip("Piles of gold. Starting value: gold yellow.")]
+        [SerializeField] private Color goldColor = new Color(0.98f, 0.8f, 0.25f);
+
+        [Tooltip("Bundles of wood. Starting value: wood brown.")]
+        [SerializeField] private Color woodColor = new Color(0.55f, 0.36f, 0.2f);
+
+        [Tooltip("An empty place to build that no side owns: a dull grey pad. Starting value: grey.")]
+        [SerializeField] private Color siteColor = new Color(0.5f, 0.5f, 0.48f);
+
+        [Tooltip("The rim of a place to build. Starting value: dark grey.")]
+        [SerializeField] private Color siteRimColor = new Color(0.25f, 0.25f, 0.26f);
+
+        [Tooltip("Shots and the flash of a gun. Starting value: warm white.")]
+        [SerializeField] private Color shotColor = new Color(1f, 0.93f, 0.7f);
+
         [Tooltip("The water around the island, to the horizon. Starting value: sea blue.")]
         [SerializeField] private Color waterColor = new Color(0.16f, 0.43f, 0.6f);
 
@@ -52,6 +73,19 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("How softly the camera follows the hero: the time to close most of the gap, seconds. Starting value: 0.12.")]
         [Min(0f)] [SerializeField] private float cameraSmoothing = 0.12f;
 
+        [Header("Life of the battle")]
+        [Tooltip("A picked resource flies to the hero this long, seconds. Starting value: 0.25.")]
+        [Min(0f)] [SerializeField] private float pickupSeconds = 0.25f;
+
+        [Tooltip("A new barracks grows this long, seconds. Starting value: 0.3.")]
+        [Min(0f)] [SerializeField] private float growSeconds = 0.3f;
+
+        [Tooltip("The trace of a shot stays this long, seconds. Starting value: 0.12.")]
+        [Min(0.01f)] [SerializeField] private float shotSeconds = 0.12f;
+
+        [Tooltip("The cubes of a fallen soldier, hero or barracks fly this long, seconds. Starting value: 0.8.")]
+        [Min(0.05f)] [SerializeField] private float debrisSeconds = 0.8f;
+
         [Header("Capture")]
         [Tooltip("«+N%» over a captured area lives this long, seconds. Starting value: 1.2.")]
         [Min(0.1f)] [SerializeField] private float popupSeconds = 1.2f;
@@ -68,8 +102,25 @@ namespace Meta.BattleSystem.Configuration
 
         public Color NeutralColor => neutralColor;
         public Color PlayerColor => playerColor;
+
+        public Color SideColor(Core.BattleSystem.Enums.Side side) => side switch
+        {
+            Core.BattleSystem.Enums.Side.Player => playerColor,
+            Core.BattleSystem.Enums.Side.Enemy => enemyColor,
+            _ => neutralColor,
+        };
+
+        public Color SoldierColor(Core.BattleSystem.Enums.Side side) =>
+            side == Core.BattleSystem.Enums.Side.Player ? playerSoldierColor : enemySoldierColor;
         public Color EnemyColor => enemyColor;
         public Color PlayerHeroColor => playerHeroColor;
+        public Color PlayerSoldierColor => playerSoldierColor;
+        public Color EnemySoldierColor => enemySoldierColor;
+        public Color GoldColor => goldColor;
+        public Color WoodColor => woodColor;
+        public Color SiteColor => siteColor;
+        public Color SiteRimColor => siteRimColor;
+        public Color ShotColor => shotColor;
         public Color WaterColor => waterColor;
         public Color IslandColor => islandColor;
         public float FlashSeconds => flashSeconds;
@@ -80,6 +131,10 @@ namespace Meta.BattleSystem.Configuration
         public float HeroHeight => heroHeight;
         public float HeroWidth => heroWidth;
         public float CameraSmoothing => cameraSmoothing;
+        public float PickupSeconds => pickupSeconds;
+        public float GrowSeconds => growSeconds;
+        public float ShotSeconds => shotSeconds;
+        public float DebrisSeconds => debrisSeconds;
         public float PopupSeconds => popupSeconds;
         public float PopupRise => popupRise;
         public Material CellsMaterial => cellsMaterial;

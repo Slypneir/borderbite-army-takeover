@@ -28,7 +28,7 @@ namespace Core.EditorTools
 
         private const string CellsMaterialPath = "Assets/Materials/Battle/Cells.mat";
         private const string FlatMaterialPath = "Assets/Materials/Placeholder/FlatShaded.mat";
-        private const string CaptureSoundPath = "Assets/Audio/Capture/capture.wav";
+        private const string AudioFolder = "Assets/Audio/";
         public const string FontAsset = "Assets/Fonts/PTSans-Regular SDF.asset";
 
         private const string FontSource = "Assets/Fonts/PTSans-Regular.ttf";
@@ -106,7 +106,15 @@ namespace Core.EditorTools
         {
             Create<SoundVolumes>(SoundVolumesPath);
             var volumes = AssetDatabase.LoadAssetAtPath<SoundVolumes>(SoundVolumesPath);
-            if (volumes.EnsureRow(Sfx.Capture, AssetDatabase.LoadAssetAtPath<AudioClip>(CaptureSoundPath)))
+            var changed = false;
+            // a sound lives in Assets/Audio/<Sound>/<sound>.wav next to its sources.txt
+            foreach (Sfx sound in System.Enum.GetValues(typeof(Sfx)))
+            {
+                var path = AudioFolder + sound + "/" + sound.ToString().ToLowerInvariant() + ".wav";
+                changed |= volumes.EnsureRow(sound, AssetDatabase.LoadAssetAtPath<AudioClip>(path));
+            }
+
+            if (changed)
                 EditorUtility.SetDirty(volumes);
         }
 

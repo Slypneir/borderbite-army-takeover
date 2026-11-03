@@ -4,5 +4,12 @@ namespace Core.AudioManagement.Enums
     public enum Sfx
     {
         Capture,
+        Pickup,
+        Build,
+        Hire,
+        Strike,
+        Shot,
+        Victory,
+        Defeat,
     }
 }

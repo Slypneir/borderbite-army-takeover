@@ -16,6 +16,13 @@ MonoBehaviour:
   playerColor: {r: 0.25, g: 0.5, b: 0.95, a: 1}
   enemyColor: {r: 0.9, g: 0.3, b: 0.27, a: 1}
   playerHeroColor: {r: 0.1, g: 0.25, b: 0.7, a: 1}
+  playerSoldierColor: {r: 0.2, g: 0.4, b: 0.88, a: 1}
+  enemySoldierColor: {r: 0.8, g: 0.2, b: 0.17, a: 1}
+  goldColor: {r: 0.98, g: 0.8, b: 0.25, a: 1}
+  woodColor: {r: 0.55, g: 0.36, b: 0.2, a: 1}
+  siteColor: {r: 0.5, g: 0.5, b: 0.48, a: 1}
+  siteRimColor: {r: 0.25, g: 0.25, b: 0.26, a: 1}
+  shotColor: {r: 1, g: 0.93, b: 0.7, a: 1}
   waterColor: {r: 0.16, g: 0.43, b: 0.6, a: 1}
   islandColor: {r: 0.46, g: 0.36, b: 0.26, a: 1}
   flashSeconds: 0.15
@@ -26,6 +33,10 @@ MonoBehaviour:
   heroHeight: 1
   heroWidth: 0.6
   cameraSmoothing: 0.12
+  pickupSeconds: 0.25
+  growSeconds: 0.3
+  shotSeconds: 0.12
+  debrisSeconds: 0.8
   popupSeconds: 1.2
   popupRise: 60
   cellsMaterial: {fileID: 2100000, guid: f454a8a787506654fb6f709ad77efd4f, type: 2}

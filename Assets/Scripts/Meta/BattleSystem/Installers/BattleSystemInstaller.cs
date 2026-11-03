@@ -32,10 +32,15 @@ namespace Meta.BattleSystem.Installers
             builder.RegisterInstance(_world);
             builder.Register<BattleDebug>(Lifetime.Singleton);
             builder.Register<BattleDriver>(Lifetime.Singleton).As<IBattleDriver, ITickable>();
+            builder.Register<ViewMaterials>(Lifetime.Singleton).AsSelf().As<IDisposable>();
+            builder.Register<EffectsView>(Lifetime.Singleton).AsSelf().As<ILateTickable>();
             builder.Register<MapView>(Lifetime.Singleton).As<ILateTickable, IDisposable>();
             builder.Register<HeroView>(Lifetime.Singleton).AsSelf().As<ILateTickable, IDisposable>();
+            builder.Register<SoldiersView>(Lifetime.Singleton).As<ILateTickable>();
+            builder.Register<ResourcesView>(Lifetime.Singleton).As<ILateTickable>();
+            builder.Register<SitesView>(Lifetime.Singleton).As<ILateTickable>();
             builder.Register<CameraRig>(Lifetime.Singleton).As<ILateTickable>();
-            builder.Register<CaptureSounds>(Lifetime.Singleton).As<ILateTickable>();
+            builder.Register<BattleSounds>(Lifetime.Singleton).As<ILateTickable, IDisposable>();
         }
     }
 }
