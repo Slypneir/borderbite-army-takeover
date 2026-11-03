@@ -37,3 +37,4 @@ sysinfo.txt
 # Unity crash recovery copies of scenes
 /Assets/_Recovery/
 /Assets/_Recovery.meta
+.claude/settings.local.json

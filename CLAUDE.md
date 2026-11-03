@@ -1,7 +1,7 @@
 # Borderbite (рабочее название)
 
-Документация проекта: ../borderbite-docs (git, ещё не заведена). Перед любой работой — скилл `project-docs`, порядок работы — скилл `gamedev-workflow`.
-Интерфейс: ../borderbite-ui (git, ещё не заведён). Перед работой над UI — скилл `unity-ui`.
+Документация проекта: D:\Repositories\borderbite-docs (git). Перед любой работой — скилл `project-docs`, порядок работы — скилл `gamedev-workflow`.
+Интерфейс: D:\Repositories\borderbite-ui (git). Перед работой над UI — скилл `unity-ui`.
 Графика: генератор и профиль игры ещё не назначены. Заказ — скилл `art-requests`.
 Проект-референс по устройству кода: D:\Repositories\my-little-challenge (читать, содержимое игры не копировать). Скилл `unity-architecture`.
 Самопроверка — скилл `unity-editor-bridge`; карта команд — `Docs/UNITY_TOOLS.md`.
