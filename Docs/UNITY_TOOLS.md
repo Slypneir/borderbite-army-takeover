@@ -13,6 +13,9 @@
 | Скрипты под все площадки | `call` на `Core.EditorTools.PlatformBuild, Assembly-CSharp-Editor`, метод `CheckScripts` |
 | Сборка | `call` на `Core.EditorTools.PlatformBuild, Assembly-CSharp-Editor`, метод `BuildYouTube`, `BuildCrazyGames` или `BuildYandex` → `Build/<площадка>`, `Logs/build_summary.json` |
 | Команды разработчика | `call` на `Meta.DeveloperTools.Services.DevBridge, Assembly-CSharp`: `State`, `SetLanguage`, `BattleCheckStart(кадры)`, `BattleCheckResult`, `SimulatePause`, `SimulateAudio`, `SimulateFocus`, `Interstitial(место)` |
+| Бой | `DevBridge`: `Battle` (тик, итог, доли в ‰, герой в клетках), `Restart`, `Walk(x,y)`, `WalkTicks(x,y,тики)`, `WalkPath("x,y,тики;…")`, `PaintRect(сторона,x0,y0,x1,y1)`, `FillShare(сторона,проценты)`, `ForceResult(Victory\|Defeat)`, `ShowDebug(bool)` (как F1: сетка, тики, кадры), `Overview(bool)` (вся карта сверху), `FreezeAfterCapture(секунды)` (пауза площадки после следующего окружения — волна и «+N%» остаются на скриншоте). Стороны: `Player`, `Enemy`, `Neutral` |
+| Ввод и окно Game | `call` на `Core.EditorTools.InputScript, Assembly-CSharp-Editor`: `SetGameView(ш,в)`, `TouchDown/TouchMove/TouchUp(x,y)` (палец на виртуальном тачскрине), `Mouse(x,y,нажата)`, `Keys("W,A")` (пусто — отпустить). Координаты — пиксели окна Game, от нижнего левого угла |
+| Помощники в оболочке | `. Tools/WebGLCheck/selfcheck.sh`, затем `play enter`, `db Battle`, `is SetGameView "[1080,1920]"`, `shot <имя>` (в `Docs/Verification/stage-1/`), `counts` |
 
 Найденные ограничения:
 
@@ -20,6 +23,9 @@
 - Операции `openScene` в мосте нет; путь `screenshot` считается от папки `EditorBridge`.
 - `setPlayMode` — последней командой пакета. Во время сборки мост занят, ответ придёт по её окончании.
 - Операции `wait` в мосте нет, она пишет ошибку в консоль; ждать — `sleep` в оболочке между пакетами.
+- Операции `exists` в мосте нет (только `assert` с `kind:"exists"`); `find` не видит объекты в `DontDestroyOnLoad` — для них `eval` с `GameObject.Find`.
+- В Play Mode один пакет отвечает за 1–3,5 с: путь героя задавать `WalkTicks`/`WalkPath`, а короткие моменты (волна окружения) ловить `FreezeAfterCapture`, а не `sleep`.
+- `click`/`mouseDrag` моста идут в EventSystem мимо Input System: стик ими не проверить, только `InputScript`.
 - Без символа площадки сборка плеера не компилируется намеренно: собирать только через `Tools/Build`.
 
 ## Проверка сборки в браузере
