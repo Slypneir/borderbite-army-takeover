@@ -44,10 +44,14 @@ namespace Core.EditorTools
         private const int PopupSize = 52;
         private const int DebugSize = 24;
         private static readonly Color TextColor = new Color(0.96f, 0.96f, 0.92f);
-        private static readonly Color BarBackColor = new Color(0.32f, 0.33f, 0.31f, 0.9f);
-        private static readonly Color DimColor = new Color(0.05f, 0.06f, 0.09f, 0.72f);
-        private static readonly Color ButtonColor = new Color(0.98f, 0.8f, 0.25f);
-        private static readonly Color ButtonTextColor = new Color(0.12f, 0.1f, 0.06f);
+        private const int BarPadding = 6;
+        private const float TitleHeight = 0.72f;
+        private static readonly Color BarBackColor = new Color(0.32f, 0.33f, 0.31f);
+        private static readonly Color BarBaseColor = new Color(0.1f, 0.11f, 0.14f);
+        private static readonly Color DimColor = new Color(0.05f, 0.06f, 0.09f, 0.86f);
+        // neutral: yellow is gold, a signal of the game (borderbite-ui STYLE §3)
+        private static readonly Color ButtonColor = new Color(0.92f, 0.93f, 0.95f);
+        private static readonly Color ButtonTextColor = new Color(0.1f, 0.11f, 0.14f);
 
         [MenuItem("Tools/Setup/Build Main Scene")]
         public static void Build()
@@ -194,7 +198,14 @@ namespace Core.EditorTools
             bar.pivot = new Vector2(0.5f, 1f);
             bar.offsetMin = new Vector2(EdgeMargin, -EdgeMargin - BarHeight);
             bar.offsetMax = new Vector2(-EdgeMargin, -EdgeMargin);
-            Picture(bar, null, BarBackColor);
+
+            // an opaque dark base: the red fill and the percents must not merge with red ground
+            var plate = Rect(bar, "Base", Vector2.zero, Vector2.one);
+            plate.offsetMin = new Vector2(-BarPadding, -BarPadding);
+            plate.offsetMax = new Vector2(BarPadding, BarPadding);
+            Picture(plate, null, BarBaseColor);
+            var middle = Rect(bar, "Neutral", Vector2.zero, Vector2.one);
+            Picture(middle, null, BarBackColor);
 
             var playerFill = Rect(bar, "PlayerFill", Vector2.zero, new Vector2(0.1f, 1f));
             Picture(playerFill, null, view.PlayerColor);
@@ -243,10 +254,11 @@ namespace Core.EditorTools
 
             var title = Text(rect, "Title", TitleSize, TextAlignmentOptions.Center);
             var titleRect = (RectTransform)title.transform;
-            titleRect.anchorMin = new Vector2(0f, 0.5f);
-            titleRect.anchorMax = new Vector2(1f, 0.5f);
+            // high above the hero, who stands in the middle of the screen
+            titleRect.anchorMin = new Vector2(0f, TitleHeight);
+            titleRect.anchorMax = new Vector2(1f, TitleHeight);
             titleRect.sizeDelta = new Vector2(0f, TitleSize * 1.5f);
-            titleRect.anchoredPosition = new Vector2(0f, TitleSize);
+            titleRect.anchoredPosition = Vector2.zero;
 
             var button = Rect(rect, "Retry", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             button.pivot = new Vector2(0.5f, 0f);
