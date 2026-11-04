@@ -140,6 +140,8 @@ namespace Core.BattleSystem.Structs
 
         /// <summary>The developer's autopilot: the same commander walks the hero of the player; its commands are ignored.</summary>
         public bool PlayerAutopilot;
+        /// <summary>The autopilot orders «Ко мне» while the army is smaller than this, then frees it: a tool of the runs, not a rule.</summary>
+        public int AutopilotRallyBelow = 8;
 
         public int MapUnits => MapCells * UnitsPerCell;
 

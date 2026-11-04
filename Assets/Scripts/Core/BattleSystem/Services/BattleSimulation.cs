@@ -116,7 +116,12 @@ namespace Core.BattleSystem.Services
             ApplyCommands();
             _enemyCommander?.Step(_state.Settings.EnemyReactionTicks);
             if (_state.Settings.PlayerAutopilot)
+            {
                 _playerCommander.Step(_state.Settings.EnemyReactionTicks);
+                // the autopilot gathers its army before it lets it attack on its own (a tool of the runs)
+                var gather = _state.ArmyOf(Side.Player) < _state.Settings.AutopilotRallyBelow;
+                _army.SetOrder(Side.Player, gather ? ArmyOrder.Rally : ArmyOrder.Free, false);
+            }
             _combat.Step();
             MoveHeroes();
             _army.Step();
