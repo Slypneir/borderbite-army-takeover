@@ -201,7 +201,9 @@ namespace Core.BattleSystem.Services
 
                 purse.Gold -= _settings.SoldierGold;
                 var site = _state.Sites[barracks];
-                var id = ArmyRules.Spawn(_state, hero.Side, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY) - BattleSettings.UnitsPerCell * 2);
+                // out of the door (south), clear of the walls: a barracks is solid
+                var door = _settings.BarracksHalfUnits + _settings.SoldierBodyUnits + BattleSettings.UnitsPerCell / 4;
+                var id = ArmyRules.Spawn(_state, hero.Side, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY) - door);
                 _state.Emit(EventKind.Hired, hero.Side, id, barracks, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY));
             }
         }

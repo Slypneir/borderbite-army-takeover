@@ -10,7 +10,7 @@ namespace Core.BattleSystem.Services
     /// The battle: integers only, one call of <see cref="Step"/> is one tick, commands wait for their tick. The same settings
     /// and commands give the same <see cref="ComputeHash"/> at every tick on any device and frame rate.
     /// A tick: commands → the commanders choose where their heroes walk → dead heroes come back, blows and shots → heroes walk →
-    /// soldiers walk → pickups, new piles, building, hiring, healing → brushes paint (the enemy first, so a cell under both
+    /// soldiers walk → standing buildings push them out → pickups, new piles, building, hiring, healing → brushes paint (the enemy first, so a cell under both
     /// brushes is the player's) → enclosure for the player → for the enemy → a fallen base or the shares decide the result.
     /// </summary>
     public sealed class BattleSimulation
@@ -27,6 +27,7 @@ namespace Core.BattleSystem.Services
         private readonly EconomyRules _economy;
         private readonly ArmyRules _army;
         private readonly CombatRules _combat;
+        private readonly BuildingColliders _colliders;
 
         public BattleSimulation(BattleSettings settings)
         {
@@ -35,6 +36,7 @@ namespace Core.BattleSystem.Services
             _economy = new EconomyRules(_state);
             _army = new ArmyRules(_state);
             _combat = new CombatRules(_state, _economy);
+            _colliders = new BuildingColliders(_state);
 
             var near = settings.StartOffsetCells;
             var far = settings.MapCells - settings.StartOffsetCells;
@@ -115,6 +117,7 @@ namespace Core.BattleSystem.Services
             _combat.Step();
             MoveHeroes();
             _army.Step();
+            _colliders.Step();
             _economy.Step();
             PaintBrushes(Side.Enemy);
             PaintBrushes(Side.Player);

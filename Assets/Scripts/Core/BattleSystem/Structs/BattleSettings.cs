@@ -94,6 +94,8 @@ namespace Core.BattleSystem.Structs
         public int BaseHalfUnits = 3000;
         /// <summary>The hero comes back this far before the middle of its base, at the gate (marker `spawn` of the model).</summary>
         public int BaseGateUnits = 5000;
+        /// <summary>Standing bases and barracks push units out (owner, 4 November).</summary>
+        public bool SolidBuildings = true;
 
         // layer 3: the enemy commander, the strength of the level (GDD 5.9; level 3 for the test level)
         public bool EnemyHero = true;
