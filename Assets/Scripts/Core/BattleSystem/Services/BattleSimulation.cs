@@ -287,8 +287,9 @@ namespace Core.BattleSystem.Services
                 X = middle,
                 Y = middle,
                 Health = settings.BaseHealth,
-                GateX = middle + gate,
-                GateY = middle,
+                // the gate to the camera (south) for both sides (task 4.24): the hero comes back in sight, by the door
+                GateX = middle,
+                GateY = middle - System.Math.Abs(gate),
             };
             _economy.ProtectBase(side);
         }

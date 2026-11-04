@@ -31,9 +31,12 @@ namespace Tests.BattleSystem.Editor
             player.Health.Should().Be(200);
             enemy.X.Should().Be(56 * Unit);
             simulation.Heroes.Should().HaveCount(2);
-            simulation.Heroes[0].X.Should().Be(player.GateX).And.BeGreaterThan(player.X);
+            // task 4.24: both gates face the camera (south)
+            simulation.Heroes[0].X.Should().Be(player.GateX).And.Be(player.X);
+            simulation.Heroes[0].Y.Should().Be(player.GateY).And.BeLessThan(player.Y);
             simulation.Heroes[1].Side.Should().Be(Side.Enemy);
-            simulation.Heroes[1].X.Should().Be(enemy.GateX).And.BeLessThan(enemy.X);
+            simulation.Heroes[1].X.Should().Be(enemy.GateX).And.Be(enemy.X);
+            simulation.Heroes[1].Y.Should().Be(enemy.GateY).And.BeLessThan(enemy.Y);
         }
 
         [Test]
@@ -112,9 +115,9 @@ namespace Tests.BattleSystem.Editor
             Run(fast, 6);
             Run(slow, 6);
 
-            var start = fast.Bases[(int)Side.Enemy].GateX;
-            var fastPath = Path(fast.Heroes[1], start, 56 * Unit);
-            var slowPath = Path(slow.Heroes[1], start, 56 * Unit);
+            var gate = fast.Bases[(int)Side.Enemy];
+            var fastPath = Path(fast.Heroes[1], gate.GateX, gate.GateY);
+            var slowPath = Path(slow.Heroes[1], gate.GateX, gate.GateY);
             slowPath.Should().BeLessThan(fastPath * 0.7);
         }
 
