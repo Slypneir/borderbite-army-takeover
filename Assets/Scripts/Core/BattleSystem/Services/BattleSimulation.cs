@@ -181,6 +181,21 @@ namespace Core.BattleSystem.Services
             _combat.HitBase(side, _state.Bases[(int)side].Health - health);
         }
 
+        /// <summary>The developer puts the hero of a side at a point in units, standing.</summary>
+        public void TeleportHero(Side side, int x, int y)
+        {
+            var index = _state.HeroOf(side);
+            if (index < 0)
+                return;
+
+            var hero = _state.Heroes[index];
+            hero.X = x;
+            hero.Y = y;
+            hero.DirectionX = 0;
+            hero.DirectionY = 0;
+            _state.Heroes[index] = hero;
+        }
+
         /// <summary>The developer builds a barracks of a side on a place at once, free.</summary>
         public void BuildBarracks(int site, Side side)
         {

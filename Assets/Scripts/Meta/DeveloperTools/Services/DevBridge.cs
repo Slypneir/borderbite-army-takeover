@@ -171,6 +171,13 @@ namespace Meta.DeveloperTools.Services
             return Progress();
         }
 
+        /// <summary>Puts the hero of a side at a point in cells (fractions allowed), standing.</summary>
+        public static string Teleport(string side, float x, float y)
+        {
+            _battle.Current.Simulation.TeleportHero(SideOf(side), Mathf.RoundToInt(x * BattleSettings.UnitsPerCell), Mathf.RoundToInt(y * BattleSettings.UnitsPerCell));
+            return Battle();
+        }
+
         /// <summary>Opens the pause as the HUD button would.</summary>
         public static string Pause()
         {

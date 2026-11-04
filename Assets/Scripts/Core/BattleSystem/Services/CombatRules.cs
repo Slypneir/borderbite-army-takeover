@@ -1,12 +1,15 @@
 using Core.BattleSystem.Data;
 using Core.BattleSystem.Enums;
 using Core.BattleSystem.Structs;
+using Core.BattleSystem.Utils;
 
 namespace Core.BattleSystem.Services
 {
     /// <summary>
     /// Blows and shots without buttons (stage 1 spec 3.4, 3.5, 4.1): the nearest enemy hero or soldier first, a building (a
-    /// barracks or the base, whose walls are reached, not only its middle) only when no such enemy is in reach. A hero strikes with the sword close by, else shoots the gun; a soldier strikes only close by.
+    /// barracks or the base) only when no such enemy is in reach. Every reach is the gap between the edges of two bodies — a
+    /// hero, a soldier, the walls of a building — not between their middles: a hero right by an enemy always strikes, whatever
+    /// way either faces (owner, 4 November). A hero strikes with the sword close by, else shoots the gun; a soldier strikes only close by.
     /// Deaths, the fall of a barracks and the return of a dead hero after a while, invulnerable for a moment.
     /// </summary>
     public sealed class CombatRules
@@ -39,9 +42,9 @@ namespace Core.BattleSystem.Services
         }
 
         /// <summary>The nearest enemy of <paramref name="side"/> within reach: a hero or soldier if any, else a barracks.</summary>
-        public static bool NearestTarget(BattleState state, Side side, int x, int y, int reach, out Target target)
+        public static bool NearestTarget(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
         {
-            return NearestUnit(state, side, x, y, reach, out target) || NearestBuilding(state, side, x, y, reach, out target);
+            return NearestUnit(state, side, x, y, reach, body, out target) || NearestBuilding(state, side, x, y, reach, body, out target);
         }
 
         public void Step()
@@ -105,13 +108,14 @@ namespace Core.BattleSystem.Services
                 // units first: the sword close by, else the gun; a building only when no unit is in the reach of the gun
                 Target target;
                 bool melee;
-                if (NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, out target))
+                var body = _settings.HeroRadiusUnits;
+                if (NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, body, out target))
                     melee = true;
-                else if (_settings.HeroGun && NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
+                else if (_settings.HeroGun && NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, body, out target))
                     melee = false;
-                else if (NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, out target))
+                else if (NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, body, out target))
                     melee = true;
-                else if (_settings.HeroGun && NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
+                else if (_settings.HeroGun && NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, body, out target))
                     melee = false;
                 else
                     continue;
@@ -131,7 +135,7 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
-                if (soldier.Cooldown > 0 || !NearestTarget(_state, soldier.Side, soldier.X, soldier.Y, reach, out var target))
+                if (soldier.Cooldown > 0 || !NearestTarget(_state, soldier.Side, soldier.X, soldier.Y, reach, _settings.SoldierBodyUnits, out var target))
                     continue;
 
                 soldier.Cooldown = _settings.SoldierCooldownTicks;
@@ -215,20 +219,28 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private static bool NearestUnit(BattleState state, Side side, int x, int y, int reach, out Target target)
+        /// <summary>The gap between the edges of two bodies, units: the distance of the middles less both radii.</summary>
+        private static long Gap(int x, int y, int toX, int toY, int radii) =>
+            IntMath.Sqrt(BattleState.Distance2(x, y, toX, toY)) - radii;
+
+        private static bool NearestUnit(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
         {
             target = default;
-            var best = (long)reach * reach;
+            var best = (long)reach;
             var found = false;
             var enemy = BattleState.Enemy(side);
+            var settings = state.Settings;
             for (var i = 0; i < state.Heroes.Count; i++)
             {
                 var hero = state.Heroes[i];
-                var distance = BattleState.Distance2(x, y, hero.X, hero.Y);
-                if (hero.Side != enemy || !hero.Alive || distance > best)
+                if (hero.Side != enemy || !hero.Alive)
                     continue;
 
-                best = distance;
+                var gap = Gap(x, y, hero.X, hero.Y, body + settings.HeroRadiusUnits);
+                if (gap > best)
+                    continue;
+
+                best = gap;
                 found = true;
                 target = new Target { Kind = TargetKind.Hero, Index = i, X = hero.X, Y = hero.Y };
             }
@@ -236,11 +248,14 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < state.Soldiers.Count; i++)
             {
                 var soldier = state.Soldiers[i];
-                var distance = BattleState.Distance2(x, y, soldier.X, soldier.Y);
-                if (soldier.Side != enemy || distance > best || (found && distance == best))
+                if (soldier.Side != enemy)
                     continue;
 
-                best = distance;
+                var gap = Gap(x, y, soldier.X, soldier.Y, body + settings.SoldierBodyUnits);
+                if (gap > best || (found && gap == best))
+                    continue;
+
+                best = gap;
                 found = true;
                 target = new Target { Kind = TargetKind.Soldier, Index = i, X = soldier.X, Y = soldier.Y };
             }
@@ -248,38 +263,40 @@ namespace Core.BattleSystem.Services
             return found;
         }
 
-        /// <summary>The nearest enemy barracks within reach, else the enemy base when its walls are within reach.</summary>
-        private static bool NearestBuilding(BattleState state, Side side, int x, int y, int reach, out Target target)
+        /// <summary>The nearest enemy barracks within reach of its walls, else the enemy base within reach of its walls.</summary>
+        private static bool NearestBuilding(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
         {
-            if (NearestBarracks(state, side, x, y, reach, out target))
+            if (NearestBarracks(state, side, x, y, reach, body, out target))
                 return true;
 
             var enemy = BattleState.Enemy(side);
             var place = state.Bases[(int)enemy];
-            var walls = (long)reach + state.Settings.BaseHalfUnits;
-            if (!place.Standing || BattleState.Distance2(x, y, place.X, place.Y) > walls * walls)
+            if (!place.Standing || Gap(x, y, place.X, place.Y, body + state.Settings.BaseHalfUnits) > reach)
                 return false;
 
             target = new Target { Kind = TargetKind.Base, Index = (int)enemy, X = place.X, Y = place.Y };
             return true;
         }
 
-        private static bool NearestBarracks(BattleState state, Side side, int x, int y, int reach, out Target target)
+        private static bool NearestBarracks(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
         {
             target = default;
-            var best = (long)reach * reach;
+            var best = (long)reach;
             var found = false;
             var enemy = BattleState.Enemy(side);
             for (var i = 0; i < state.Sites.Length; i++)
             {
                 var site = state.Sites[i];
-                var sx = BattleState.Middle(site.CenterX);
-                var sy = BattleState.Middle(site.CenterY);
-                var distance = BattleState.Distance2(x, y, sx, sy);
-                if (site.Barracks != enemy || distance > best || (found && distance == best))
+                if (site.Barracks != enemy)
                     continue;
 
-                best = distance;
+                var sx = BattleState.Middle(site.CenterX);
+                var sy = BattleState.Middle(site.CenterY);
+                var gap = Gap(x, y, sx, sy, body + state.Settings.BarracksHalfUnits);
+                if (gap > best || (found && gap == best))
+                    continue;
+
+                best = gap;
                 found = true;
                 target = new Target { Kind = TargetKind.Barracks, Index = i, X = sx, Y = sy };
             }

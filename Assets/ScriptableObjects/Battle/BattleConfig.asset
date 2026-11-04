@@ -56,7 +56,7 @@ MonoBehaviour:
   barracksWood: 10
   barracksHealth: 300
   auraCells: 3
-  hireReach: 2
+  hireReach: 1
   hireEvery: 0.5
   soldierGold: 5
   armyMax: 30

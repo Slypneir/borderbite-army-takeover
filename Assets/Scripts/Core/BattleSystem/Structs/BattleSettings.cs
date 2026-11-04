@@ -44,8 +44,13 @@ namespace Core.BattleSystem.Structs
         public int BuildTicks = 30;
         public int BarracksWood = 10;
         public int BarracksHealth = 3000;
+        /// <summary>Half the side of a barracks (2.25 m): blows, hiring and the reach of everything go to its walls.</summary>
+        public int BarracksHalfUnits = 2250;
+        /// <summary>A hero builds when the edge of its body is this close to the edge of the place (or on it).</summary>
+        public int BuildReachUnits = 600;
         public int AuraCells = 3;
-        public int HireUnits = 4000;
+        /// <summary>Hiring reaches from the edge of the hero to the walls of the barracks.</summary>
+        public int HireUnits = 2000;
         public int HireEveryTicks = 15;
         public int SoldierGold = 5;
         public int ArmyMax = 30;
@@ -60,6 +65,8 @@ namespace Core.BattleSystem.Structs
         public int SoldierSightUnits = 8000;
         public int SoldierLeashUnits = 16000;
         public int SoldierSpacingUnits = 1000;
+        /// <summary>Radius of the body of a soldier: reaches are measured from the edge of a body to the edge of another.</summary>
+        public int SoldierBodyUnits = 500;
         public int SlotSpacingUnits = 2000;
         public int PlayerSoldierPermille = 1100;
         public int EnemySoldierPermille = 900;

@@ -158,7 +158,7 @@ namespace Core.BattleSystem.Services
                 ref var site = ref _state.Sites[s];
                 var owner = _state.Grid.At(site.CenterX, site.CenterY);
                 var hero = owner == Side.Neutral ? -1 : _state.HeroOf(owner);
-                var standing = !site.Built && hero >= 0 && _state.Heroes[hero].Alive && OnSite(_state.Heroes[hero], site) &&
+                var standing = !site.Built && hero >= 0 && _state.Heroes[hero].Alive && ByPlace(_state.Heroes[hero], site) &&
                                _state.Sides[(int)owner].Wood >= _settings.BarracksWood &&
                                (owner != Side.Enemy || _state.Tick >= _settings.EnemyBuildFromTicks);
                 if (!standing)
@@ -179,7 +179,8 @@ namespace Core.BattleSystem.Services
         /// <summary>While the hero stands near its own barracks, a soldier every period for gold, up to the limit of the army.</summary>
         private void Hire()
         {
-            var reach2 = (long)_settings.HireUnits * _settings.HireUnits;
+            var hire = (long)_settings.HireUnits + _settings.HeroRadiusUnits + _settings.BarracksHalfUnits;
+            var reach2 = hire * hire;
             foreach (var hero in _state.Heroes)
             {
                 ref var purse = ref _state.Sides[(int)hero.Side];
@@ -245,6 +246,7 @@ namespace Core.BattleSystem.Services
                 if (site.Barracks != hero.Side)
                     continue;
 
+                // the reach of hiring is from the edge of the hero to the walls of the barracks
                 var distance = BattleState.Distance2(hero.X, hero.Y, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY));
                 if (distance <= reach2 && distance < bestDistance)
                 {
@@ -256,12 +258,17 @@ namespace Core.BattleSystem.Services
             return best;
         }
 
-        private static bool OnSite(HeroState hero, SiteState site)
+        /// <summary>
+        /// The hero is on the 3 × 3 place or right by it: the edge of its body within the reach of building from the edge of the
+        /// place (owner, 4 November: whatever touches the place builds, not only standing in its middle).
+        /// </summary>
+        private bool ByPlace(HeroState hero, SiteState site)
         {
             const int unit = BattleSettings.UnitsPerCell;
-            var x0 = (site.CenterX - 1) * unit;
-            var y0 = (site.CenterY - 1) * unit;
-            return hero.X >= x0 && hero.X < x0 + 3 * unit && hero.Y >= y0 && hero.Y < y0 + 3 * unit;
+            var reach = unit * 3 / 2 + _settings.HeroRadiusUnits + _settings.BuildReachUnits;
+            var dx = System.Math.Abs(hero.X - BattleState.Middle(site.CenterX));
+            var dy = System.Math.Abs(hero.Y - BattleState.Middle(site.CenterY));
+            return dx <= reach && dy <= reach;
         }
 
         private void ForAura(SiteState site, System.Action<int> visit)

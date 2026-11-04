@@ -148,7 +148,8 @@ namespace Core.BattleSystem.Services
                 case 2:
                     return purse.Wood >= _settings.BarracksWood && _state.Tick >= BuildFrom() && NearestPlace(hero, out x, out y);
                 case 3:
-                    stop = _settings.HireUnits / 2;
+                    // by the walls, within the reach of hiring, not inside the barracks
+                    stop = _settings.HireUnits / 2 + _settings.HeroRadiusUnits + _settings.BarracksHalfUnits;
                     return purse.Gold >= _settings.SoldierGold && _state.ArmyOf(_side) < _settings.ArmyMax && NearestBarracks(hero, _side, out x, out y);
                 case 4:
                 {
@@ -157,7 +158,8 @@ namespace Core.BattleSystem.Services
                     if (army < _settings.CommanderAttackArmy || army * 1000L < theirs * (long)_settings.CommanderAttackPermille)
                         return false;
 
-                    stop = _settings.MeleeReachUnits / 2;
+                    // at the walls, within the reach of the sword
+                    stop = _settings.MeleeReachUnits / 2 + _settings.HeroRadiusUnits + _settings.BarracksHalfUnits;
                     return NearestBarracks(hero, BattleState.Enemy(_side), out x, out y) || EnemyBase(out x, out y);
                 }
                 default:

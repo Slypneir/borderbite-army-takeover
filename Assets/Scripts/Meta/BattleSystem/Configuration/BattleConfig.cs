@@ -50,7 +50,7 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The hero heals only when nothing hurt it this long, seconds: out of a fight (task 4.7). Starting value: 3.")]
         [Min(0f)] [SerializeField] private float healAfter = 3f;
 
-        [Tooltip("Sword: reach in meters. Starting value: 1.2.")]
+        [Tooltip("Sword: reach in meters, from the edge of the hero to the edge of the target (a body, the walls of a building). Starting value: 1.2.")]
         [Min(0.1f)] [SerializeField] private float meleeReach = 1.2f;
 
         [Tooltip("Sword: damage of a blow. Starting value: 10.")]
@@ -134,11 +134,18 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Health of a barracks. Starting value: 300.")]
         [Min(1f)] [SerializeField] private float barracksHealth = 300f;
 
+        [Tooltip("Half the side of a barracks, meters: blows and hiring reach its walls. Starting value: 1.125 (the model is 2.25 m).")]
+        [Min(0f)] [SerializeField] private float barracksHalfSize = 1.125f;
+
+        [Tooltip("A hero builds when the edge of its body is this close to the edge of the place, or on it, meters. Starting value: 0.3.")]
+        [Min(0f)] [SerializeField] private float buildReach = 0.3f;
+
         [Tooltip("Radius of the aura of a barracks: cells always of its colour, cells. Starting value: 3.")]
         [Min(1)] [SerializeField] private int auraCells = 3;
 
-        [Tooltip("The hero hires within this distance of its barracks, meters. Starting value: 2.")]
-        [Min(0.1f)] [SerializeField] private float hireReach = 2f;
+        [Tooltip("The hero hires within this distance from the edge of its body to the walls of its barracks, meters. Starting value: 1 " +
+                 "(was 2 m to the middle; the same place by the door).")]
+        [Min(0.1f)] [SerializeField] private float hireReach = 1f;
 
         [Tooltip("A soldier every this many seconds while hiring. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float hireEvery = 0.5f;
@@ -165,7 +172,7 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Seconds between the blows of a soldier. Starting value: 0.8.")]
         [Min(0.05f)] [SerializeField] private float soldierEvery = 0.8f;
 
-        [Tooltip("Reach of a blow, meters. Starting value: 1.")]
+        [Tooltip("Reach of a blow of a soldier, meters, from the edge of its body to the edge of the target. Starting value: 1.")]
         [Min(0.1f)] [SerializeField] private float soldierReach = 1f;
 
         [Tooltip("A soldier sees enemies this far, meters. Starting value: 4.")]
@@ -176,6 +183,9 @@ namespace Meta.BattleSystem.Configuration
 
         [Tooltip("Soldiers keep this far from each other and from their hero, meters. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float soldierSpacing = 0.5f;
+
+        [Tooltip("Radius of the body of a soldier, meters: every reach goes from the edge of a body to the edge of another. Starting value: 0.25.")]
+        [Min(0f)] [SerializeField] private float soldierBody = 0.25f;
 
         [Tooltip("Places in the crowd around the hero are this far apart, meters; the crowd keeps within 1–4 m. Starting value: 1.")]
         [Min(0.1f)] [SerializeField] private float slotSpacing = 1f;
@@ -349,6 +359,9 @@ namespace Meta.BattleSystem.Configuration
                 SoldierSightUnits = Units(soldierSight),
                 SoldierLeashUnits = Units(soldierLeash),
                 SoldierSpacingUnits = Units(soldierSpacing),
+                SoldierBodyUnits = Units(soldierBody),
+                BarracksHalfUnits = Units(barracksHalfSize),
+                BuildReachUnits = Units(buildReach),
                 SlotSpacingUnits = Units(slotSpacing),
                 PlayerSoldierPermille = Mathf.RoundToInt(playerSoldierFactor * 1000f),
                 EnemySoldierPermille = Mathf.RoundToInt(enemySoldierFactor * enemy.soldiers * 1000f),

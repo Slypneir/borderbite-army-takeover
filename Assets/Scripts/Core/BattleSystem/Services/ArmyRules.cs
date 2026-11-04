@@ -58,7 +58,7 @@ namespace Core.BattleSystem.Services
                 var leash2 = (long)_settings.SoldierLeashUnits * _settings.SoldierLeashUnits;
 
                 if (BattleState.Distance2(soldier.X, soldier.Y, anchorX, anchorY) <= leash2 &&
-                    CombatRules.NearestTarget(_state, soldier.Side, soldier.X, soldier.Y, _settings.SoldierSightUnits, out var target))
+                    CombatRules.NearestTarget(_state, soldier.Side, soldier.X, soldier.Y, _settings.SoldierSightUnits, _settings.SoldierBodyUnits, out var target))
                 {
                     // to the enemy, stopping at the reach of a blow
                     if (BattleState.Distance2(soldier.X, soldier.Y, target.X, target.Y) > (long)_settings.SoldierReachUnits * _settings.SoldierReachUnits)
