@@ -30,6 +30,7 @@ namespace Meta.BattleSystem.Services
         private readonly List<int> _gone = new List<int>();
         private readonly Dictionary<int, Quaternion> _fallen = new Dictionary<int, Quaternion>();
         private readonly Dictionary<Transform, UnitPose> _poses = new Dictionary<Transform, UnitPose>();
+        private readonly Dictionary<Transform, HitFlash> _flashes = new Dictionary<Transform, HitFlash>();
         private BattleRunner _runner;
         private EventCursor _events;
 
@@ -67,6 +68,7 @@ namespace Meta.BattleSystem.Services
             {
                 var position = Vector3.Lerp(body.Previous, body.Current, alpha);
                 body.Pose.Update(Vector3.Distance(position, body.Transform.localPosition), Time.deltaTime);
+                body.Flash.Update(Time.deltaTime);
                 body.Transform.localPosition = position;
                 if (body.Facing.sqrMagnitude > 0f)
                     body.Transform.localRotation = Quaternion.RotateTowards(body.Transform.localRotation, Quaternion.LookRotation(body.Facing), _view.TurnSpeed * Time.deltaTime);
@@ -100,7 +102,8 @@ namespace Meta.BattleSystem.Services
                 if (!_bodies.TryGetValue(soldier.Id, out var body))
                 {
                     var transform = Take(soldier.Side);
-                    body = new Body { Transform = transform, Pose = Pose(transform), Previous = position };
+                    body = new Body { Transform = transform, Pose = Pose(transform), Flash = Flash(transform), Previous = position, Health = soldier.Health };
+                    body.Flash.Clear();
                     body.Transform.localPosition = position;
                     _bodies[soldier.Id] = body;
                 }
@@ -110,6 +113,10 @@ namespace Meta.BattleSystem.Services
                 }
 
                 body.Current = position;
+                // less health than a tick ago: a hit, the body flashes red (task 4.20)
+                if (soldier.Health < body.Health && _view.HitFlash)
+                    body.Flash.Hit();
+                body.Health = soldier.Health;
                 body.Facing = new Vector3(soldier.FacingX, 0f, soldier.FacingY);
                 body.Side = soldier.Side;
             }
@@ -154,6 +161,18 @@ namespace Meta.BattleSystem.Services
             return pose;
         }
 
+        /// <summary>The flash of a pooled body is made once and kept with it.</summary>
+        private HitFlash Flash(Transform body)
+        {
+            if (!_flashes.TryGetValue(body, out var flash))
+            {
+                flash = new HitFlash(body);
+                _flashes[body] = flash;
+            }
+
+            return flash;
+        }
+
         private Transform Take(Side side)
         {
             var body = _free.Count > 0 ? _free.Pop() : _world.Copy(_world.SoldierTemplate);
@@ -176,6 +195,8 @@ namespace Meta.BattleSystem.Services
         {
             public Transform Transform;
             public UnitPose Pose;
+            public HitFlash Flash;
+            public int Health;
             public Vector3 Previous;
             public Vector3 Current;
             public Vector3 Facing;

@@ -8,6 +8,7 @@ Shader "Borderbite/World/Flat Lit Outlined"
     {
         _BaseMap ("Texture", 2D) = "white" {}
         _BaseColor ("Colour", Color) = (1, 1, 1, 1)
+        _Hit ("Red flash of a hit, 0..1 (task 4.20)", Range(0, 1)) = 0
         _Shadow ("Brightness of the side away from the light", Range(0, 1)) = 0.55
         _OutlineColor ("Rim colour", Color) = (1, 1, 1, 1)
         _OutlineWidth ("Rim width, part of the screen height", Range(0, 0.01)) = 0.0025
@@ -34,6 +35,7 @@ Shader "Borderbite/World/Flat Lit Outlined"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
+                half _Hit;
                 half _Shadow;
                 half4 _OutlineColor;
                 float _OutlineWidth;
@@ -67,7 +69,10 @@ Shader "Borderbite/World/Flat Lit Outlined"
             half4 Frag(Varyings input) : SV_Target
             {
                 half3 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb;
-                return half4(color * input.shade, 1);
+                // a hit (task 4.20): the surface goes red and glows, seen in the shade and on the red side alike
+                const half3 hitRed = half3(1.0, 0.231, 0.184);
+                color = lerp(color, hitRed, 0.72 * _Hit);
+                return half4(color * input.shade + hitRed * 0.55 * _Hit, 1);
             }
             ENDHLSL
         }
@@ -86,6 +91,7 @@ Shader "Borderbite/World/Flat Lit Outlined"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
+                half _Hit;
                 half _Shadow;
                 half4 _OutlineColor;
                 float _OutlineWidth;

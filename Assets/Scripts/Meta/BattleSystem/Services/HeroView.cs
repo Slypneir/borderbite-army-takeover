@@ -120,6 +120,8 @@ namespace Meta.BattleSystem.Services
                 Side = side,
                 Transform = transform,
                 Pose = new UnitPose(transform),
+                Flash = new HitFlash(transform),
+                Health = -1,
                 Renderers = transform.GetComponentsInChildren<MeshRenderer>(true),
             };
             _materials.Tint(transform, _view.HeroColor(side));
@@ -141,6 +143,7 @@ namespace Meta.BattleSystem.Services
             transform.gameObject.SetActive(state.Alive);
             var position = PositionOf(body);
             body.Pose.Update(Vector3.Distance(position, body.Drawn), Time.deltaTime);
+            body.Flash.Update(Time.deltaTime);
             body.Drawn = position;
             transform.localPosition = position;
 
@@ -168,6 +171,11 @@ namespace Meta.BattleSystem.Services
 
                 body.Previous = body.Current;
                 body.Current = WorldOf(heroes[body.Index]);
+                // less health than a tick ago: a hit, the hero flashes red (task 4.20)
+                var health = heroes[body.Index].Health;
+                if (body.Health >= 0 && health < body.Health && _view.HitFlash)
+                    body.Flash.Hit();
+                body.Health = health;
             }
         }
 
@@ -247,6 +255,8 @@ namespace Meta.BattleSystem.Services
             public int Index;
             public Transform Transform;
             public UnitPose Pose;
+            public HitFlash Flash;
+            public int Health;
             public MeshRenderer[] Renderers;
             public Vector3 Previous;
             public Vector3 Current;

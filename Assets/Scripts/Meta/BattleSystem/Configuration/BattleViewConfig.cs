@@ -77,6 +77,9 @@ namespace Meta.BattleSystem.Configuration
                  "(task 4.9, spec T12). Starting value: 5.")]
         [Min(0f)] [SerializeField] private float barHoldSeconds = 5f;
 
+        [Tooltip("A hit unit flashes red (task 4.20, the 3D artist's HIT.md); off — no flash. Starting value: on.")]
+        [SerializeField] private bool hitFlash = true;
+
         [Tooltip("An icon over a pile of gold or a bundle of wood shows only while the player's hero is this close, meters (owner, " +
                  "4 November, spec 3.1). Starting value: 5 (10 cells).")]
         [Min(0f)] [SerializeField] private float resourceIconReach = 5f;
@@ -174,6 +177,7 @@ namespace Meta.BattleSystem.Configuration
         public Shader OutlinedShader => outlinedShader;
         public Shader BarsShader => barsShader;
         public float BarHoldSeconds => barHoldSeconds;
+        public bool HitFlash => hitFlash;
         public float ResourceIconReach => resourceIconReach;
         public float ResourceIconFade => resourceIconFade;
         public Material WaterMaterial => waterMaterial;

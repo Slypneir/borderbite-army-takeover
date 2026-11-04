@@ -466,6 +466,32 @@ namespace Meta.DeveloperTools.Services
             runner.OnStep += Check;
             return "waiting for a death";
         }
+
+        /// <summary>The next blow of a side pauses the game this many seconds after it: the red flash of a hit (task 4.20) stays on the screen.</summary>
+        public static string FreezeAfterStrike(string side, float seconds)
+        {
+            _debug.QuietFreeze = true;
+            var runner = _battle.Current;
+            var striker = SideOf(side);
+            var seen = runner.Simulation.Events.Count;
+            void Check()
+            {
+                var events = runner.Simulation.Events;
+                var struck = false;
+                for (var i = System.Math.Min(seen, events.Count); i < events.Count && !struck; i++)
+                    struck = events[i].Kind == EventKind.Strike && events[i].Side == striker;
+                seen = events.Count;
+                if (!struck)
+                    return;
+
+                runner.OnStep -= Check;
+                UniTask.Delay(System.TimeSpan.FromSeconds(seconds), DelayType.Realtime)
+                    .ContinueWith(() => ((EditorPlatform)_platform).SimulatePause(true)).Forget();
+            }
+
+            runner.OnStep += Check;
+            return "waiting for a blow of " + side;
+        }
 #endif
     }
 }
