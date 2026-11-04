@@ -34,7 +34,6 @@ namespace Core.BattleSystem.Services
 
         public void Step()
         {
-            PickUp();
             Spawn(ResourceKind.Gold, _settings.GoldEveryTicks, _settings.GoldMax, _settings.GoldPortion);
             Spawn(ResourceKind.Wood, _settings.WoodEveryTicks, _settings.WoodMax, _settings.WoodPortion);
             Build();
@@ -104,31 +103,47 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private void PickUp()
+        /// <summary>
+        /// A blow of mining (spec 3.1, task 4.19): the nearest pile within the reach of the hero gives one unit to its side and
+        /// is gone after its last; the unit is told as a pickup of 1. False when no pile is in reach. Only heroes mine.
+        /// </summary>
+        public bool Mine(HeroState hero, out int x, out int y)
         {
-            var reach2 = (long)_settings.PickupUnits * _settings.PickupUnits;
-            foreach (var hero in _state.Heroes)
+            x = 0;
+            y = 0;
+            var reach = (long)_settings.HeroRadiusUnits + _settings.MineReachUnits;
+            var best = reach * reach + 1;
+            var index = -1;
+            for (var i = 0; i < _state.Resources.Count; i++)
             {
-                if (!hero.Alive)
+                var resource = _state.Resources[i];
+                var distance = BattleState.Distance2(hero.X, hero.Y, resource.X, resource.Y);
+                if (distance >= best)
                     continue;
 
-                for (var i = 0; i < _state.Resources.Count; i++)
-                {
-                    var resource = _state.Resources[i];
-                    if (BattleState.Distance2(hero.X, hero.Y, resource.X, resource.Y) > reach2)
-                        continue;
-
-                    ref var purse = ref _state.Sides[(int)hero.Side];
-                    if (resource.Kind == ResourceKind.Gold)
-                        purse.Gold += resource.Amount;
-                    else
-                        purse.Wood += resource.Amount;
-
-                    _state.Emit(EventKind.Pickup, hero.Side, resource.Id, resource.Amount, resource.X, resource.Y, hero.X, hero.Y, (int)resource.Kind);
-                    _state.Resources.RemoveAt(i);
-                    i--;
-                }
+                best = distance;
+                index = i;
             }
+
+            if (index < 0)
+                return false;
+
+            var pile = _state.Resources[index];
+            ref var purse = ref _state.Sides[(int)hero.Side];
+            if (pile.Kind == ResourceKind.Gold)
+                purse.Gold++;
+            else
+                purse.Wood++;
+
+            pile.Amount--;
+            x = pile.X;
+            y = pile.Y;
+            _state.Emit(EventKind.Pickup, hero.Side, pile.Id, 1, pile.X, pile.Y, hero.X, hero.Y, (int)pile.Kind);
+            if (pile.Amount > 0)
+                _state.Resources[index] = pile;
+            else
+                _state.Resources.RemoveAt(index);
+            return true;
         }
 
         /// <summary>A new pile every period while there are fewer than the most: on a neutral cell, or on any unprotected one

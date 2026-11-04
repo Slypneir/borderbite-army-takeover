@@ -99,8 +99,8 @@ namespace Meta.BattleSystem.Configuration
         [Range(1f, 100f)] [SerializeField] private float victoryShare = 70f;
 
         [Header("Resources")]
-        [Tooltip("Gold in a pile. Starting value: 5.")]
-        [Min(1)] [SerializeField] private int goldPortion = 5;
+        [Tooltip("Gold in a pile. Starting value: 4.")]
+        [Min(1)] [SerializeField] private int goldPortion = 4;
 
         [Tooltip("A new pile of gold every this many seconds. Starting value: 2.")]
         [Min(0.1f)] [SerializeField] private float goldEvery = 2f;
@@ -108,8 +108,8 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The most piles of gold on the map. Starting value: 12.")]
         [Min(0)] [SerializeField] private int goldMax = 12;
 
-        [Tooltip("Wood in a bundle. Starting value: 2.")]
-        [Min(1)] [SerializeField] private int woodPortion = 2;
+        [Tooltip("Wood in a bundle. Starting value: 4.")]
+        [Min(1)] [SerializeField] private int woodPortion = 4;
 
         [Tooltip("A new bundle of wood every this many seconds. Starting value: 3.")]
         [Min(0.1f)] [SerializeField] private float woodEvery = 3f;
@@ -122,6 +122,12 @@ namespace Meta.BattleSystem.Configuration
 
         [Tooltip("The hero picks a resource up within this distance, meters. Starting value: 1.")]
         [Min(0.1f)] [SerializeField] private float pickupReach = 1f;
+
+        [Tooltip("A hero mines a pile whose middle is this far from the edge of its body, meters (task 4.19). Starting value: 1.2.")]
+        [Min(0.1f)] [SerializeField] private float mineReach = 1.2f;
+
+        [Tooltip("A blow of mining every this many seconds, each takes one unit (T21). Starting value: 0.25.")]
+        [Min(0.05f)] [SerializeField] private float mineEvery = 0.25f;
 
         [Tooltip("Under this share of neutral land resources appear on any unprotected cell, percent. Starting value: 10.")]
         [Range(0f, 100f)] [SerializeField] private float neutralLowShare = 10f;
@@ -137,8 +143,8 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The hero stands on its empty place this long to build, seconds. Starting value: 1.")]
         [Min(0.05f)] [SerializeField] private float buildSeconds = 1f;
 
-        [Tooltip("Wood a barracks costs. Starting value: 10.")]
-        [Min(0)] [SerializeField] private int barracksWood = 10;
+        [Tooltip("Wood a barracks costs. Starting value: 5.")]
+        [Min(0)] [SerializeField] private int barracksWood = 5;
 
         [Tooltip("Health of a barracks, points (T13). Starting value: 50.")]
         [Min(1)] [SerializeField] private int barracksHealth = 50;
@@ -159,8 +165,8 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("A soldier every this many seconds while hiring. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float hireEvery = 0.5f;
 
-        [Tooltip("Gold a soldier costs. Starting value: 5.")]
-        [Min(0)] [SerializeField] private int soldierGold = 5;
+        [Tooltip("Gold a soldier costs. Starting value: 1.")]
+        [Min(0)] [SerializeField] private int soldierGold = 1;
 
         [Tooltip("The most soldiers of a side. Starting value: 30.")]
         [Min(0)] [SerializeField] private int armyMax = 30;
@@ -351,6 +357,8 @@ namespace Meta.BattleSystem.Configuration
                 WoodMax = woodMax,
                 ResourceAwayUnits = Units(resourceAway),
                 PickupUnits = Units(pickupReach),
+                MineReachUnits = Units(mineReach),
+                MineCooldownTicks = Ticks(mineEvery),
                 NeutralLowPermille = Mathf.RoundToInt(neutralLowShare * 10f),
 
                 SiteCells = siteCells,

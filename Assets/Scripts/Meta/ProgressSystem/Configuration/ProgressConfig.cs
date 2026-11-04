@@ -36,8 +36,8 @@ namespace Meta.ProgressSystem.Configuration
         [Tooltip("Health of each soldier per step, points; a blow stays 1 (T14). Starting value: 1.")]
         [Min(0)] [SerializeField] private int armyPowerStep = 1;
 
-        [Tooltip("Start gold per step. Starting value: 5.")]
-        [Min(0)] [SerializeField] private int startGoldStep = 5;
+        [Tooltip("Start gold per step. Starting value: 1 (a soldier costs 1, T22).")]
+        [Min(0)] [SerializeField] private int startGoldStep = 1;
 
         public int Steps => steps;
         public int HeroPowerStep => heroPowerStep;

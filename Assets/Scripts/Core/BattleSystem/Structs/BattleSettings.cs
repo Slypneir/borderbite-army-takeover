@@ -24,14 +24,19 @@ namespace Core.BattleSystem.Structs
         public uint Seed = 1;
 
         // layer 2: resources
-        public int GoldPortion = 5;
+        public int GoldPortion = 4;
         public int GoldEveryTicks = 60;
         public int GoldMax = 12;
-        public int WoodPortion = 2;
+        public int WoodPortion = 4;
         public int WoodEveryTicks = 90;
         public int WoodMax = 8;
         public int ResourceAwayUnits = 4000;
+        /// <summary>The commander stops this close to a pile it walks to (half of it): then its hero mines it.</summary>
         public int PickupUnits = 2000;
+        /// <summary>A hero mines a pile whose middle is this far from the edge of its body (task 4.19: 1.2 m).</summary>
+        public int MineReachUnits = 2400;
+        /// <summary>A blow of mining every this many ticks; each takes one unit (0.25 s, T21).</summary>
+        public int MineCooldownTicks = 8;
         public int NeutralLowPermille = 100;
 
         /// <summary>Start piles of the player, cell x and y pairs; the enemy gets them mirrored through the centre.</summary>
@@ -42,7 +47,7 @@ namespace Core.BattleSystem.Structs
         /// <summary>Centres of the 3 × 3 places, cell x and y pairs, mirrored through the centre of the map.</summary>
         public int[] SiteCells = { 15, 15, 48, 48, 12, 36, 51, 27, 36, 12, 27, 51 };
         public int BuildTicks = 30;
-        public int BarracksWood = 10;
+        public int BarracksWood = 5;
         public int BarracksHealth = 50;
         /// <summary>Half the side of a barracks (2.25 m): blows, hiring and the reach of everything go to its walls.</summary>
         public int BarracksHalfUnits = 2250;
@@ -52,7 +57,7 @@ namespace Core.BattleSystem.Structs
         /// <summary>Hiring reaches from the edge of the hero to the walls of the barracks.</summary>
         public int HireUnits = 2000;
         public int HireEveryTicks = 15;
-        public int SoldierGold = 5;
+        public int SoldierGold = 1;
         public int ArmyMax = 30;
 
         // layer 2: soldiers

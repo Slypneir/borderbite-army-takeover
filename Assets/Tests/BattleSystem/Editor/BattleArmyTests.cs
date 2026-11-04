@@ -59,15 +59,48 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void PickUp_HeroWalksOverAPile_PurseGrows()
+        public void Mine_HeroByAPile_FourBlowsOfOneInAboutASecond()
         {
             var simulation = New();
+            // the pile of gold at (15, 9): the hero stands 1 m from it
+            simulation.TeleportHero(Side.Player, 15 * Unit + Unit / 2 - 2000, 9 * Unit + Unit / 2);
 
-            // the pile of gold at (15, 9): the hero walks right along y = 8
-            Walk(simulation, 1000, 0, 30);
+            Run(simulation, 30);
 
-            simulation.SideOf(Side.Player).Gold.Should().Be(5);
-            simulation.Events.Should().Contain(e => e.Kind == EventKind.Pickup && e.Value == 5);
+            simulation.SideOf(Side.Player).Gold.Should().Be(4);
+            simulation.Events.Count(e => e.Kind == EventKind.Pickup && e.Value == 1).Should().Be(4);
+            simulation.Events.Count(e => e.Kind == EventKind.Strike && e.Id < 0).Should().Be(4);
+            simulation.Resources.Should().NotContain(r => r.Kind == ResourceKind.Gold && r.X == 15 * Unit + Unit / 2 && r.Y == 9 * Unit + Unit / 2);
+        }
+
+        [Test]
+        public void Mine_HeroLeavesEarly_TheRestStays()
+        {
+            var simulation = New();
+            simulation.TeleportHero(Side.Player, 15 * Unit + Unit / 2 - 2000, 9 * Unit + Unit / 2);
+            Run(simulation, 10);
+            simulation.SideOf(Side.Player).Gold.Should().Be(2);
+
+            simulation.TeleportHero(Side.Player, 30 * Unit, 30 * Unit);
+            Run(simulation, 30);
+
+            simulation.SideOf(Side.Player).Gold.Should().Be(2);
+            simulation.Resources.Should().Contain(r => r.Kind == ResourceKind.Gold && r.Amount == 2);
+        }
+
+        [Test]
+        public void Mine_EnemyNear_FightFirst()
+        {
+            var simulation = New();
+            var x = 15 * Unit + Unit / 2 - 2000;
+            var y = 9 * Unit + Unit / 2;
+            simulation.TeleportHero(Side.Player, x, y);
+            simulation.AddSoldiers(Side.Enemy, 1, x - 1500, y);
+
+            Run(simulation, 1);
+
+            simulation.SideOf(Side.Player).Gold.Should().Be(0);
+            simulation.Events.First(e => e.Kind == EventKind.Strike && e.Id < 0).ToX.Should().BeLessThan(x);
         }
 
         [Test]
@@ -82,10 +115,10 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Build_StandOneSecondWithTenWood_BarracksAndAuraOfTheSide()
+        public void Build_StandOneSecondWithFiveWood_BarracksAndAuraOfTheSide()
         {
             var simulation = New();
-            simulation.Give(Side.Player, 0, 10);
+            simulation.Give(Side.Player, 0, 5);
             WalkOntoFirstPlace(simulation);
 
             Run(simulation, 31);
@@ -100,13 +133,13 @@ namespace Tests.BattleSystem.Editor
         public void Build_NotEnoughWood_NothingBuilt()
         {
             var simulation = New();
-            simulation.Give(Side.Player, 0, 9);
+            simulation.Give(Side.Player, 0, 4);
             WalkOntoFirstPlace(simulation);
 
             Run(simulation, 60);
 
             simulation.Sites[0].Built.Should().BeFalse();
-            simulation.SideOf(Side.Player).Wood.Should().Be(9);
+            simulation.SideOf(Side.Player).Wood.Should().Be(4);
         }
 
         [Test]
@@ -132,10 +165,10 @@ namespace Tests.BattleSystem.Editor
 
             Run(simulation, 150);
 
-            // the way to the place passes the pile of gold at (13, 13)
-            var picked = simulation.Events.Where(e => e.Kind == EventKind.Pickup && e.Value == 5).Sum(e => e.Value);
+            // the way to the place passes the pile of gold at (13, 13): the hero may mine a little of it
+            var picked = simulation.Events.Where(e => e.Kind == EventKind.Pickup && e.Detail == (int)ResourceKind.Gold).Sum(e => e.Value);
             simulation.ArmyOf(Side.Player).Should().Be(10);
-            simulation.SideOf(Side.Player).Gold.Should().Be(50 + picked - 10 * 5);
+            simulation.SideOf(Side.Player).Gold.Should().Be(50 + picked - 10 * 1);
         }
 
         [Test]

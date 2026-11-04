@@ -94,7 +94,7 @@ namespace Tests.ProgressSystem.Editor
             settings.SoldierHealthOf(Side.Player).Should().Be(10);
             settings.SoldierHealthOf(Side.Enemy).Should().Be(5);
             settings.MeleeDamage.Should().Be(1);
-            simulation.SideOf(Side.Player).Gold.Should().Be(10);
+            simulation.SideOf(Side.Player).Gold.Should().Be(2);
             simulation.SideOf(Side.Enemy).Gold.Should().Be(0);
         }
 

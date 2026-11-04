@@ -39,14 +39,16 @@ MonoBehaviour:
   enclosureEveryTicks: 1
   maxEnclosureCells: 250
   victoryShare: 70
-  goldPortion: 5
+  goldPortion: 4
   goldEvery: 2
   goldMax: 12
-  woodPortion: 2
+  woodPortion: 4
   woodEvery: 3
   woodMax: 8
   resourceAway: 2
   pickupReach: 1
+  mineReach: 1.2
+  mineEvery: 0.25
   neutralLowShare: 10
   sites:
   - {x: 15, y: 15}
@@ -56,14 +58,14 @@ MonoBehaviour:
   - {x: 36, y: 12}
   - {x: 27, y: 51}
   buildSeconds: 1
-  barracksWood: 10
+  barracksWood: 5
   barracksHealth: 50
   barracksHalfSize: 1.125
   buildReach: 0.3
   auraCells: 3
   hireReach: 1
   hireEvery: 0.5
-  soldierGold: 5
+  soldierGold: 1
   armyMax: 30
   soldierSpeed: 5.5
   soldierBrush: 1

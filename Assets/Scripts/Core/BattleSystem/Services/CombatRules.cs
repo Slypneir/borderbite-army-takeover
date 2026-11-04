@@ -118,7 +118,19 @@ namespace Core.BattleSystem.Services
                 else if (_settings.HeroGun && NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, body, out target))
                     melee = false;
                 else
+                {
+                    // nothing to fight: a blow at a pile in reach mines one unit (task 4.19); it is no fight, healing goes on
+                    if (_economy.Mine(hero, out var pileX, out var pileY))
+                    {
+                        hero.Cooldown = _settings.MineCooldownTicks;
+                        hero.FacingX = pileX - hero.X;
+                        hero.FacingY = pileY - hero.Y;
+                        _state.Heroes[i] = hero;
+                        _state.Emit(EventKind.Strike, hero.Side, -1, 0, hero.X, hero.Y, pileX, pileY);
+                    }
+
                     continue;
+                }
 
                 hero.Cooldown = melee ? _settings.MeleeCooldownTicks : _settings.GunCooldownTicks;
                 hero.FightTick = _state.Tick;

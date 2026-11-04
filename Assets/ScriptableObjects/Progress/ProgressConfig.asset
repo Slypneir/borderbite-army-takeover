@@ -21,4 +21,4 @@ MonoBehaviour:
   heroPowerStep: 1
   heroBrushStep: 0.25
   armyPowerStep: 1
-  startGoldStep: 5
+  startGoldStep: 1

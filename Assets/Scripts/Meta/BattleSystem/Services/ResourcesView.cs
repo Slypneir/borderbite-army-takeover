@@ -12,15 +12,18 @@ using VContainer.Unity;
 namespace Meta.BattleSystem.Services
 {
     /// <summary>
-    /// Draws the piles of gold and bundles of wood; a picked one flies to the hero and is gone (stage 1 spec 3.1). A slow bob
-    /// makes them read as things to take.
+    /// Draws the piles of gold and bundles of wood (stage 1 spec 3.1, task 4.19). A pile stands still until mined (T8: no idle
+    /// bob; gold keeps its glint); each blow of mining makes it pulse — a short springy bounce of scale — and sends one small
+    /// unit flying to the hero. After its last unit the pile is gone.
     /// </summary>
     public sealed class ResourcesView : ILateTickable
     {
         // the vein of the 3D artist (a883021) is 1.1 m across: no more growing to tell it from a flower (spec T8)
         private const float GoldScale = 1f;
-        private const float GoldHop = 0.12f;
         private const float GoldHopsPerSecond = 1.4f;
+        private const float PulseSeconds = 0.25f;
+        private const float PulseScale = 0.18f;
+        private const float UnitScale = 0.35f;
         private const float GlintEvery = 3f;
 
         private readonly BattleViewConfig _view;
@@ -34,6 +37,7 @@ namespace Meta.BattleSystem.Services
         private readonly Stack<Transform>[] _free = { new Stack<Transform>(), new Stack<Transform>() };
         private readonly HashSet<int> _present = new HashSet<int>();
         private readonly List<int> _gone = new List<int>();
+        private readonly Dictionary<int, float> _pulses = new Dictionary<int, float>();
         private EventCursor _events;
         private BattleSimulation _simulation;
 
@@ -76,7 +80,6 @@ namespace Meta.BattleSystem.Services
         private void Sync(BattleSimulation simulation)
         {
             _present.Clear();
-            var bob = Mathf.Sin(Time.time * 3f) * 0.05f;
             foreach (var resource in simulation.Resources)
             {
                 _present.Add(resource.Id);
@@ -87,20 +90,28 @@ namespace Meta.BattleSystem.Services
                     _lying[resource.Id] = body;
                 }
 
-                var position = body.localPosition;
-                if (resource.Kind == ResourceKind.Gold)
+                // a blow: a short springy bounce of scale, back to the pile as it was
+                var pulse = 1f;
+                if (_pulses.TryGetValue(resource.Id, out var age))
                 {
-                    // gold must not pass for a yellow flower (spec T8): larger, it hops, and now and then it swells for a glint
-                    var phase = Time.time * GoldHopsPerSecond + resource.Id * 0.37f;
-                    position.y = 0.05f + Mathf.Abs(Mathf.Sin(phase * Mathf.PI)) * GoldHop;
-                    var glint = Mathf.Repeat(phase, GlintEvery) < 0.25f ? 1f + 0.12f * Mathf.Sin(Mathf.Repeat(phase, GlintEvery) / 0.25f * Mathf.PI) : 1f;
-                    body.localScale = Vector3.one * (GoldScale * glint);
-                }
-                else
-                {
-                    position.y = 0.05f + bob;
+                    age += Time.deltaTime;
+                    _pulses[resource.Id] = age;
+                    var t = Mathf.Clamp01(age / PulseSeconds);
+                    pulse = 1f + PulseScale * Mathf.Sin(t * Mathf.PI * 2f) * (1f - t);
                 }
 
+                var scale = 1f;
+                if (resource.Kind == ResourceKind.Gold)
+                {
+                    // gold must not pass for a yellow flower (spec T8): now and then it swells for a glint; it does not hop
+                    var phase = Time.time * GoldHopsPerSecond + resource.Id * 0.37f;
+                    var glint = Mathf.Repeat(phase, GlintEvery) < 0.25f ? 1f + 0.12f * Mathf.Sin(Mathf.Repeat(phase, GlintEvery) / 0.25f * Mathf.PI) : 1f;
+                    scale = GoldScale * glint;
+                }
+
+                body.localScale = Vector3.one * (scale * pulse);
+                var position = body.localPosition;
+                position.y = 0.05f;
                 body.localPosition = position;
             }
 
@@ -115,6 +126,7 @@ namespace Meta.BattleSystem.Services
             {
                 Release(_lying[id]);
                 _lying.Remove(id);
+                _pulses.Remove(id);
             }
         }
 
@@ -123,9 +135,11 @@ namespace Meta.BattleSystem.Services
             if (battleEvent.Kind != EventKind.Pickup || !_lying.TryGetValue(battleEvent.Id, out var body))
                 return;
 
-            // the picked pile has left the map but flies to the hero before it is gone
-            _lying.Remove(battleEvent.Id);
-            _flying.Add(new Flight { Transform = body, From = body.localPosition });
+            // one unit: the pile pulses, a small copy of it flies to the hero
+            _pulses[battleEvent.Id] = 0f;
+            var unit = Take(battleEvent.Detail == (int)ResourceKind.Gold ? ResourceKind.Gold : ResourceKind.Wood);
+            unit.localPosition = body.localPosition + Vector3.up * 0.3f;
+            _flying.Add(new Flight { Transform = unit, From = unit.localPosition });
         }
 
         private void Fly()
@@ -145,7 +159,7 @@ namespace Meta.BattleSystem.Services
 
                 var target = _hero.Position + Vector3.up * 0.8f;
                 flight.Transform.localPosition = Vector3.Lerp(flight.From, target, t) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 0.6f);
-                flight.Transform.localScale = Vector3.one * (1f - 0.6f * t);
+                flight.Transform.localScale = Vector3.one * (UnitScale * (1f - 0.5f * t));
                 _flying[i] = flight;
             }
         }

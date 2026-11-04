@@ -113,8 +113,17 @@ namespace Meta.DeveloperTools.Services
                 settings.PlayerAutopilot = true;
                 var simulation = new BattleSimulation(settings);
                 var limit = maxSeconds * settings.TicksPerSecond;
+                // the first second each army reached its limit (task 4.19: the economy is richer)
+                var full = new[] { -1f, -1f, -1f };
                 while (simulation.Result == BattleResult.None && simulation.Tick < limit)
+                {
                     simulation.Step();
+                    foreach (var side in new[] { Side.Player, Side.Enemy })
+                    {
+                        if (full[(int)side] < 0f && simulation.ArmyOf(side) >= settings.ArmyMax)
+                            full[(int)side] = simulation.Tick / (float)settings.TicksPerSecond;
+                    }
+                }
 
                 var built = new int[3];
                 var hired = new int[3];
@@ -127,11 +136,13 @@ namespace Meta.DeveloperTools.Services
                 }
 
                 lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
-                          $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]}");
+                          $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]}, army {settings.ArmyMax} at {Seconds(full[1])}/{Seconds(full[2])}");
             }
 
             return string.Join(" | ", lines);
         }
+
+        private static string Seconds(float seconds) => seconds < 0f ? "never" : seconds.ToString("0") + "s";
 
         /// <summary>The progress: level, crowns, steps of the upgrades, the step of the hint.</summary>
         public static string Progress()
