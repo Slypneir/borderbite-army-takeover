@@ -14,7 +14,9 @@ namespace Meta.BattleSystem.Services
     /// Health bars over the heroes and every soldier (task 4.9, spec T12): the fill is the share of health left, in the colour of
     /// the side, on a dark base with a rim (light for the player's units, dark for the enemy's). The player's hero always shows
     /// its bar; the enemy's hero and any soldier only after a blow, until nothing hurt it for a while (5 s). Soldiers' bars are
-    /// smaller. All bars are one mesh rebuilt each frame, facing the camera: one draw for up to 60 soldiers and two heroes.
+    /// smaller. The fill is cut into segments, a point each while the full health is 10 or less (a blow takes one away, read
+    /// without numbers, like hearts), five points each above (battle-marks card of the UI, 4 November); 2 units apart. All bars
+    /// are one mesh rebuilt each frame, facing the camera: one draw for up to 60 soldiers and two heroes.
     /// </summary>
     public sealed class BarsView : ILateTickable, IDisposable
     {
@@ -23,6 +25,10 @@ namespace Meta.BattleSystem.Services
         private static readonly Vector2 HeroSize = new Vector2(1.4f, 0.2f);
         private static readonly Vector2 SoldierSize = new Vector2(0.8f, 0.13f);
         private const float Rim = 0.04f;
+        /// <summary>The gap between segments, meters: 2 units of the UI over a hero at the default camera.</summary>
+        private const float Gap = 0.03f;
+        private const int PointsPerSegmentAbove = 5;
+        private const int MostPointSegments = 10;
         private static readonly Color Base = new Color(0.1f, 0.11f, 0.14f);
 
         private readonly BattleViewConfig _view;
@@ -89,7 +95,7 @@ namespace Meta.BattleSystem.Services
                 var full = simulation.Settings.HeroHealthOf(hero.Side);
                 var shown = hero.Side == Side.Player || Hurt(key, hero.Health, full, now);
                 if (shown)
-                    Bar(_heroes.PositionOf(hero.Side) + Vector3.up * HeroHeight, HeroSize, hero.Health / (float)full, hero.Side, right, up);
+                    Bar(_heroes.PositionOf(hero.Side) + Vector3.up * HeroHeight, HeroSize, hero.Health, full, hero.Side, right, up);
             }
 
             _alive.Clear();
@@ -100,7 +106,7 @@ namespace Meta.BattleSystem.Services
                     continue;
 
                 var track = _tracks[soldier.Id];
-                Bar(position + Vector3.up * SoldierHeight, SoldierSize, soldier.Health / (float)Mathf.Max(1, track.Full), soldier.Side, right, up);
+                Bar(position + Vector3.up * SoldierHeight, SoldierSize, soldier.Health, track.Full, soldier.Side, right, up);
             }
 
             // the dead leave their tracks; heroes keep theirs (negative keys)
@@ -149,12 +155,31 @@ namespace Meta.BattleSystem.Services
             return now - track.HurtAt < _view.BarHoldSeconds;
         }
 
-        private void Bar(Vector3 centre, Vector2 size, float share, Side side, Vector3 right, Vector3 up)
+        private void Bar(Vector3 centre, Vector2 size, int health, int full, Side side, Vector3 right, Vector3 up)
         {
             var rim = side == Side.Player ? _view.OutlineColor(Side.Player) : _view.OutlineColor(Side.Enemy);
             Quad(centre, size + Vector2.one * (Rim * 2f), 1f, rim, right, up);
             Quad(centre, size, 1f, Base, right, up);
-            Quad(centre, size - Vector2.one * Rim, Mathf.Clamp01(share), _view.SoldierColor(side), right, up);
+
+            // segments of the fill, the gaps show the dark base
+            full = Mathf.Max(1, full);
+            var per = full <= MostPointSegments ? 1 : PointsPerSegmentAbove;
+            var segments = (full + per - 1) / per;
+            var inner = size - Vector2.one * Rim;
+            var width = (inner.x - Gap * (segments - 1)) / segments;
+            var color = _view.SoldierColor(side);
+            for (var i = 0; i < segments; i++)
+            {
+                var points = Mathf.Min(per, full - i * per);
+                var filled = Mathf.Clamp(health - i * per, 0, points);
+                if (filled <= 0)
+                    break;
+
+                // the last segment of an uneven health is as narrow as its points
+                var segment = new Vector2(width * points / per, inner.y);
+                var left = -inner.x / 2f + i * (width + Gap);
+                Quad(centre + right * (left + segment.x / 2f), segment, filled / (float)points, color, right, up);
+            }
         }
 
         /// <summary>A quad facing the camera, filled from the left by <paramref name="share"/> of its width.</summary>

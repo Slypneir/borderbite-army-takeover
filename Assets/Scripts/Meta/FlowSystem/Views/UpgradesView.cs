@@ -28,7 +28,7 @@ namespace Meta.FlowSystem.Views
         private const float ShakeSeconds = 0.3f;
 
         private static readonly string[] NameKeys = { "upgrades.hero_power", "upgrades.hero_brush", "upgrades.army_power", "upgrades.start_gold" };
-        private static readonly string[] EffectKeys = { "upgrades.effect.health", "upgrades.effect.cells", "upgrades.effect.health", "upgrades.effect.gold" };
+        private static readonly string[] EffectKeys = { "upgrades.effect.health", "upgrades.effect.cells", "upgrades.effect.soldier_health", "upgrades.effect.gold" };
 
         [SerializeField] private CanvasGroup group;
         [SerializeField] private RectTransform cards;
