@@ -80,6 +80,12 @@ namespace Meta.BattleSystem.Services
             OnFinished?.Invoke(result);
         }
 
+        public void Order(ArmyOrder order)
+        {
+            var simulation = Current?.Simulation;
+            simulation?.Enqueue(new BattleCommand(simulation.Tick + 1, Side.Player, order));
+        }
+
         private void SendDirection()
         {
             var direction = _input.Direction;

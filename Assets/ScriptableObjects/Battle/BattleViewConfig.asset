@@ -33,6 +33,8 @@ MonoBehaviour:
   enemyOutline: {r: 0.09, g: 0.08, b: 0.1, a: 1}
   outlineWidth: 0.0025
   barHoldSeconds: 5
+  resourceIconReach: 5
+  resourceIconFade: 0.3
   attackFaceSeconds: 0.35
   islandDepth: 1.5
   waterDepth: 0.5

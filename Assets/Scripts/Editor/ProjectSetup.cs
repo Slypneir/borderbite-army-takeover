@@ -410,7 +410,14 @@ namespace Core.EditorTools
 
             // the icons over the map and in the labels shrink more than twice in a small window (800 × 450): mipmaps and a
             // trilinear filter keep them from shimmering (the UI designer, 4 November)
-            foreach (var name in new[] { "icon_gold_128", "icon_wood_128", "icon_barracks_128", "icon_gold_64", "icon_wood_64", "icon_barracks_64" })
+            var mipped = new List<string> { "icon_gold_128", "icon_wood_128", "icon_barracks_128", "icon_gold_64", "icon_wood_64", "icon_barracks_64" };
+            // the buttons of the orders (task 4.18): frames 256 and 128, icons 128 and 64
+            foreach (var order in new[] { "rally", "capture", "units", "barracks", "base" })
+                mipped.AddRange(new[] { $"icon_order_{order}_128", $"icon_order_{order}_64" });
+            foreach (var group in new[] { "own", "attack" })
+            foreach (var state in new[] { "normal", "active" })
+                mipped.AddRange(new[] { $"btn_order_{group}_{state}_256", $"btn_order_{group}_{state}_128" });
+            foreach (var name in mipped)
             {
                 var path = IconFolder + name + ".png";
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite

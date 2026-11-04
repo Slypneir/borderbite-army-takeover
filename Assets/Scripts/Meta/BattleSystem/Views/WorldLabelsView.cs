@@ -34,6 +34,9 @@ namespace Meta.BattleSystem.Views
         [Tooltip("The lowest block of the HUD at the top of the screen (the row of counters): labels stay under it.")]
         [SerializeField] private RectTransform hudBottom;
 
+        [Tooltip("The row of the orders (task 4.18): nothing goes under it.")]
+        [SerializeField] private RectTransform orderBar;
+
         [SerializeField] private Sprite goldIcon;
         [SerializeField] private Sprite woodIcon;
         [SerializeField] private Sprite barracksIcon;
@@ -79,6 +82,7 @@ namespace Meta.BattleSystem.Views
             var scale = Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height)) / 720f;
             var safe = Screen.safeArea;
             var bounds = new Rect(safe.position / scale, safe.size / scale);
+            bounds.yMin = Floor(bounds.yMin, scale, EdgeInset);
             var ceiling = bounds.yMax - EdgeInset;
             if (hudBottom != null)
             {
@@ -223,6 +227,16 @@ namespace Meta.BattleSystem.Views
             public GameObject Dot;
             public Image Icon3;
             public TMP_Text Text2;
+        }
+
+        /// <summary>The bottom of the free part of the screen: over the row of the orders + 8, canvas units.</summary>
+        private float Floor(float bottom, float scale, float inset)
+        {
+            if (orderBar == null || !orderBar.gameObject.activeInHierarchy)
+                return bottom;
+
+            orderBar.GetWorldCorners(_corners);
+            return Mathf.Max(bottom, _corners[1].y / scale + 8f - inset);
         }
     }
 }

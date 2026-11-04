@@ -297,6 +297,10 @@ namespace Core.EditorTools
             Wire(icons, ("hudBottom", counters), ("labels", labels));
             Wire(marks, ("hudBottom", counters));
             var pauseButton = BuildPauseButton(area);
+            var orders = BuildOrders(area);
+            Wire(labels, ("orderBar", orders.Row));
+            Wire(marks, ("orderBar", orders.Row));
+            Wire(icons, ("orderBar", orders.Row));
             var hint = BuildHint(root, counters);
             BuildDebug(area);
             results = BuildResults(area);
@@ -307,7 +311,7 @@ namespace Core.EditorTools
             var layers = go.AddComponent<BattleLayersView>();
             var serialized = new SerializedObject(layers);
             var over = serialized.FindProperty("overWorld");
-            var overLayers = new Component[] { icons, labels, marks, popups, hint };
+            var overLayers = new Component[] { icons, labels, marks, popups, hint, orders };
             over.arraySize = overLayers.Length;
             for (var i = 0; i < overLayers.Length; i++)
                 over.GetArrayElementAtIndex(i).objectReferenceValue = Group(overLayers[i].gameObject);
@@ -421,6 +425,98 @@ namespace Core.EditorTools
             ((RectTransform)gain.transform).offsetMax = new Vector2(-8f, 0f);
             gain.alpha = 0f;
             return label;
+        }
+
+        /// <summary>
+        /// The row of the orders (army-orders card, task 4.18): five buttons 104 with a frame of their group (own — blue, attack —
+        /// dark red) and the active frame over it, the icon 64 on top, a light strip under, the key in the corner, a point for a
+        /// hint 72 over each; a transparent catcher 16 around the row keeps the stick off; the name of an order over the row.
+        /// </summary>
+        private static OrdersView BuildOrders(RectTransform area)
+        {
+            const float button = 104f;
+            const float gap = 32f;
+            var go = new GameObject("Orders", typeof(RectTransform), typeof(OrdersView));
+            go.transform.SetParent(area, false);
+            Stretch((RectTransform)go.transform);
+            var row = Rect((RectTransform)go.transform, "Row", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            row.pivot = new Vector2(0.5f, 0f);
+            row.sizeDelta = new Vector2(5 * button + 4 * gap, button);
+            var catcher = Rect(row, "StickGuard", Vector2.zero, Vector2.one);
+            catcher.offsetMin = new Vector2(-16f, -16f);
+            catcher.offsetMax = new Vector2(16f, 16f);
+            Picture(catcher, null, new Color(0f, 0f, 0f, 0f)).raycastTarget = true;
+
+            string[] orders = { "rally", "capture", "units", "barracks", "base" };
+            var views = new OrderButtonView[orders.Length];
+            for (var i = 0; i < orders.Length; i++)
+            {
+                var group = i < 2 ? "own" : "attack";
+                var slot = Rect(row, "Order_" + orders[i], Vector2.zero, Vector2.zero);
+                slot.pivot = new Vector2(0.5f, 0.5f);
+                slot.sizeDelta = Vector2.one * button;
+                slot.anchoredPosition = new Vector2(button / 2f + i * (button + gap), button / 2f);
+                var body = Rect(slot, "Body", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                body.sizeDelta = Vector2.one * button;
+                var frame = Rect(body, "Frame", Vector2.zero, Vector2.one);
+                var frameImage = Picture(frame, Icon($"btn_order_{group}_normal_256"), Color.white);
+                frameImage.raycastTarget = true;
+                var active = Rect(body, "Active", Vector2.zero, Vector2.one);
+                Picture(active, Icon($"btn_order_{group}_active_256"), new Color(1f, 1f, 1f, 0f));
+                var icon = Rect(body, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                icon.sizeDelta = Vector2.one * 64f;
+                var iconSprite = Icon($"icon_order_{orders[i]}_128");
+                var iconImage = Picture(icon, iconSprite, Color.white);
+                iconImage.preserveAspect = true;
+                if (iconSprite == null)
+                {
+                    // a letter while the icon is missing (card: placeholders with a letter)
+                    var letter = Text(icon, "Letter", LabelTextSize, TextAlignmentOptions.Center);
+                    letter.text = orders[i].Substring(0, 1).ToUpperInvariant();
+                }
+
+                var strip = Rect(slot, "Strip", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+                strip.sizeDelta = new Vector2(48f, 6f);
+                strip.anchoredPosition = new Vector2(0f, -14f);
+                Picture(strip, null, new Color(TextColor.r, TextColor.g, TextColor.b, 0f));
+                var key = Text(body, "Key", 20, TextAlignmentOptions.TopRight);
+                var keyRect = (RectTransform)key.transform;
+                keyRect.offsetMin = new Vector2(0f, 0f);
+                keyRect.offsetMax = new Vector2(-10f, -8f);
+                key.fontStyle = FontStyles.Bold;
+                key.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+                var hint = Rect(slot, "HintAnchor", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                hint.anchoredPosition = new Vector2(0f, 72f);
+
+                var view = slot.gameObject.AddComponent<OrderButtonView>();
+                Wire(view, ("body", body), ("frame", frameImage), ("activeFrame", active.GetComponent<Image>()), ("icon", iconImage),
+                    ("strip", strip.GetComponent<Image>()), ("key", key),
+                    ("frameNormal", Icon($"btn_order_{group}_normal_256")), ("frameActive", Icon($"btn_order_{group}_active_256")),
+                    ("frameNormalSmall", Icon($"btn_order_{group}_normal_128")), ("frameActiveSmall", Icon($"btn_order_{group}_active_128")),
+                    ("iconLarge", iconSprite), ("iconSmall", Icon($"icon_order_{orders[i]}_64")));
+                views[i] = view;
+            }
+
+            var toast = Text(row, "Name", BodySize, TextAlignmentOptions.Bottom);
+            var toastRect = (RectTransform)toast.transform;
+            toastRect.anchorMin = new Vector2(0f, 1f);
+            toastRect.anchorMax = new Vector2(1f, 1f);
+            toastRect.pivot = new Vector2(0.5f, 0f);
+            toastRect.sizeDelta = new Vector2(0f, BodySize * 1.4f);
+            toastRect.anchoredPosition = new Vector2(0f, 24f);
+            toast.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+            toast.alpha = 0f;
+
+            var ordersView = go.GetComponent<OrdersView>();
+            var serialized = new SerializedObject(ordersView);
+            serialized.FindProperty("row").objectReferenceValue = row;
+            serialized.FindProperty("toast").objectReferenceValue = toast;
+            var list = serialized.FindProperty("buttons");
+            list.arraySize = views.Length;
+            for (var i = 0; i < views.Length; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = views[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return ordersView;
         }
 
         /// <summary>An icon over each pile of gold and bundle of wood (battle-marks card, «Значки над картой»).</summary>

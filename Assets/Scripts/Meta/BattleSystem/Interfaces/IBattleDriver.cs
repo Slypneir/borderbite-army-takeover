@@ -27,6 +27,11 @@ namespace Meta.BattleSystem.Interfaces
         void StopBattle();
 
         /// <summary>
+        /// Gives the army of the player an order from the next tick (spec 3.8); the active order again frees the army
+        /// </summary>
+        void Order(Core.BattleSystem.Enums.ArmyOrder order);
+
+        /// <summary>
         /// A battle began: the views take the new one
         /// </summary>
         event Action<BattleRunner> OnStarted;

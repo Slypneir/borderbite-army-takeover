@@ -35,6 +35,9 @@ namespace Meta.BattleSystem.Views
         [Tooltip("The lowest block of the HUD at the top of the screen: icons under it are hidden.")]
         [SerializeField] private RectTransform hudBottom;
 
+        [Tooltip("The row of the orders (task 4.18): nothing goes under it.")]
+        [SerializeField] private RectTransform orderBar;
+
         [Tooltip("The labels over places and barracks: an icon never crosses them.")]
         [SerializeField] private WorldLabelsView labels;
 
@@ -77,6 +80,7 @@ namespace Meta.BattleSystem.Views
                 var scale = Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height)) / 720f;
                 var safe = Screen.safeArea;
                 var bounds = new Rect(safe.position / scale, safe.size / scale);
+                bounds.yMin = Floor(bounds.yMin, scale, 0f);
                 var ceiling = bounds.yMax;
                 if (hudBottom != null)
                 {
@@ -165,6 +169,16 @@ namespace Meta.BattleSystem.Views
             }
 
             return false;
+        }
+
+        /// <summary>The bottom of the free part of the screen: over the row of the orders + 8, canvas units.</summary>
+        private float Floor(float bottom, float scale, float inset)
+        {
+            if (orderBar == null || !orderBar.gameObject.activeInHierarchy)
+                return bottom;
+
+            orderBar.GetWorldCorners(_corners);
+            return Mathf.Max(bottom, _corners[1].y / scale + 8f - inset);
         }
     }
 }
