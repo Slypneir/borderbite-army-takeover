@@ -279,7 +279,6 @@ namespace Core.EditorTools
             var root = (RectTransform)go.transform;
 
             var labels = BuildWorldLabels(root);
-            BuildHeroBar(root, view);
             var marks = BuildMarks(root);
             BuildPopups(root);
             BuildStick(root);
@@ -484,23 +483,6 @@ namespace Core.EditorTools
             var view = go.GetComponent<BattleMarksView>();
             Wire(view, ("barTemplate", bar), ("signTemplate", sign), ("countdown", countdown));
             return view;
-        }
-
-        private static void BuildHeroBar(RectTransform root, BattleViewConfig view)
-        {
-            var go = new GameObject("HeroBar", typeof(RectTransform), typeof(HeroBarView));
-            go.transform.SetParent(root, false);
-            Stretch((RectTransform)go.transform);
-            var bar = Rect((RectTransform)go.transform, "Bar", Vector2.zero, Vector2.zero);
-            bar.pivot = new Vector2(0.5f, 0f);
-            bar.sizeDelta = new Vector2(HealthWidth, HealthHeight);
-            Picture(bar, null, BarBaseColor);
-            var fill = Rect(bar, "Fill", Vector2.zero, Vector2.one);
-            fill.offsetMin = new Vector2(2f, 2f);
-            fill.offsetMax = new Vector2(-2f, -2f);
-            // light, not blue: the bar hangs over blue land
-            Picture(fill, null, TextColor);
-            Wire(go.GetComponent<HeroBarView>(), ("bar", bar), ("fill", fill));
         }
 
         private static void BuildDebug(RectTransform area)

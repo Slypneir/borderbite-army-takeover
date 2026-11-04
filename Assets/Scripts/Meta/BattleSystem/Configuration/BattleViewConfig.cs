@@ -73,6 +73,10 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The width of the rim, a part of the screen height: 0.0025 is about 2.7 pixels at 1080. Starting value: 0.0025.")]
         [Range(0f, 0.01f)] [SerializeField] private float outlineWidth = 0.0025f;
 
+        [Tooltip("The bar of the enemy hero or of a soldier shows after a blow and goes when nothing hurt it this long, seconds " +
+                 "(task 4.9, spec T12). Starting value: 5.")]
+        [Min(0f)] [SerializeField] private float barHoldSeconds = 5f;
+
         [Tooltip("After a blow or a shot the hero faces its target this long, seconds, then turns back to where it walks. " +
                  "Starting value: 0.35.")]
         [Min(0f)] [SerializeField] private float attackFaceSeconds = 0.35f;
@@ -123,6 +127,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The sea: shader Borderbite/World/Water, its numbers from Assets/Textures/Water/water.json (ProjectSetup).")]
         [SerializeField] private Material waterMaterial;
 
+        [Tooltip("Shader Borderbite/World/Bars: the health bars of all units in one mesh.")]
+        [SerializeField] private Shader barsShader;
+
         [Tooltip("Shader Borderbite/World/Flat Lit Outlined: units take copies of their materials with it and the rim of their side.")]
         [SerializeField] private Shader outlinedShader;
 
@@ -158,6 +165,8 @@ namespace Meta.BattleSystem.Configuration
             side == Core.BattleSystem.Enums.Side.Player ? playerOutline : enemyOutline;
         public float OutlineWidth => outlineWidth;
         public Shader OutlinedShader => outlinedShader;
+        public Shader BarsShader => barsShader;
+        public float BarHoldSeconds => barHoldSeconds;
         public Material WaterMaterial => waterMaterial;
         public float TurnSpeed => turnSpeed;
         public float AttackFaceSeconds => attackFaceSeconds;
@@ -184,6 +193,8 @@ namespace Meta.BattleSystem.Configuration
         public void SetSurfaceForEditor(SurfaceConfig config) => surface = config;
 
         public void SetOutlinedShaderForEditor(Shader shader) => outlinedShader = shader;
+
+        public void SetBarsShaderForEditor(Shader shader) => barsShader = shader;
 
         public void SetWaterForEditor(Material material) => waterMaterial = material;
 #endif

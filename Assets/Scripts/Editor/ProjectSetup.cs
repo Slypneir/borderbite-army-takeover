@@ -105,6 +105,13 @@ namespace Core.EditorTools
                 EditorUtility.SetDirty(config);
             }
 
+            var bars = Shader.Find("Borderbite/World/Bars");
+            if (config.BarsShader != bars)
+            {
+                config.SetBarsShaderForEditor(bars);
+                EditorUtility.SetDirty(config);
+            }
+
             if (config.CellsMaterial != null && config.FlatMaterial != null)
                 return;
 

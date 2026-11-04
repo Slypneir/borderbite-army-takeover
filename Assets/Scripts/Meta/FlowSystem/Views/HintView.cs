@@ -51,7 +51,8 @@ namespace Meta.FlowSystem.Views
         private Vector3 _lastHero;
         private float _stillSince;
         private bool _grown;
-        private int _shownStep = -1;
+        // none yet: the first Show hides or shows every part
+        private int _shownStep = -2;
 
         [Inject]
         public void Construct(IBattleDriver battle, ProgressService progress, HeroView hero, BattleConfig rules, Camera mainCamera)

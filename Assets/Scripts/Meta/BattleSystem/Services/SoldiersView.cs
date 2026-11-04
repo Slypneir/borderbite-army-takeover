@@ -44,6 +44,17 @@ namespace Meta.BattleSystem.Services
             _battle.OnStarted += Take;
         }
 
+        /// <summary>Where a soldier is drawn now; false when it has no body.</summary>
+        public bool TryGetPosition(int id, out Vector3 position)
+        {
+            position = default;
+            if (!_bodies.TryGetValue(id, out var body))
+                return false;
+
+            position = body.Transform.localPosition;
+            return true;
+        }
+
         public void LateTick()
         {
             if (_runner == null || _battle.Current != _runner)

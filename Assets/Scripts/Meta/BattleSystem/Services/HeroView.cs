@@ -46,6 +46,18 @@ namespace Meta.BattleSystem.Services
         /// <summary>The hero of the player now, in the world, between ticks; the camera reads it in the same frame, whatever the order.</summary>
         public Vector3 Position => _player == null ? Vector3.zero : PositionOf(_player);
 
+        /// <summary>The hero of a side now, between ticks; zero when it has none.</summary>
+        public Vector3 PositionOf(Side side)
+        {
+            foreach (var body in _bodies)
+            {
+                if (body.Side == side)
+                    return PositionOf(body);
+            }
+
+            return Vector3.zero;
+        }
+
         public void LateTick()
         {
             if (_runner == null || _battle.Current != _runner)

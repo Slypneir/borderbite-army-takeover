@@ -23,9 +23,11 @@ MonoBehaviour:
   heroBrush: 2
   heroHealth: 100
   heroRegen: 5
+  healAfter: 3
   meleeReach: 1.2
   meleeDamage: 10
   meleeEvery: 0.5
+  heroGun: 0
   gunReach: 6
   gunDamage: 8
   gunEvery: 1.5
