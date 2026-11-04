@@ -254,14 +254,14 @@ namespace Core.EditorTools
             go.AddComponent<GraphicRaycaster>();
             var root = (RectTransform)go.transform;
 
-            BuildWorldLabels(root);
+            var labels = BuildWorldLabels(root);
             BuildHeroBar(root, view);
             BuildPopups(root);
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
             BuildBar(area, view);
-            BuildCounters(area, view);
+            Wire(labels, ("hudBottom", BuildCounters(area, view)));
             BuildDebug(area);
             results = BuildResults(area);
             return go;
@@ -326,7 +326,7 @@ namespace Core.EditorTools
         }
 
         /// <summary>Gold, wood and the army in a row under the bar; a gain like +5 next to a counter after a pickup.</summary>
-        private static void BuildCounters(RectTransform area, BattleViewConfig view)
+        private static RectTransform BuildCounters(RectTransform area, BattleViewConfig view)
         {
             var row = Rect(area, "Counters", new Vector2(0f, 1f), new Vector2(0f, 1f));
             row.pivot = new Vector2(0f, 1f);
@@ -339,6 +339,7 @@ namespace Core.EditorTools
             var army = Counter(row, "Army", 2, "army", view.PlayerSoldierColor, out _);
             Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
                 ("goldGain", goldGain), ("woodGain", woodGain));
+            return row;
         }
 
         private static TMP_Text Counter(RectTransform row, string name, int index, string icon, Color color, out TMP_Text gain)
@@ -360,7 +361,7 @@ namespace Core.EditorTools
         }
 
         /// <summary>A label with a ring of progress, copied over each place of the player.</summary>
-        private static void BuildWorldLabels(RectTransform root)
+        private static WorldLabelsView BuildWorldLabels(RectTransform root)
         {
             var go = new GameObject("WorldLabels", typeof(RectTransform), typeof(WorldLabelsView));
             go.transform.SetParent(root, false);
@@ -379,7 +380,9 @@ namespace Core.EditorTools
             var label = Text(template, "Price", LabelTextSize, TextAlignmentOptions.Bottom);
             label.fontStyle = FontStyles.Bold;
             label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
-            Wire(go.GetComponent<WorldLabelsView>(), ("template", template));
+            var view = go.GetComponent<WorldLabelsView>();
+            Wire(view, ("template", template));
+            return view;
         }
 
         private static void BuildHeroBar(RectTransform root, BattleViewConfig view)

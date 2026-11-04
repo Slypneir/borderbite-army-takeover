@@ -16,7 +16,8 @@ namespace Meta.BattleSystem.Views
     /// of building, dull while wood is short; over a barracks the price of a soldier and the army «N/30». Copies of
     /// <see cref="template"/> (a label with a ring), one per place. Lives right under the canvas, anchored to its lower left corner.
     /// Short wood is dull, never red: red is the enemy. A label never leaves the safe area: it is pushed inside it by
-    /// <see cref="EdgeInset"/>, and hidden while the place itself is out of the frame (UI review of f1d3ccb).
+    /// <see cref="EdgeInset"/> and kept <see cref="HudGap"/> under the bottom of the HUD, and hidden while the place itself is out of
+    /// the frame, under the HUD or no room is left for it (UI reviews of f1d3ccb and 3752fe1: the HUD is always on top and always reads).
     /// </summary>
     public sealed class WorldLabelsView : MonoBehaviour
     {
@@ -25,8 +26,15 @@ namespace Meta.BattleSystem.Views
         private const float DullAlpha = 0.45f;
         // the inset from the edges of the safe area, canvas units (STYLE.md 1 of the interface, EdgeInset)
         private const float EdgeInset = 24f;
+        // the gap between a label and the bottom of the HUD, canvas units
+        private const float HudGap = 8f;
 
         [SerializeField] private RectTransform template;
+
+        [Tooltip("The lowest block of the HUD at the top of the screen (the row of counters): labels stay under it.")]
+        [SerializeField] private RectTransform hudBottom;
+
+        private readonly Vector3[] _corners = new Vector3[4];
 
         private readonly List<Mark> _marks = new List<Mark>();
         private IBattleDriver _battle;
@@ -56,6 +64,13 @@ namespace Meta.BattleSystem.Views
             var scale = Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height)) / 720f;
             var safe = Screen.safeArea;
             var bounds = new Rect(safe.position / scale, safe.size / scale);
+            var ceiling = bounds.yMax - EdgeInset;
+            if (hudBottom != null)
+            {
+                // an overlay canvas: world corners are screen pixels
+                hudBottom.GetWorldCorners(_corners);
+                ceiling = Mathf.Min(ceiling, _corners[0].y / scale - HudGap);
+            }
             var purse = simulation.SideOf(Side.Player);
             var army = simulation.ArmyOf(Side.Player);
             var buildTicks = Mathf.Max(1, simulation.Settings.BuildTicks);
@@ -66,8 +81,10 @@ namespace Meta.BattleSystem.Views
                 var mark = _marks[i];
                 var x = (site.CenterX + 0.5f) * _rules.CellSize;
                 var z = (site.CenterY + 0.5f) * _rules.CellSize;
+                // the place itself must be in the frame and not under the HUD
+                var ground = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, 0f, z)) / scale;
                 var shown = (site.Barracks == Side.Player || (!site.Built && owner == Side.Player))
-                            && bounds.Contains((Vector2)_camera.WorldToScreenPoint(new Vector3(x, 0f, z)) / scale);
+                            && bounds.Contains(ground) && ground.y < ceiling;
                 mark.Root.gameObject.SetActive(shown);
                 if (!shown)
                     continue;
@@ -87,21 +104,26 @@ namespace Meta.BattleSystem.Views
                 }
 
                 var point = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, Height, z)) / scale;
-                mark.Root.anchoredPosition = Inside(point, mark, bounds);
+                if (Inside(point, mark, bounds, ceiling, out var place))
+                    mark.Root.anchoredPosition = place;
+                else
+                    mark.Root.gameObject.SetActive(false);
             }
         }
 
-        /// <summary>The bottom middle of a label, moved so the text and the ring stay in the safe area with the inset.</summary>
-        private static Vector2 Inside(Vector2 point, Mark mark, Rect bounds)
+        /// <summary>
+        /// The bottom middle of a label, moved so the text and the ring stay in the safe area with the inset and under the
+        /// <paramref name="ceiling"/>; false when no room is left for the label.
+        /// </summary>
+        private static bool Inside(Vector2 point, Mark mark, Rect bounds, float ceiling, out Vector2 place)
         {
             var half = Mathf.Max(mark.Label.preferredWidth, mark.Ring.rectTransform.rect.width) / 2f;
-            var height = mark.Root.rect.height;
             var left = bounds.xMin + EdgeInset + half;
             var right = bounds.xMax - EdgeInset - half;
             var bottom = bounds.yMin + EdgeInset;
-            var top = bounds.yMax - EdgeInset - height;
-            return new Vector2(left <= right ? Mathf.Clamp(point.x, left, right) : bounds.center.x,
-                bottom <= top ? Mathf.Clamp(point.y, bottom, top) : bottom);
+            var top = ceiling - mark.Root.rect.height;
+            place = new Vector2(left <= right ? Mathf.Clamp(point.x, left, right) : bounds.center.x, Mathf.Clamp(point.y, bottom, top));
+            return bottom <= top;
         }
 
         private Mark Create()
