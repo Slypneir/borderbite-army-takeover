@@ -54,14 +54,15 @@ namespace Meta.BattleSystem.Services
         }
 
         /// <summary>
-        /// Colours the `paint` parts under <paramref name="root"/>; the other parts keep the texture of the model. A skinned
+        /// Colours the `paint…` parts under <paramref name="root"/> (`paint`, `paint_flag_1`…); the other parts keep the texture of
+        /// the model. A skinned
         /// effect of one mesh colours its material slots named `…_paint` instead.
         /// </summary>
         public void Tint(Transform root, Color color)
         {
             foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
             {
-                if (renderer.name == PaintPart)
+                if (renderer.name.StartsWith(PaintPart))
                     renderer.sharedMaterial = Tinted(Plain(renderer.sharedMaterial), color);
             }
 

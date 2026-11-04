@@ -17,7 +17,8 @@ namespace Meta.BattleSystem.Services
     /// </summary>
     public sealed class ResourcesView : ILateTickable
     {
-        private const float GoldScale = 1.3f;
+        // the vein of the 3D artist (a883021) is 1.1 m across: no more growing to tell it from a flower (spec T8)
+        private const float GoldScale = 1f;
         private const float GoldHop = 0.12f;
         private const float GoldHopsPerSecond = 1.4f;
         private const float GlintEvery = 3f;
