@@ -31,6 +31,10 @@
     { "key": "pause.resume", "text": "Resume" },
     { "key": "pause.restart", "text": "Restart" },
     { "key": "pause.restart_confirm", "text": "Restart for sure?" },
+    { "key": "menu.play", "text": "Play" },
+    { "key": "menu.editor", "text": "Editor" },
+    { "key": "pause.menu", "text": "Menu" },
+    { "key": "pause.editor", "text": "Editor" },
     { "key": "hint.move", "text": "Drag" }
   ]
 }

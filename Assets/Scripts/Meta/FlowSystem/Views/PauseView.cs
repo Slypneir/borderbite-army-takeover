@@ -21,11 +21,16 @@ namespace Meta.FlowSystem.Views
         [SerializeField] private TMP_Text resumeCaption;
         [SerializeField] private Button restart;
         [SerializeField] private TMP_Text restartCaption;
+        [Tooltip("«Menu»: leaves the battle for the main menu, or for the editor when the battle came from there.")]
+        [SerializeField] private Button leave;
+        [SerializeField] private TMP_Text leaveCaption;
         [Tooltip("The light rim of «Really again?»: the second tap must not look like the first (UI review).")]
         [SerializeField] private Outline restartRim;
 
         private Action _onResume;
         private Action _onRestart;
+        private Action _onLeave;
+        private string _leaveKey = "pause.menu";
         private float _confirmUntil = -1f;
 
         public bool Shown => group.alpha > 0f;
@@ -34,6 +39,7 @@ namespace Meta.FlowSystem.Views
         {
             resume.onClick.AddListener(() => _onResume?.Invoke());
             restart.onClick.AddListener(Restart);
+            leave.onClick.AddListener(() => _onLeave?.Invoke());
             Hide();
         }
 
@@ -41,10 +47,12 @@ namespace Meta.FlowSystem.Views
 
         private void OnDisable() => Loc.Changed -= Draw;
 
-        public void Show(Action onResume, Action onRestart)
+        public void Show(Action onResume, Action onRestart, Action onLeave, string leaveKey)
         {
             _onResume = onResume;
             _onRestart = onRestart;
+            _onLeave = onLeave;
+            _leaveKey = leaveKey;
             _confirmUntil = -1f;
             Draw();
             group.alpha = 1f;
@@ -87,6 +95,7 @@ namespace Meta.FlowSystem.Views
             title.text = Loc.Get("pause.title");
             resumeCaption.text = Loc.Get("pause.resume");
             restartCaption.text = Loc.Get(_confirmUntil > 0f ? "pause.restart_confirm" : "pause.restart");
+            leaveCaption.text = Loc.Get(_leaveKey);
             if (restartRim != null)
                 restartRim.enabled = _confirmUntil > 0f;
         }

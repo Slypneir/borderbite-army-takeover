@@ -18,11 +18,13 @@ namespace Meta.DeveloperTools.Services
         private readonly IAdService _ads;
         private readonly BattleDebug _debug;
         private readonly BattleFlow _flow;
+        private readonly MenuFlow _menu;
         private readonly Meta.ProgressSystem.Services.ProgressService _progress;
 
         public DevTools(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads,
-            BattleDebug debug, BattleFlow flow, Meta.ProgressSystem.Services.ProgressService progress)
+            BattleDebug debug, BattleFlow flow, MenuFlow menu, Meta.ProgressSystem.Services.ProgressService progress)
         {
+            _menu = menu;
             _progress = progress;
             _platform = platform;
             _gate = gate;
@@ -33,7 +35,7 @@ namespace Meta.DeveloperTools.Services
             _flow = flow;
         }
 
-        public void Start() => DevBridge.Bind(_platform, _gate, _layout, _battle, _ads, _debug, _flow, _progress);
+        public void Start() => DevBridge.Bind(_platform, _gate, _layout, _battle, _ads, _debug, _flow, _menu, _progress);
     }
 }
 #endif

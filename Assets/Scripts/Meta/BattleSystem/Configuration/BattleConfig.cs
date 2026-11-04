@@ -232,6 +232,9 @@ namespace Meta.BattleSystem.Configuration
         /// <summary>The map of the next battle: one the developer chose to play, else that of the test level; null — the square island.</summary>
         public BattleMapAsset Map => _playing != null ? _playing : map;
 
+        /// <summary>The map of the test level, whatever the developer plays now.</summary>
+        public BattleMapAsset TestMap => map;
+
         /// <summary>The developer plays another map from the next battle (layer 5 spec 2.6); null — back to the map of the test level.</summary>
         public void Play(BattleMapAsset other) => _playing = other;
 

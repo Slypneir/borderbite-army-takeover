@@ -33,12 +33,14 @@ namespace Meta.DeveloperTools.Services
         private static IAdService _ads;
         private static BattleDebug _debug;
         private static BattleFlow _flow;
+        private static MenuFlow _menu;
         private static Meta.ProgressSystem.Services.ProgressService _progress;
         private static readonly Dictionary<int, ulong> Hashes = new Dictionary<int, ulong>();
 
         public static void Bind(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads,
-            BattleDebug debug, BattleFlow flow, Meta.ProgressSystem.Services.ProgressService progress)
+            BattleDebug debug, BattleFlow flow, MenuFlow menu, Meta.ProgressSystem.Services.ProgressService progress)
         {
+            _menu = menu;
             _progress = progress;
             _platform = platform;
             _gate = gate;
@@ -240,6 +242,27 @@ namespace Meta.DeveloperTools.Services
             return Battle();
         }
 #endif
+
+        /// <summary>«Play» of the main menu: the test level on its own map.</summary>
+        public static string Play()
+        {
+            _menu.Play();
+            return Battle();
+        }
+
+        /// <summary>The main menu, as «Menu» of the pause does.</summary>
+        public static string Menu()
+        {
+            _menu.ShowMenu();
+            return State();
+        }
+
+        /// <summary>«Editor» of the main menu.</summary>
+        public static string Editor()
+        {
+            _menu.OpenEditor();
+            return State();
+        }
 
         /// <summary>Starts the level anew, as «Again» does.</summary>
         public static string Restart()

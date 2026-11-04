@@ -10,6 +10,7 @@ using Meta.BattleSystem.Views;
 using Meta.FlowSystem.Views;
 using Meta.ProgressSystem.Configuration;
 using Meta.LocalizationSystem.Views;
+using Meta.MapEditorSystem.Views;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -83,8 +84,10 @@ namespace Core.EditorTools
 
             var camera = BuildCamera(view);
             var world = BuildWorld();
-            var canvas = BuildCanvas(view, out var results, out var upgrades, out var pause);
+            var canvas = BuildCanvas(view, out var results, out var upgrades, out var pause, out var menu, out var editor);
             BuildRoot(camera, world, results, upgrades, pause, canvas);
+            var root = Object.FindFirstObjectByType<RootInstaller>(FindObjectsInactive.Include);
+            Wire(root, ("mainMenuView", menu), ("mapEditorView", editor));
             BuildEventSystem();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -274,7 +277,8 @@ namespace Core.EditorTools
             go.SetActive(true);
         }
 
-        private static GameObject BuildCanvas(BattleViewConfig view, out ResultsView results, out UpgradesView upgrades, out PauseView pause)
+        private static GameObject BuildCanvas(BattleViewConfig view, out ResultsView results, out UpgradesView upgrades, out PauseView pause,
+            out MainMenuView menu, out MapEditorView editor)
         {
             var go = new GameObject("Canvas");
             var canvas = go.AddComponent<Canvas>();
@@ -311,6 +315,9 @@ namespace Core.EditorTools
             results = BuildResults(area);
             upgrades = BuildUpgrades(area);
             pause = BuildPause(area);
+            // the main menu and the map editor cover the whole window, over everything else (owner, 5 November)
+            menu = BuildMainMenu(area);
+            editor = BuildMapEditor(area);
 
             // the layers of the battle hide under a window (UI review of layers 3–4)
             var layers = go.AddComponent<BattleLayersView>();
@@ -1072,7 +1079,7 @@ namespace Core.EditorTools
             Stretch(rect);
             go.GetComponent<Image>().color = DimColor;
             var window = Rect(rect, "Window", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            window.sizeDelta = new Vector2(480f, 520f);
+            window.sizeDelta = new Vector2(480f, 648f);
             Picture(window, null, BarBaseColor);
             var title = Text(window, "Title", HeadingSize, TextAlignmentOptions.Center);
             var titleRect = (RectTransform)title.transform;
@@ -1091,10 +1098,277 @@ namespace Core.EditorTools
             rim.enabled = false;
             var resume = MainButton(window, "Resume", new Vector2(0.5f, 0f), 400f, 128f);
             resume.Rect.anchoredPosition = new Vector2(0f, 32f);
+            var leave = MainButton(window, "Leave", new Vector2(0.5f, 0f), 400f, 104f);
+            leave.Rect.anchoredPosition = new Vector2(0f, 32f + 128f + 56f + 104f + 24f);
+            leave.Button.targetGraphic.color = new Color(0.32f, 0.33f, 0.36f);
+            leave.Caption.color = TextColor;
             var view = go.GetComponent<PauseView>();
             Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("title", title), ("resume", resume.Button), ("resumeCaption", resume.Caption),
-                ("restart", restart.Button), ("restartCaption", restart.Caption), ("restartRim", rim));
+                ("restart", restart.Button), ("restartCaption", restart.Caption), ("restartRim", rim), ("leave", leave.Button),
+                ("leaveCaption", leave.Caption));
             return view;
+        }
+
+        /// <summary>
+        /// The main menu (screens/main-menu.md): an opaque cover of the whole window, the name of the game above the middle,
+        /// «Play» — the main button — and «Editor» under it, dark, for the owner only.
+        /// </summary>
+        private static MainMenuView BuildMainMenu(RectTransform area)
+        {
+            var go = new GameObject("MainMenu", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(MainMenuView));
+            go.transform.SetParent(area, false);
+            var rect = (RectTransform)go.transform;
+            Stretch(rect);
+            go.GetComponent<Image>().color = BarBaseColor;
+            var title = Line(rect, "Title", TitleSize, 0.68f, 0f);
+            var play = MainButton(rect, "Play", new Vector2(0.5f, 0.5f), ButtonWidth + 40f, ButtonHeight);
+            play.Rect.pivot = new Vector2(0.5f, 0.5f);
+            play.Rect.anchoredPosition = new Vector2(0f, -40f);
+            var editor = MainButton(rect, "Editor", new Vector2(0.5f, 0.5f), ButtonWidth + 40f, 96f);
+            editor.Rect.pivot = new Vector2(0.5f, 0.5f);
+            editor.Rect.anchoredPosition = new Vector2(0f, -40f - ButtonHeight / 2f - 32f - 48f);
+            editor.Button.targetGraphic.color = new Color(0.32f, 0.33f, 0.36f);
+            editor.Caption.color = TextColor;
+            var view = go.GetComponent<MainMenuView>();
+            Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("title", title), ("play", play.Button), ("playCaption", play.Caption),
+                ("editor", editor.Button), ("editorCaption", editor.Caption));
+            return view;
+        }
+
+        // the map editor: a tool of the owner, dense as a tool (screens/map-editor.md)
+        private const float EditorSide = 340f;
+        private const float EditorRow = 36f;
+        private const int EditorText = 20;
+        private const float EditorGap = 6f;
+        private static readonly Color EditorPanel = new Color(0.14f, 0.15f, 0.18f, 1f);
+        private static readonly Color EditorBack = new Color(0.06f, 0.07f, 0.09f, 1f);
+
+        /// <summary>
+        /// The map editor (screens/map-editor.md): a panel of tools on the left in one column, the map in the rest of the window
+        /// with its name above and a line of numbers below, and a dialog over everything for «Save?» and «Delete?».
+        /// </summary>
+        private static MapEditorView BuildMapEditor(RectTransform area)
+        {
+            var go = new GameObject("MapEditor", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(MapEditorView));
+            go.transform.SetParent(area, false);
+            var rect = (RectTransform)go.transform;
+            Stretch(rect);
+            go.GetComponent<Image>().color = EditorBack;
+
+            // the map: the rest of the window
+            var viewport = Rect(rect, "Viewport", Vector2.zero, Vector2.one);
+            viewport.offsetMin = new Vector2(EditorSide + 12f, 48f);
+            viewport.offsetMax = new Vector2(-12f, -52f);
+            var back = Picture(viewport, null, new Color(0.03f, 0.04f, 0.05f, 1f));
+            back.raycastTarget = true;
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var input = viewport.gameObject.AddComponent<MapViewportInput>();
+            var mapRect = Rect(viewport, "Map", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            mapRect.sizeDelta = Vector2.one * 600f;
+            var raw = mapRect.gameObject.AddComponent<RawImage>();
+            raw.raycastTarget = false;
+
+            var title = Text(rect, "Title", 30, TextAlignmentOptions.Center);
+            var titleRect = (RectTransform)title.transform;
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.offsetMin = new Vector2(EditorSide + 12f, -48f);
+            titleRect.offsetMax = new Vector2(-12f, -6f);
+            var status = Text(rect, "Status", EditorText, TextAlignmentOptions.Center);
+            var statusRect = (RectTransform)status.transform;
+            statusRect.anchorMin = Vector2.zero;
+            statusRect.anchorMax = new Vector2(1f, 0f);
+            statusRect.pivot = new Vector2(0.5f, 0f);
+            statusRect.offsetMin = new Vector2(EditorSide + 12f, 8f);
+            statusRect.offsetMax = new Vector2(-12f, 42f);
+            var message = Text(viewport, "Message", 24, TextAlignmentOptions.Center);
+            var messageRect = (RectTransform)message.transform;
+            messageRect.anchorMin = new Vector2(0f, 0f);
+            messageRect.anchorMax = new Vector2(1f, 0f);
+            messageRect.pivot = new Vector2(0.5f, 0f);
+            messageRect.offsetMin = new Vector2(0f, 12f);
+            messageRect.offsetMax = new Vector2(0f, 48f);
+            message.color = new Color(1f, 0.9f, 0.7f, 1f);
+            message.text = string.Empty;
+
+            // the panel of tools: one column
+            var panel = Rect(rect, "Panel", Vector2.zero, new Vector2(0f, 1f));
+            panel.pivot = new Vector2(0f, 0.5f);
+            panel.sizeDelta = new Vector2(EditorSide, 0f);
+            Picture(panel, null, EditorPanel);
+            var column = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+            column.padding = new RectOffset(14, 14, 12, 12);
+            column.spacing = EditorGap;
+            column.childControlWidth = true;
+            column.childControlHeight = true;
+            column.childForceExpandWidth = true;
+            column.childForceExpandHeight = false;
+
+            Caption(panel, "Header", "Редактор карт", 28, 40f);
+            Caption(panel, "MapsLabel", "Карты", EditorText, 24f);
+            var list = BuildMapList(panel, out var template);
+            var newRow = EditorRowOf(panel, "NewRow");
+            Caption(newRow, "NewLabel", "Новая:", EditorText, EditorRow);
+            var create48 = Tool(newRow, "New48", "48");
+            var create64 = Tool(newRow, "New64", "64");
+            var create80 = Tool(newRow, "New80", "80");
+            var nameRow = EditorRowOf(panel, "NameRow");
+            var nameField = NameField(nameRow);
+            var rename = Tool(nameRow, "Rename", "Имя");
+            rename.GetComponent<LayoutElement>().flexibleWidth = 0f;
+            rename.GetComponent<LayoutElement>().preferredWidth = 80f;
+            var fileRow = EditorRowOf(panel, "FileRow");
+            var copy = Tool(fileRow, "Copy", "Копия");
+            var remove = Tool(fileRow, "Delete", "Удалить");
+            Caption(panel, "BrushLabel", "Кисть", EditorText, 24f);
+            var brushRow = EditorRowOf(panel, "BrushRow");
+            var land = Tool(brushRow, "Land", "Суша");
+            var water = Tool(brushRow, "Water", "Вода");
+            var sizeRow = EditorRowOf(panel, "SizeRow");
+            var brush1 = Tool(sizeRow, "Brush1", "1");
+            var brush3 = Tool(sizeRow, "Brush3", "3");
+            var brush5 = Tool(sizeRow, "Brush5", "5");
+            var grid = Tool(sizeRow, "Grid", "Сетка");
+            var historyRow = EditorRowOf(panel, "HistoryRow");
+            var undo = Tool(historyRow, "Undo", "Отменить");
+            var redo = Tool(historyRow, "Redo", "Повторить");
+            var save = Tool(EditorRowOf(panel, "SaveRow"), "Save", "Сохранить");
+            var exitRow = EditorRowOf(panel, "ExitRow");
+            var play = Tool(exitRow, "Play", "Играть");
+            var exit = Tool(exitRow, "Exit", "В меню");
+
+            // the dialog over everything
+            var dialogGo = new GameObject("Dialog", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+            dialogGo.transform.SetParent(rect, false);
+            var dialogRect = (RectTransform)dialogGo.transform;
+            Stretch(dialogRect);
+            dialogGo.GetComponent<Image>().color = DimColor;
+            var window = Rect(dialogRect, "Window", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            window.sizeDelta = new Vector2(560f, 220f);
+            Picture(window, null, EditorPanel);
+            var dialogText = Text(window, "Text", 24, TextAlignmentOptions.Center);
+            dialogText.textWrappingMode = TextWrappingModes.Normal;
+            var dialogTextRect = (RectTransform)dialogText.transform;
+            dialogTextRect.offsetMin = new Vector2(24f, 84f);
+            dialogTextRect.offsetMax = new Vector2(-24f, -20f);
+            var buttons = Rect(window, "Buttons", Vector2.zero, new Vector2(1f, 0f));
+            buttons.pivot = new Vector2(0.5f, 0f);
+            buttons.offsetMin = new Vector2(24f, 20f);
+            buttons.offsetMax = new Vector2(-24f, 20f + 48f);
+            var row = buttons.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.spacing = 12f;
+            row.childControlWidth = true;
+            row.childControlHeight = true;
+            row.childForceExpandWidth = true;
+            var yes = Tool(buttons, "Yes", "Да");
+            var no = Tool(buttons, "No", "Нет");
+            var cancel = Tool(buttons, "Cancel", "Отмена");
+
+            var view = go.GetComponent<MapEditorView>();
+            Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("viewport", viewport), ("map", raw), ("input", input),
+                ("listContent", list), ("itemTemplate", template), ("nameField", nameField), ("title", title), ("status", status),
+                ("message", message), ("create48", create48), ("create64", create64), ("create80", create80), ("copy", copy),
+                ("rename", rename), ("remove", remove), ("land", land), ("water", water), ("brush1", brush1), ("brush3", brush3),
+                ("brush5", brush5), ("grid", grid), ("save", save), ("undo", undo), ("redo", redo), ("play", play), ("exit", exit),
+                ("dialog", dialogGo.GetComponent<CanvasGroup>()), ("dialogText", dialogText), ("dialogYes", yes),
+                ("dialogYesCaption", yes.GetComponentInChildren<TMP_Text>()), ("dialogNo", no),
+                ("dialogNoCaption", no.GetComponentInChildren<TMP_Text>()), ("dialogCancel", cancel));
+            return view;
+        }
+
+        /// <summary>The list of maps: a scrolled column of buttons made from a template, a map per button.</summary>
+        private static RectTransform BuildMapList(RectTransform panel, out Button template)
+        {
+            var scroll = Rect(panel, "Maps", Vector2.zero, Vector2.one);
+            scroll.gameObject.AddComponent<LayoutElement>().preferredHeight = 176f;
+            Picture(scroll, null, EditorBack).raycastTarget = true;
+            var viewport = Rect(scroll, "Viewport", Vector2.zero, Vector2.one);
+            viewport.offsetMin = new Vector2(4f, 4f);
+            viewport.offsetMax = new Vector2(-4f, -4f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var content = Rect(viewport, "Content", new Vector2(0f, 1f), Vector2.one);
+            content.pivot = new Vector2(0.5f, 1f);
+            var column = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            column.spacing = 4f;
+            column.childControlWidth = true;
+            column.childControlHeight = true;
+            column.childForceExpandWidth = true;
+            column.childForceExpandHeight = false;
+            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var view = scroll.gameObject.AddComponent<ScrollRect>();
+            view.viewport = viewport;
+            view.content = content;
+            view.horizontal = false;
+            view.movementType = ScrollRect.MovementType.Clamped;
+            view.scrollSensitivity = 24f;
+            template = Tool(content, "Item", "Карта");
+            template.GetComponentInChildren<TMP_Text>().alignment = TextAlignmentOptions.MidlineLeft;
+            var label = (RectTransform)template.GetComponentInChildren<TMP_Text>().transform;
+            label.offsetMin = new Vector2(10f, 0f);
+            return content;
+        }
+
+        private static RectTransform EditorRowOf(RectTransform parent, string name)
+        {
+            var rect = Rect(parent, name, Vector2.zero, Vector2.one);
+            rect.gameObject.AddComponent<LayoutElement>().preferredHeight = EditorRow;
+            var row = rect.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.spacing = EditorGap;
+            row.childControlWidth = true;
+            row.childControlHeight = true;
+            row.childForceExpandWidth = true;
+            row.childForceExpandHeight = true;
+            return rect;
+        }
+
+        /// <summary>A light button of the editor with a dark caption, as wide as its row lets it.</summary>
+        private static Button Tool(RectTransform parent, string name, string caption)
+        {
+            var rect = Rect(parent, name, Vector2.zero, Vector2.one);
+            var element = rect.gameObject.AddComponent<LayoutElement>();
+            element.preferredHeight = EditorRow;
+            element.flexibleWidth = 1f;
+            var image = Picture(rect, null, ButtonColor);
+            image.raycastTarget = true;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            var label = Text(rect, "Label", EditorText, TextAlignmentOptions.Center);
+            label.color = ButtonTextColor;
+            label.text = caption;
+            return button;
+        }
+
+        private static TextMeshProUGUI Caption(RectTransform parent, string name, string text, int size, float height)
+        {
+            var label = Text(parent, name, size, TextAlignmentOptions.MidlineLeft);
+            label.text = text;
+            label.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
+            return label;
+        }
+
+        /// <summary>The field of the name of the open map: «Имя» renames its file to what is typed.</summary>
+        private static TMP_InputField NameField(RectTransform row)
+        {
+            var go = TMP_DefaultControls.CreateInputField(new TMP_DefaultControls.Resources());
+            go.name = "Name";
+            go.transform.SetParent(row, false);
+            var element = go.AddComponent<LayoutElement>();
+            element.preferredHeight = EditorRow;
+            element.flexibleWidth = 3f;
+            var field = go.GetComponent<TMP_InputField>();
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(ProjectSetup.FontAsset);
+            foreach (var text in go.GetComponentsInChildren<TMP_Text>(true))
+            {
+                text.font = font;
+                text.fontSize = EditorText;
+                text.alignment = TextAlignmentOptions.MidlineLeft;
+            }
+
+            field.textComponent.color = ButtonTextColor;
+            ((TMP_Text)field.placeholder).text = "имя карты";
+            field.lineType = TMP_InputField.LineType.SingleLine;
+            return field;
         }
 
         /// <summary>The pause button of the HUD, at the right of the row of counters: two bars on a dark square.</summary>

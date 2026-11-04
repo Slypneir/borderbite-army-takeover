@@ -12,6 +12,8 @@ using Meta.BattleSystem.Views;
 using Meta.DeveloperTools.Installers;
 using Meta.FlowSystem.Installers;
 using Meta.FlowSystem.Views;
+using Meta.MapEditorSystem.Installers;
+using Meta.MapEditorSystem.Views;
 using Meta.ProgressSystem.Configuration;
 using Meta.ProgressSystem.Installers;
 using UnityEngine;
@@ -40,6 +42,8 @@ namespace Core.DependencyInjection
         [SerializeField] private ResultsView resultsView;
         [SerializeField] private UpgradesView upgradesView;
         [SerializeField] private PauseView pauseView;
+        [SerializeField] private MainMenuView mainMenuView;
+        [SerializeField] private MapEditorView mapEditorView;
         [SerializeField] private ProgressConfig progressConfig;
 
         protected override void Configure(IContainerBuilder builder)
@@ -50,7 +54,8 @@ namespace Core.DependencyInjection
             new AudioManagementInstaller(soundVolumes).Install(builder);
             new BattleSystemInstaller(battleConfig, battleViewConfig, battleWorld).Install(builder);
             new ProgressSystemInstaller(progressConfig).Install(builder);
-            new FlowSystemInstaller(resultsView, upgradesView, pauseView).Install(builder);
+            new MapEditorSystemInstaller(mapEditorView).Install(builder);
+            new FlowSystemInstaller(resultsView, upgradesView, pauseView, mainMenuView).Install(builder);
             new DeveloperToolsInstaller().Install(builder);
         }
     }

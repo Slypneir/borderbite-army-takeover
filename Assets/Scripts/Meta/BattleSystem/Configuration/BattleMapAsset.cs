@@ -73,6 +73,55 @@ namespace Meta.BattleSystem.Configuration
             return map;
         }
 
+        /// <summary>
+        /// A new map of the editor (layer 5 spec 2.1): a square of land of <paramref name="cells"/> with the bases 8 cells from two
+        /// corners, start areas of 6, nothing else.
+        /// </summary>
+        public void Reset(int cells)
+        {
+            size = cells;
+            land = Array.Empty<string>();
+            playerBase = new BaseSpot { corner = new Vector2Int(8, 8), startRadius = 6 };
+            enemyBase = new BaseSpot { corner = new Vector2Int(cells - 8, cells - 8), startRadius = 6 };
+            sites.Clear();
+            piles.Clear();
+            rocks.Clear();
+        }
+
+        /// <summary>Makes a cell water or land; true when it changed. The rows appear with the first water.</summary>
+        public bool SetWater(int x, int y, bool water)
+        {
+            if (x < 0 || y < 0 || x >= size || y >= size || IsWater(x, y) == water)
+                return false;
+
+            if (land == null || land.Length != size)
+            {
+                land = new string[size];
+                for (var i = 0; i < size; i++)
+                    land[i] = new string(Land, size);
+            }
+
+            var row = size - 1 - y;
+            var line = land[row].PadRight(size, Land).ToCharArray();
+            line[x] = water ? Water : Land;
+            land[row] = new string(line);
+            return true;
+        }
+
+        /// <summary>The cells of land.</summary>
+        public int LandCells()
+        {
+            var count = 0;
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                if (!IsWater(x, y))
+                    count++;
+            }
+
+            return count;
+        }
+
         /// <summary>Writes a whole map over this one: the editor and the move of the test map (task 5.5).</summary>
         public void Set(BattleMap map)
         {

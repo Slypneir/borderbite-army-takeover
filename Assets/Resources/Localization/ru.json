@@ -31,6 +31,10 @@
     { "key": "pause.resume", "text": "Продолжить" },
     { "key": "pause.restart", "text": "Заново" },
     { "key": "pause.restart_confirm", "text": "Точно заново?" },
+    { "key": "menu.play", "text": "Играть" },
+    { "key": "menu.editor", "text": "Редактор" },
+    { "key": "pause.menu", "text": "В меню" },
+    { "key": "pause.editor", "text": "В редактор" },
     { "key": "hint.move", "text": "Веди" }
   ]
 }
