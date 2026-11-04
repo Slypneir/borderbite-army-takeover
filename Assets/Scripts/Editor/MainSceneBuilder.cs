@@ -45,8 +45,11 @@ namespace Core.EditorTools
         private const int DebugSize = 24;
         private static readonly Color TextColor = new Color(0.96f, 0.96f, 0.92f);
         private const int BarPadding = 6;
-        private const int CounterHeight = 44;
-        private const int CounterWidth = 150;
+        private const int CounterHeight = 56;
+        private const int CounterWidth = 180;
+        // the icons of the HUD counters: not smaller than 48 units (UI review of f1d3ccb)
+        private const int CounterIcon = 48;
+        private const int CounterPadding = 8;
         private const int CounterTextSize = 30;
         private const int RingSize = 56;
         private const int LabelTextSize = 26;
@@ -343,13 +346,13 @@ namespace Core.EditorTools
             var cell = Rect(row, name, new Vector2(index / 3f, 0f), new Vector2((index + 1) / 3f, 1f));
             var iconRect = Rect(cell, "Icon", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
             iconRect.pivot = new Vector2(0f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(10f, 0f);
-            iconRect.sizeDelta = Vector2.one * (CounterHeight - 8);
+            iconRect.anchoredPosition = new Vector2(CounterPadding, 0f);
+            iconRect.sizeDelta = Vector2.one * CounterIcon;
             // the icon of the 3D artist, or a coloured circle while it is missing
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.IconFolder + icon + ".png");
             Picture(iconRect, sprite != null ? sprite : AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), sprite != null ? Color.white : color);
             var label = Text(cell, "Value", CounterTextSize, TextAlignmentOptions.Left);
-            ((RectTransform)label.transform).offsetMin = new Vector2(CounterHeight, 0f);
+            ((RectTransform)label.transform).offsetMin = new Vector2(CounterPadding * 2 + CounterIcon, 0f);
             gain = Text(cell, "Gain", CounterTextSize, TextAlignmentOptions.Right);
             ((RectTransform)gain.transform).offsetMax = new Vector2(-8f, 0f);
             gain.alpha = 0f;

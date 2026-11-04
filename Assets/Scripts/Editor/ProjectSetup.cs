@@ -191,18 +191,22 @@ namespace Core.EditorTools
             return true;
         }
 
-        /// <summary>The icons of the 3D artist for the HUD (gold, wood, army): sprites, point filter, no compression.</summary>
+        /// <summary>
+        /// The icons of the 3D artist for the HUD (gold, wood, army): sprites, bilinear filter, no compression. Bilinear, not point:
+        /// 64 px icons land on the screen at a scale that is not whole (72–110 px), and point sampling gives uneven pixels.
+        /// </summary>
         private static void Icons()
         {
             foreach (var name in new[] { "gold", "wood", "army" })
             {
                 var path = IconFolder + name + ".png";
-                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite)
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite
+                    && importer.filterMode == FilterMode.Bilinear)
                     continue;
 
                 importer.textureType = TextureImporterType.Sprite;
                 importer.spriteImportMode = SpriteImportMode.Single;
-                importer.filterMode = FilterMode.Point;
+                importer.filterMode = FilterMode.Bilinear;
                 importer.textureCompression = TextureImporterCompression.Uncompressed;
                 importer.mipmapEnabled = false;
                 importer.alphaIsTransparency = true;
