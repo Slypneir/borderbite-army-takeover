@@ -55,6 +55,15 @@ namespace Meta.BattleSystem.Configuration
                  "spec asks for 0.3–0.5. Starting value: 0.35.")]
         [Range(0f, 1f)] [SerializeField] private float waveSeconds = 0.35f;
 
+        [Header("Units")]
+        [Tooltip("The hero and soldiers turn to where they walk or fight this fast, degrees a second; 180° takes 0.2 s (stage 1 " +
+                 "spec 2.2). Starting value: 900.")]
+        [Min(1f)] [SerializeField] private float turnSpeed = 900f;
+
+        [Tooltip("After a blow or a shot the hero faces its target this long, seconds, then turns back to where it walks. " +
+                 "Starting value: 0.35.")]
+        [Min(0f)] [SerializeField] private float attackFaceSeconds = 0.35f;
+
         [Header("World")]
         [Tooltip("Depth of the island under the cells, meters. Starting value: 1.5.")]
         [Min(0.1f)] [SerializeField] private float islandDepth = 1.5f;
@@ -119,6 +128,8 @@ namespace Meta.BattleSystem.Configuration
         public float FlashSeconds => flashSeconds;
         public float FlashStrength => flashStrength;
         public float WaveSeconds => waveSeconds;
+        public float TurnSpeed => turnSpeed;
+        public float AttackFaceSeconds => attackFaceSeconds;
         public float IslandDepth => islandDepth;
         public float WaterDepth => waterDepth;
         public float CameraSmoothing => cameraSmoothing;

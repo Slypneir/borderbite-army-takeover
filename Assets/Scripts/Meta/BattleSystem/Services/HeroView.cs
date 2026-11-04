@@ -32,6 +32,8 @@ namespace Meta.BattleSystem.Services
         private Vector3 _previous;
         private Vector3 _current;
         private Vector3 _drawn;
+        private Vector3 _attack;
+        private float _attackUntil;
 
         public HeroView(BattleViewConfig view, BattleConfig rules, IBattleDriver battle, BattleWorld world, EffectsView effects,
             ViewMaterials materials)
@@ -68,9 +70,12 @@ namespace Meta.BattleSystem.Services
             foreach (var renderer in _renderers)
                 renderer.enabled = shown;
 
-            var facing = new Vector3(state.FacingX, 0f, state.FacingY);
+            // smoothly, never a jump: to the target for a moment after a blow or a shot, else to where it walks
+            var facing = Time.time < _attackUntil ? _attack
+                : state.Moving ? new Vector3(state.DirectionX, 0f, state.DirectionY)
+                : new Vector3(state.FacingX, 0f, state.FacingY);
             if (facing.sqrMagnitude > 0f)
-                hero.localRotation = Quaternion.RotateTowards(hero.localRotation, Quaternion.LookRotation(facing), 900f * Time.deltaTime);
+                hero.localRotation = Quaternion.RotateTowards(hero.localRotation, Quaternion.LookRotation(facing), _view.TurnSpeed * Time.deltaTime);
         }
 
         public void Dispose()
@@ -114,9 +119,7 @@ namespace Meta.BattleSystem.Services
                 case EventKind.Shot when battleEvent.Side == Side.Player:
                     // aim first, so the trace leaves the muzzle of the raised gun
                     _pose.Aim();
-                    var aim = Meters(battleEvent.ToX - battleEvent.X, battleEvent.ToY - battleEvent.Y);
-                    if (aim.sqrMagnitude > 0f)
-                        _world.Hero.rotation = Quaternion.LookRotation(aim);
+                    Face(battleEvent);
                     _pose.Update(0f, 0f);
                     var muzzle = _pose.Muzzle != null ? _pose.Muzzle.position : Meters(battleEvent.X, battleEvent.Y) + Vector3.up * 0.6f;
                     _effects.Shot(muzzle, Meters(battleEvent.ToX, battleEvent.ToY) + Vector3.up * 0.5f);
@@ -126,6 +129,7 @@ namespace Meta.BattleSystem.Services
                     break;
                 case EventKind.Strike when battleEvent.Side == Side.Player && battleEvent.Id < 0:
                     _pose.Blow();
+                    Face(battleEvent);
                     break;
                 case EventKind.HeroDied when battleEvent.Side == Side.Player:
                     _effects.Debris(Meters(battleEvent.X, battleEvent.Y), _view.PlayerHeroColor, 10, 1f);
@@ -137,6 +141,17 @@ namespace Meta.BattleSystem.Services
                     _drawn = _current;
                     break;
             }
+        }
+
+        /// <summary>The hero turns to the target of its blow or shot for a moment, at the usual turn speed.</summary>
+        private void Face(BattleEvent battleEvent)
+        {
+            var aim = Meters(battleEvent.ToX - battleEvent.X, battleEvent.ToY - battleEvent.Y);
+            if (aim.sqrMagnitude <= 0f)
+                return;
+
+            _attack = aim;
+            _attackUntil = Time.time + _view.AttackFaceSeconds;
         }
 
         private Vector3 Meters(int x, int y) => new Vector3(x * _rules.MetersPerUnit, 0f, y * _rules.MetersPerUnit);

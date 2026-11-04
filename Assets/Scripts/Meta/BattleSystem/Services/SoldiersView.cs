@@ -57,7 +57,7 @@ namespace Meta.BattleSystem.Services
                 body.Pose.Update(Vector3.Distance(position, body.Transform.localPosition), Time.deltaTime);
                 body.Transform.localPosition = position;
                 if (body.Facing.sqrMagnitude > 0f)
-                    body.Transform.localRotation = Quaternion.RotateTowards(body.Transform.localRotation, Quaternion.LookRotation(body.Facing), 720f * Time.deltaTime);
+                    body.Transform.localRotation = Quaternion.RotateTowards(body.Transform.localRotation, Quaternion.LookRotation(body.Facing), _view.TurnSpeed * Time.deltaTime);
             }
         }
 
