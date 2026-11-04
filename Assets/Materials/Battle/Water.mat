@@ -29,28 +29,42 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AbyssFrom: 2
-    - _AbyssTo: 14
+    - _AbyssFrom: 3
+    - _AbyssTo: 16
+    - _AbyssWarp: 6
     - _AlphaEdge: 0.35
     - _CapsFrom: 1.6
+    - _CapsHeight: 0.1
     - _FullDepth: 1.2
     - _MapSize: 32
+    - _PatchTint: 0.05
     - _PixelsPerMeter: 8
     - _RockSlope: 2.2
-    - _ShoreFoamAlpha: 0.9
+    - _Shadow: 0.55
+    - _ShoreFoamAlpha: 0.85
     - _ShoreLip: 0.45
     - _Slope: 1
+    - _Waves: 1
     m_Colors:
     - _Abyss: {r: 0.14509805, g: 0.4117647, b: 0.42745098, a: 1}
-    - _Caps: {r: 64, g: 3, b: 0.5, a: 0.85}
-    - _Crest: {r: 0.37254903, g: 0.7019608, b: 0.65882355, a: 1}
+    - _Amp: {r: 0.05, g: 0.2, b: 10, a: 0}
+    - _Calm: {r: 0.15, g: 1.4, b: 0, a: 0}
+    - _Caps: {r: 64, g: 6, b: 0.4, a: 0.5}
+    - _Crest: {r: 0.42352942, g: 0.7372549, b: 0.6901961, a: 1}
     - _Deep: {r: 0.18431373, g: 0.5176471, b: 0.5294118, a: 1}
     - _Foam: {r: 0.8627451, g: 0.92156863, b: 0.89411765, a: 1}
     - _FoamRim: {r: 0.6627451, g: 0.8392157, b: 0.8, a: 1}
     - _RockRadii: {r: 0.315, g: 0.773, b: 0.635, a: 0}
     - _Shallow: {r: 0.30980393, g: 0.6627451, b: 0.627451, a: 1}
-    - _ShoreFoam: {r: 0.08, g: 0.3, b: 3, a: 0.14}
+    - _ShoreFoam: {r: 0.08, g: 0.3, b: 6, a: 0.14}
     - _Swell: {r: 2.5, g: 3, b: 0.9, a: 0.32}
     - _SwellRange: {r: 0.8, g: 2.6, b: 0, a: 0}
+    - _Tint: {r: 0.22, g: 0.18, b: 0, a: 0}
+    - _Train0: {r: 0.94, g: 0.33, b: 7, a: 6}
+    - _Train1: {r: -0.37, g: 0.93, b: 5, a: 4}
+    - _Train2: {r: 0.6, g: -0.8, b: 3.5, a: 3}
+    - _TrainPhase: {r: 0, g: 1.7, b: 4.1, a: 0}
+    - _TrainWeight: {r: 0.5, g: 0.32, b: 0.18, a: 0}
+    - _Trough: {r: 0.14117648, g: 0.40392157, b: 0.41960785, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

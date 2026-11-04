@@ -4,7 +4,8 @@
   "shallow": "#4fa9a0",
   "deep": "#2f8487",
   "abyss": "#25696d",
-  "crest": "#5fb3a8",
+  "crest": "#6cbcb0",
+  "trough": "#24676b",
   "foam": "#dcebe4",
   "foamRim": "#a9d6cc",
   "under": [
@@ -12,36 +13,78 @@
     0.78,
     0.76
   ],
-  "abyssFrom": 2,
-  "abyssTo": 14,
+  "abyssFrom": 3,
+  "abyssTo": 16,
+  "abyssWarp": 6,
+  "patchTint": 0.05,
   "shoreLip": 0.45,
   "slope": 1,
   "rockSlope": 2.2,
   "fullDepth": 1.2,
   "alphaEdge": 0.35,
-  "swell": {
-    "length": 2.5,
-    "period": 3,
-    "warp": 0.9,
-    "strength": 0.32,
-    "from": 0.8,
-    "to": 2.6
+  "waves": {
+    "grid": 1,
+    "jitter": 0.3,
+    "trains": [
+      {
+        "dir": [
+          0.94,
+          0.33
+        ],
+        "length": 7,
+        "period": 6,
+        "weight": 0.5,
+        "phase": 0
+      },
+      {
+        "dir": [
+          -0.37,
+          0.93
+        ],
+        "length": 5,
+        "period": 4,
+        "weight": 0.32,
+        "phase": 1.7
+      },
+      {
+        "dir": [
+          0.6,
+          -0.8
+        ],
+        "length": 3.5,
+        "period": 3,
+        "weight": 0.18,
+        "phase": 4.1
+      }
+    ],
+    "amp": {
+      "min": 0.05,
+      "max": 0.2,
+      "patch": 10
+    },
+    "calm": {
+      "from": 0.15,
+      "to": 1.4
+    },
+    "crestTint": 0.22,
+    "troughTint": 0.18
   },
   "caps": {
     "tile": 64,
-    "period": 3,
-    "life": 0.5,
+    "period": 6,
+    "life": 0.4,
     "from": 1.6,
-    "strength": 0.85
+    "strength": 0.5,
+    "minHeight": 0.1
   },
   "shoreFoam": {
     "min": 0.08,
     "max": 0.3,
-    "period": 3,
+    "period": 6,
     "lace": 0.14,
-    "alpha": 0.9
+    "alpha": 0.85
   },
-  "loop": 6,
+  "loop": 12,
   "rockRadius": {
     "rock_small": 0.315,
     "rock_large": 0.773,

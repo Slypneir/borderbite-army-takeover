@@ -34,6 +34,11 @@ namespace Meta.BattleSystem.Services
         private static readonly int RockCountId = Shader.PropertyToID("_RockCount");
         private static readonly int RockRadiiId = Shader.PropertyToID("_RockRadii");
         private const int MaxRocks = 16;
+        private static readonly int WavesId = Shader.PropertyToID("_Waves");
+        // the waving sea reaches this far off the island, meters; past it the water is flat (README of the 3D artist)
+        private const float SeaReach = 15f;
+        private const float SeaStep = 1f;
+        private const float SeaJitter = 0.3f;
 
         private readonly BattleViewConfig _view;
         private readonly BattleConfig _rules;
@@ -47,6 +52,9 @@ namespace Meta.BattleSystem.Services
         private BattleSimulation _simulation;
         private Texture2D _texture;
         private Texture2D _grass;
+        private MeshRenderer _nearSea;
+        private Mesh _seaGrid;
+        private Mesh _farSea;
         private uint _grassSeed;
         private Material _cells;
         private Color32[] _pixels;
@@ -93,6 +101,10 @@ namespace Meta.BattleSystem.Services
                 UnityEngine.Object.Destroy(_texture);
             if (_grass != null)
                 UnityEngine.Object.Destroy(_grass);
+            if (_seaGrid != null)
+                UnityEngine.Object.Destroy(_seaGrid);
+            if (_farSea != null)
+                UnityEngine.Object.Destroy(_farSea);
         }
 
         private void Take(BattleRunner runner)
@@ -150,13 +162,128 @@ namespace Meta.BattleSystem.Services
             _world.Island.transform.localPosition = new Vector3(mapSize / 2f, -depth / 2f - 0.001f, mapSize / 2f);
             _world.Island.transform.localScale = new Vector3(mapSize, depth, mapSize);
 
-            // water to the horizon: far wider than any view of the orthographic camera
-            _world.Water.sharedMaterial = _view.WaterMaterial != null ? Copy(_view.WaterMaterial) : Flat(_view.WaterColor);
-            _world.Water.sharedMaterial.SetFloat(MapSizeId, mapSize);
-            _world.Water.transform.localPosition = new Vector3(mapSize / 2f, -_view.WaterDepth, mapSize / 2f);
-            _world.Water.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            _world.Water.transform.localScale = new Vector3(mapSize * 20f, mapSize * 20f, 1f);
+            BuildSea(mapSize);
             BuildShore(mapSize);
+        }
+
+        /// <summary>
+        /// The sea (task 4.10): near the island a mesh of uneven triangles a meter apart, its vertices moved by a constant hash
+        /// up to 0.3 m and the diagonals of the squares alternating, which the shader raises into waves; around it, to the
+        /// horizon, a flat ring of the same water without waves. The ring leaves a hole for the mesh: translucent water must not
+        /// lie twice. The outer vertices of the mesh do not move, so it meets the ring without a gap.
+        /// </summary>
+        private void BuildSea(float mapSize)
+        {
+            var source = _view.WaterMaterial;
+            var water = _world.Water;
+            water.transform.localPosition = new Vector3(0f, -_view.WaterDepth, 0f);
+            water.transform.localRotation = Quaternion.identity;
+            water.transform.localScale = Vector3.one;
+            var far = source != null ? Copy(source) : Flat(_view.WaterColor);
+            far.SetFloat(MapSizeId, mapSize);
+            far.SetFloat(WavesId, 0f);
+            water.sharedMaterial = far;
+            water.GetComponent<MeshFilter>().sharedMesh = _farSea = SeaRing(mapSize, SeaReach, mapSize * 10f);
+
+            if (_nearSea == null)
+            {
+                var near = new GameObject("NearSea", typeof(MeshFilter), typeof(MeshRenderer));
+                near.transform.SetParent(water.transform.parent, false);
+                _nearSea = near.GetComponent<MeshRenderer>();
+                _nearSea.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _nearSea.receiveShadows = false;
+            }
+
+            _nearSea.transform.localPosition = water.transform.localPosition;
+            var waves = source != null ? Copy(source) : Flat(_view.WaterColor);
+            waves.SetFloat(MapSizeId, mapSize);
+            waves.SetFloat(WavesId, 1f);
+            _nearSea.sharedMaterial = waves;
+            _nearSea.GetComponent<MeshFilter>().sharedMesh = _seaGrid = SeaGrid(mapSize, SeaReach, SeaStep, SeaJitter);
+        }
+
+        /// <summary>The squares of the grid from <paramref name="reach"/> off the island inwards, leaving out those under it.</summary>
+        private static Mesh SeaGrid(float mapSize, float reach, float step, float jitter)
+        {
+            var cells = Mathf.RoundToInt((mapSize + reach * 2f) / step);
+            var origin = -reach;
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+            var index = new int[(cells + 1) * (cells + 1)];
+            for (var j = 0; j <= cells; j++)
+            for (var i = 0; i <= cells; i++)
+            {
+                var edge = i == 0 || j == 0 || i == cells || j == cells;
+                var x = origin + i * step + (edge ? 0f : (Hash(i, j, 71) - 0.5f) * 2f * jitter);
+                var z = origin + j * step + (edge ? 0f : (Hash(i, j, 72) - 0.5f) * 2f * jitter);
+                index[j * (cells + 1) + i] = vertices.Count;
+                vertices.Add(new Vector3(x, 0f, z));
+            }
+
+            for (var j = 0; j < cells; j++)
+            for (var i = 0; i < cells; i++)
+            {
+                // a square wholly under the island is never seen
+                var cx = origin + (i + 0.5f) * step;
+                var cz = origin + (j + 0.5f) * step;
+                if (cx > step && cx < mapSize - step && cz > step && cz < mapSize - step)
+                    continue;
+
+                var a = index[j * (cells + 1) + i];
+                var b = index[j * (cells + 1) + i + 1];
+                var c = index[(j + 1) * (cells + 1) + i + 1];
+                var d = index[(j + 1) * (cells + 1) + i];
+                if ((i + j) % 2 == 0)
+                    triangles.AddRange(new[] { a, d, c, a, c, b });
+                else
+                    triangles.AddRange(new[] { a, d, b, d, c, b });
+            }
+
+            var mesh = new Mesh { name = "SeaGrid" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            // the waves rise up to a few tenths of a meter: bounds a little taller than the flat grid
+            mesh.bounds = new Bounds(new Vector3(mapSize / 2f, 0f, mapSize / 2f), new Vector3(mapSize + reach * 2f, 1f, mapSize + reach * 2f));
+            return mesh;
+        }
+
+        /// <summary>Four flat strips round the grid out to the horizon.</summary>
+        private static Mesh SeaRing(float mapSize, float reach, float horizon)
+        {
+            var lo = -reach;
+            var hi = mapSize + reach;
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+            void Strip(float x0, float z0, float x1, float z1)
+            {
+                var s = vertices.Count;
+                vertices.Add(new Vector3(x0, 0f, z0));
+                vertices.Add(new Vector3(x0, 0f, z1));
+                vertices.Add(new Vector3(x1, 0f, z1));
+                vertices.Add(new Vector3(x1, 0f, z0));
+                triangles.AddRange(new[] { s, s + 1, s + 2, s, s + 2, s + 3 });
+            }
+
+            Strip(-horizon, -horizon, lo, mapSize + horizon);
+            Strip(hi, -horizon, mapSize + horizon, mapSize + horizon);
+            Strip(lo, -horizon, hi, lo);
+            Strip(lo, hi, hi, mapSize + horizon);
+            var mesh = new Mesh { name = "SeaRing" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        /// <summary>A constant hash of a vertex of the grid, 0..1: the same sea every time.</summary>
+        private static float Hash(int x, int y, int salt)
+        {
+            unchecked
+            {
+                var h = (uint)x * 374761393u + (uint)y * 668265263u + (uint)salt * 982451653u;
+                h = (h ^ (h >> 13)) * 1274126177u;
+                return (h ^ (h >> 16)) / 4294967296f;
+            }
         }
 
         /// <summary>
@@ -207,6 +334,7 @@ namespace Meta.BattleSystem.Services
             var bottom = -_view.WaterDepth - 0.5f;
             var water = _world.Water.sharedMaterial;
             var radii = water.HasProperty(RockRadiiId) ? water.GetVector(RockRadiiId) : Vector4.zero;
+            // global: the waving sea and the flat ring read the same rocks
             var circles = new Vector4[MaxRocks];
             var count = Mathf.Min(spots.Length, MaxRocks);
             for (var i = 0; i < spots.Length; i++)
@@ -220,8 +348,8 @@ namespace Meta.BattleSystem.Services
             }
 
             // the sea foams around the rocks: circles at the water line, radii of the 3D artist (water.json)
-            water.SetVectorArray(RocksId, circles);
-            water.SetFloat(RockCountId, count);
+            Shader.SetGlobalVectorArray(RocksId, circles);
+            Shader.SetGlobalFloat(RockCountId, count);
         }
 
         private static float RockRadius(string name, Vector4 radii)

@@ -210,8 +210,8 @@ namespace Core.EditorTools
             material.SetTexture("_FoamTex", foam);
             foreach (var (property, key) in new[]
                      {
-                         ("_Shallow", "shallow"), ("_Deep", "deep"), ("_Abyss", "abyss"), ("_Crest", "crest"), ("_Foam", "foam"),
-                         ("_FoamRim", "foamRim"),
+                         ("_Shallow", "shallow"), ("_Deep", "deep"), ("_Abyss", "abyss"), ("_Crest", "crest"), ("_Trough", "trough"),
+                         ("_Foam", "foam"), ("_FoamRim", "foamRim"),
                      })
             {
                 if (ColorUtility.TryParseHtmlString((string)data[key], out var color))
@@ -219,22 +219,38 @@ namespace Core.EditorTools
             }
 
             material.SetFloat("_PixelsPerMeter", (float?)data["pxPerM"] ?? 8f);
-            material.SetFloat("_AbyssFrom", (float)data["abyssFrom"]);
-            material.SetFloat("_AbyssTo", (float)data["abyssTo"]);
-            material.SetFloat("_ShoreLip", (float)data["shoreLip"]);
-            material.SetFloat("_Slope", (float)data["slope"]);
-            material.SetFloat("_RockSlope", (float)data["rockSlope"]);
-            material.SetFloat("_FullDepth", (float)data["fullDepth"]);
-            material.SetFloat("_AlphaEdge", (float)data["alphaEdge"]);
-            var swell = data["swell"];
-            material.SetVector("_Swell", new Vector4((float)swell["length"], (float)swell["period"], (float)swell["warp"], (float)swell["strength"]));
-            material.SetVector("_SwellRange", new Vector4((float)swell["from"], (float)swell["to"], 0f, 0f));
+            foreach (var (property, key) in new[]
+                     {
+                         ("_AbyssFrom", "abyssFrom"), ("_AbyssTo", "abyssTo"), ("_AbyssWarp", "abyssWarp"), ("_PatchTint", "patchTint"),
+                         ("_ShoreLip", "shoreLip"), ("_Slope", "slope"), ("_RockSlope", "rockSlope"), ("_FullDepth", "fullDepth"),
+                         ("_AlphaEdge", "alphaEdge"),
+                     })
+                material.SetFloat(property, (float)data[key]);
+
+            var waves = data["waves"];
+            var trains = (JArray)waves["trains"];
+            var weights = Vector4.zero;
+            var phases = Vector4.zero;
+            for (var t = 0; t < 3 && t < trains.Count; t++)
+            {
+                var train = trains[t];
+                material.SetVector("_Train" + t, new Vector4((float)train["dir"][0], (float)train["dir"][1], (float)train["length"], (float)train["period"]));
+                weights[t] = (float)train["weight"];
+                phases[t] = (float)train["phase"];
+            }
+
+            material.SetVector("_TrainWeight", weights);
+            material.SetVector("_TrainPhase", phases);
+            material.SetVector("_Amp", new Vector4((float)waves["amp"]["min"], (float)waves["amp"]["max"], (float)waves["amp"]["patch"], 0f));
+            material.SetVector("_Calm", new Vector4((float)waves["calm"]["from"], (float)waves["calm"]["to"], 0f, 0f));
+            material.SetVector("_Tint", new Vector4((float)waves["crestTint"], (float)waves["troughTint"], 0f, 0f));
             var caps = data["caps"];
             material.SetVector("_Caps", new Vector4((float)caps["tile"], (float)caps["period"], (float)caps["life"], (float)caps["strength"]));
-            material.SetFloat("_CapsFrom", (float)caps["from"]);
+            material.SetFloat("_CapsHeight", (float?)caps["minHeight"] ?? 0.1f);
             var shore = data["shoreFoam"];
             material.SetVector("_ShoreFoam", new Vector4((float)shore["min"], (float)shore["max"], (float)shore["period"], (float)shore["lace"]));
             material.SetFloat("_ShoreFoamAlpha", (float)shore["alpha"]);
+            material.SetFloat("_Waves", 1f);
             var rocks = data["rockRadius"];
             material.SetVector("_RockRadii", new Vector4((float)rocks["rock_small"], (float)rocks["rock_large"], (float)rocks["rock_tall"], 0f));
             EditorUtility.SetDirty(material);
