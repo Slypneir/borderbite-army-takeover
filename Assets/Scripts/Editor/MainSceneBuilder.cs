@@ -62,6 +62,9 @@ namespace Core.EditorTools
         // the icons in the labels over places and barracks, and over the piles (battle-marks card, «Значки над картой»)
         private const int LabelIcon = 64;
         private const int MapIcon = 48;
+        // the pin of a place to build (task 4.26): the medallion and the whole with its tail
+        private const float PinMedallion = 64f;
+        private const float PinTall = 76f;
         private const int HealthWidth = 90;
         private const int HealthHeight = 12;
         private const float TitleHeight = 0.72f;
@@ -642,19 +645,54 @@ namespace Core.EditorTools
             Stretch((RectTransform)go.transform);
             var template = Rect((RectTransform)go.transform, "Template", Vector2.zero, Vector2.zero);
             template.pivot = new Vector2(0.5f, 0f);
-            template.sizeDelta = new Vector2(280f, RingSize + LabelIcon);
+            template.sizeDelta = new Vector2(280f, PinTall);
             template.gameObject.AddComponent<CanvasGroup>();
-            var ring = Rect(template, "Ring", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-            ring.pivot = new Vector2(0.5f, 1f);
-            ring.sizeDelta = Vector2.one * RingSize;
-            var image = Picture(ring, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), new Color(1f, 1f, 1f, 0.85f));
+
+            // the pin of an empty place (task 4.26): a medallion 64 with a tail to 76, its tip at the root; a placeholder disc with
+            // the icon of the barracks until the art of the 3D artist; the ring of building round the medallion
+            var circle = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath);
+            var pin = Rect(template, "Pin", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            pin.pivot = new Vector2(0.5f, 0f);
+            pin.sizeDelta = new Vector2(PinMedallion, PinTall);
+            var tail = Rect(pin, "Tail", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            tail.sizeDelta = Vector2.one * 18f;
+            tail.anchoredPosition = new Vector2(0f, 12f);
+            tail.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Picture(tail, null, new Color(0.18f, 0.19f, 0.23f, 1f));
+            var plate = Rect(pin, "Plate", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            plate.pivot = new Vector2(0.5f, 1f);
+            plate.sizeDelta = Vector2.one * PinMedallion;
+            Picture(plate, circle, Color.white);
+            var siteIcon = Rect(plate, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            siteIcon.sizeDelta = Vector2.one * 48f;
+            Picture(siteIcon, Icon("icon_barracks_128"), Color.white).preserveAspect = true;
+            var ring = Rect(pin, "Ring", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            ring.sizeDelta = Vector2.one * (PinMedallion + 16f);
+            ring.anchoredPosition = new Vector2(0f, -PinMedallion / 2f);
+            var image = Picture(ring, circle, new Color(1f, 1f, 1f, 0.85f));
             image.type = Image.Type.Filled;
             image.fillMethod = Image.FillMethod.Radial360;
             image.fillOrigin = (int)Image.Origin360.Top;
             image.fillClockwise = true;
+            ring.SetAsFirstSibling();
+            // the art of the 3D artist (mark_site_*, the whole pin with the barracks): the medallion takes the whole pin, the
+            // placeholder tail and icon go
+            var markOwn = Hud("mark_site_own_128x152");
+            var markLocked = Hud("mark_site_locked_128x152");
+            if (markOwn != null && markLocked != null)
+            {
+                plate.anchorMin = Vector2.zero;
+                plate.anchorMax = Vector2.one;
+                plate.offsetMin = Vector2.zero;
+                plate.offsetMax = Vector2.zero;
+                plate.GetComponent<Image>().sprite = markOwn;
+                Object.DestroyImmediate(siteIcon.gameObject);
+                Object.DestroyImmediate(tail.gameObject);
+            }
             var row = Rect(template, "Row", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             row.pivot = new Vector2(0.5f, 0f);
             row.sizeDelta = new Vector2(0f, LabelIcon);
+            row.gameObject.AddComponent<CanvasGroup>();
             var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
             // 8 between an icon and its number, 24 between the groups: 8, the dot of 8, 8 (UI designer, 4 November)
             layout.spacing = 8f;
@@ -693,7 +731,8 @@ namespace Core.EditorTools
 
             var view = go.GetComponent<WorldLabelsView>();
             Wire(view, ("template", template), ("goldIcon", Icon("icon_gold_128")), ("woodIcon", Icon("icon_wood_128")),
-                ("barracksIcon", Icon("icon_barracks_128")), ("armyIcon", Icon("army")), ("goldIconSmall", Icon("icon_gold_64")),
+                ("barracksIcon", Icon("icon_barracks_128")), ("armyIcon", Icon("army")),
+                ("siteOwn", Hud("mark_site_own_128x152")), ("siteOther", Hud("mark_site_locked_128x152")), ("goldIconSmall", Icon("icon_gold_64")),
                 ("woodIconSmall", Icon("icon_wood_64")), ("barracksIconSmall", Icon("icon_barracks_64")));
             return view;
         }

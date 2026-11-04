@@ -18,8 +18,18 @@ namespace Meta.BattleSystem.Views
     /// <see cref="HudGap"/> under the bottom of the HUD, and hidden while the place itself is out of the frame, under the HUD or no
     /// room is left for it (UI reviews of f1d3ccb and 3752fe1: the HUD is always on top and always reads).
     /// </summary>
+    /// <remarks>
+    /// The mark of a place to build (task 4.26, battle-marks card «Метка места под казарму»; owner: seen always): a pin over every
+    /// empty place in the frame at any distance from the hero, its tip 1.2 m over the middle of the place — blue on the land of
+    /// the player with «[wood] 5» under it and the ring of building round the medallion, grey on neutral or enemy land with no
+    /// label. A built barracks has no pin. Off the frame no pin: the edges belong to the signs of threats.
+    /// </remarks>
     public sealed class WorldLabelsView : MonoBehaviour
     {
+        // the tip of the pin over the middle of a place, meters
+        private const float PinHeight = 1.2f;
+        private const float RowGap = 6f;
+        private static readonly Color Grey = new Color(0.55f, 0.56f, 0.6f, 1f);
         // over the roof of the barracks model (2.5 m)
         private const float Height = 2.8f;
         private const float DullAlpha = 0.45f;
@@ -41,6 +51,11 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private Sprite woodIcon;
         [SerializeField] private Sprite barracksIcon;
         [SerializeField] private Sprite armyIcon;
+
+        [Tooltip("The medallion of a place on the land of the player, and on any other; while empty the placeholder disc is tinted.")]
+        [SerializeField] private Sprite siteOwn;
+        [SerializeField] private Sprite siteOther;
+        [SerializeField] private Color ownColor = new Color(0.25f, 0.5f, 0.95f, 1f);
 
         [Tooltip("The 64 px renders, for a window with less than a pixel per unit of the canvas.")]
         [SerializeField] private Sprite goldIconSmall;
@@ -106,33 +121,50 @@ namespace Meta.BattleSystem.Views
                 var z = (site.CenterY + 0.5f) * _rules.CellSize;
                 // the place itself must be in the frame and not under the HUD
                 var ground = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, 0f, z)) / scale;
-                var shown = (site.Barracks == Side.Player || (!site.Built && owner == Side.Player))
-                            && bounds.Contains(ground) && ground.y < ceiling;
+                var shown = (site.Barracks == Side.Player || !site.Built) && bounds.Contains(ground) && ground.y < ceiling;
                 mark.Root.gameObject.SetActive(shown);
                 if (!shown)
                     continue;
 
+                var own = owner == Side.Player;
                 if (site.Built)
                 {
+                    // over a barracks of the player: the price of a soldier and the army, as before; no pin
+                    mark.Pin.gameObject.SetActive(false);
+                    mark.Row.gameObject.SetActive(true);
+                    mark.Row.anchoredPosition = Vector2.zero;
                     Fill(mark, gold, null, _rules.SoldierGold.ToString(), true, armyIcon, $"{army}/{_rules.ArmyMax}");
-                    mark.Group.alpha = purse.Gold >= _rules.SoldierGold && army < _rules.ArmyMax ? 1f : DullAlpha;
+                    mark.RowGroup.alpha = purse.Gold >= _rules.SoldierGold && army < _rules.ArmyMax ? 1f : DullAlpha;
                     mark.Ring.enabled = false;
                 }
                 else
                 {
-                    Fill(mark, barracks, wood, _rules.BarracksWood.ToString(), false, null, null);
-                    mark.Group.alpha = purse.Wood >= _rules.BarracksWood ? 1f : DullAlpha;
-                    mark.Ring.enabled = site.BuildProgress > 0;
+                    // an empty place: the pin, blue on the land of the player, grey elsewhere; the price only on its own
+                    mark.Pin.gameObject.SetActive(true);
+                    var sprite = own ? siteOwn : siteOther;
+                    mark.Plate.sprite = sprite != null ? sprite : mark.Disc;
+                    mark.Plate.color = sprite != null ? Color.white : own ? ownColor : Grey;
+                    mark.Row.gameObject.SetActive(own);
+                    if (own)
+                    {
+                        Fill(mark, wood, null, _rules.BarracksWood.ToString(), false, null, null);
+                        mark.Row.anchoredPosition = new Vector2(0f, -mark.Row.rect.height - RowGap);
+                        mark.RowGroup.alpha = purse.Wood >= _rules.BarracksWood ? 1f : DullAlpha;
+                    }
+
+                    mark.Ring.enabled = own && site.BuildProgress > 0;
                     mark.Ring.fillAmount = (float)site.BuildProgress / buildTicks;
                 }
 
-                var point = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, Height, z)) / scale;
+                var point = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, site.Built ? Height : PinHeight, z)) / scale;
                 if (Inside(point, mark, bounds, ceiling, out var place))
                 {
                     mark.Root.anchoredPosition = place;
-                    var width = Mathf.Max(mark.Row.rect.width, mark.Ring.enabled ? mark.Ring.rectTransform.rect.width : 0f);
-                    var height = mark.Ring.enabled ? mark.Root.rect.height : mark.Row.rect.height;
-                    _shown.Add(new Rect(place.x - width / 2f, place.y, width, height));
+                    var rowShown = mark.Row.gameObject.activeSelf;
+                    var width = Mathf.Max(rowShown ? mark.Row.rect.width : 0f, mark.Pin.gameObject.activeSelf ? mark.Pin.rect.width : 0f);
+                    var bottom = rowShown ? place.y + mark.Row.anchoredPosition.y : place.y;
+                    var top = mark.Pin.gameObject.activeSelf ? place.y + mark.Pin.rect.height : place.y + mark.Row.rect.height;
+                    _shown.Add(new Rect(place.x - width / 2f, bottom, width, top - bottom));
                 }
                 else
                     mark.Root.gameObject.SetActive(false);
@@ -186,10 +218,11 @@ namespace Meta.BattleSystem.Views
         /// </summary>
         private static bool Inside(Vector2 point, Mark mark, Rect bounds, float ceiling, out Vector2 place)
         {
-            var half = Mathf.Max(mark.Row.rect.width, mark.Ring.rectTransform.rect.width) / 2f;
+            var half = Mathf.Max(mark.Row.gameObject.activeSelf ? mark.Row.rect.width : 0f, mark.Pin.rect.width) / 2f;
             var left = bounds.xMin + EdgeInset + half;
             var right = bounds.xMax - EdgeInset - half;
-            var bottom = bounds.yMin + EdgeInset;
+            // a price under a pin hangs below the root: it keeps over the bottom too
+            var bottom = bounds.yMin + EdgeInset - (mark.Row.gameObject.activeSelf ? Mathf.Min(0f, mark.Row.anchoredPosition.y) : 0f);
             var top = ceiling - mark.Root.rect.height;
             place = new Vector2(left <= right ? Mathf.Clamp(point.x, left, right) : bounds.center.x, Mathf.Clamp(point.y, bottom, top));
             return bottom <= top;
@@ -204,7 +237,11 @@ namespace Meta.BattleSystem.Views
             {
                 Root = root,
                 Group = root.GetComponent<CanvasGroup>(),
-                Ring = root.Find("Ring").GetComponent<Image>(),
+                Pin = (RectTransform)root.Find("Pin"),
+                Plate = root.Find("Pin/Plate").GetComponent<Image>(),
+                Disc = root.Find("Pin/Plate").GetComponent<Image>().sprite,
+                RowGroup = row.GetComponent<CanvasGroup>(),
+                Ring = root.Find("Pin/Ring").GetComponent<Image>(),
                 Row = row,
                 Icon1 = row.Find("Icon1").GetComponent<Image>(),
                 Icon2 = row.Find("Icon2").GetComponent<Image>(),
@@ -219,6 +256,10 @@ namespace Meta.BattleSystem.Views
         {
             public RectTransform Root;
             public CanvasGroup Group;
+            public RectTransform Pin;
+            public Image Plate;
+            public Sprite Disc;
+            public CanvasGroup RowGroup;
             public Image Ring;
             public RectTransform Row;
             public Image Icon1;
