@@ -18,6 +18,7 @@ Shader "Borderbite/World/Flat Lit"
         Pass
         {
             Name "Unlit"
+            Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
             #pragma vertex Vert

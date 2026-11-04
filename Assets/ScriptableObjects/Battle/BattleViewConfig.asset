@@ -27,6 +27,11 @@ MonoBehaviour:
   flashSeconds: 0.15
   flashStrength: 0.45
   waveSeconds: 0.35
+  turnSpeed: 900
+  playerOutline: {r: 0.96, g: 0.95, b: 0.88, a: 1}
+  enemyOutline: {r: 0.09, g: 0.08, b: 0.1, a: 1}
+  outlineWidth: 0.0025
+  attackFaceSeconds: 0.35
   islandDepth: 1.5
   waterDepth: 0.5
   cameraSmoothing: 0.12
@@ -36,5 +41,7 @@ MonoBehaviour:
   debrisSeconds: 0.8
   popupSeconds: 1.2
   popupRise: 60
+  surface: {fileID: 11400000, guid: 38c8a4c323601d946b71064a462b6f3b, type: 2}
   cellsMaterial: {fileID: 2100000, guid: f454a8a787506654fb6f709ad77efd4f, type: 2}
   flatMaterial: {fileID: 2100000, guid: f1ac751d09186dc4ea501d00f27dca5a, type: 2}
+  outlinedShader: {fileID: 4800000, guid: 856543c743bbaf94d9d8c4475c90ed61, type: 3}

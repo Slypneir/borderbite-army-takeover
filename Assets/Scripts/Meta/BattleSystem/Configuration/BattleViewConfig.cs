@@ -60,6 +60,16 @@ namespace Meta.BattleSystem.Configuration
                  "spec 2.2). Starting value: 900.")]
         [Min(1f)] [SerializeField] private float turnSpeed = 900f;
 
+        [Tooltip("The rim around the units of the player: light, so the side reads not only by colour (owner, 4 November). " +
+                 "Starting value: warm white.")]
+        [SerializeField] private Color playerOutline = new Color(0.96f, 0.95f, 0.88f);
+
+        [Tooltip("The rim around the units of the enemy: dark. Starting value: near black.")]
+        [SerializeField] private Color enemyOutline = new Color(0.09f, 0.08f, 0.1f);
+
+        [Tooltip("The width of the rim, a part of the screen height: 0.0025 is about 2.7 pixels at 1080. Starting value: 0.0025.")]
+        [Range(0f, 0.01f)] [SerializeField] private float outlineWidth = 0.0025f;
+
         [Tooltip("After a blow or a shot the hero faces its target this long, seconds, then turns back to where it walks. " +
                  "Starting value: 0.35.")]
         [Min(0f)] [SerializeField] private float attackFaceSeconds = 0.35f;
@@ -96,12 +106,19 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("«+N%» rises this much while it lives, canvas units. Starting value: 60.")]
         [SerializeField] private float popupRise = 60f;
 
+        [Header("Surface")]
+        [Tooltip("The grass of the island and how the colour of a side lies over it.")]
+        [SerializeField] private SurfaceConfig surface;
+
         [Header("Materials")]
         [Tooltip("The material of the cells: shader Borderbite/Map/Cells.")]
         [SerializeField] private Material cellsMaterial;
 
         [Tooltip("The material of placeholders: shader Borderbite/World/Flat Lit; each view takes a copy in its colour.")]
         [SerializeField] private Material flatMaterial;
+
+        [Tooltip("Shader Borderbite/World/Flat Lit Outlined: units take copies of their materials with it and the rim of their side.")]
+        [SerializeField] private Shader outlinedShader;
 
         public Color NeutralColor => neutralColor;
         public Color PlayerColor => playerColor;
@@ -128,6 +145,10 @@ namespace Meta.BattleSystem.Configuration
         public float FlashSeconds => flashSeconds;
         public float FlashStrength => flashStrength;
         public float WaveSeconds => waveSeconds;
+        public Color OutlineColor(Core.BattleSystem.Enums.Side side) =>
+            side == Core.BattleSystem.Enums.Side.Player ? playerOutline : enemyOutline;
+        public float OutlineWidth => outlineWidth;
+        public Shader OutlinedShader => outlinedShader;
         public float TurnSpeed => turnSpeed;
         public float AttackFaceSeconds => attackFaceSeconds;
         public float IslandDepth => islandDepth;
@@ -141,6 +162,7 @@ namespace Meta.BattleSystem.Configuration
         public float PopupRise => popupRise;
         public Material CellsMaterial => cellsMaterial;
         public Material FlatMaterial => flatMaterial;
+        public SurfaceConfig Surface => surface;
 
 #if UNITY_EDITOR
         public void InitForEditor(Material cells, Material flat)
@@ -148,6 +170,10 @@ namespace Meta.BattleSystem.Configuration
             cellsMaterial = cells;
             flatMaterial = flat;
         }
+
+        public void SetSurfaceForEditor(SurfaceConfig config) => surface = config;
+
+        public void SetOutlinedShaderForEditor(Shader shader) => outlinedShader = shader;
 #endif
     }
 }

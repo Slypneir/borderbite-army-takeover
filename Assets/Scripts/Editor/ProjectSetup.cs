@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Core.AudioManagement.Configuration;
 using Core.AudioManagement.Enums;
@@ -5,6 +6,7 @@ using Core.InputManagement.Configuration;
 using Core.PlatformSystem.Configuration;
 using Core.ScreenSystem.Configuration;
 using Meta.BattleSystem.Configuration;
+using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -29,6 +31,8 @@ namespace Core.EditorTools
         public const string OutlineFontMaterial = "Assets/Fonts/PTSans-Regular Outline.mat";
 
         private const string CellsMaterialPath = "Assets/Materials/Battle/Cells.mat";
+        public const string SurfaceConfigPath = "Assets/ScriptableObjects/Battle/SurfaceConfig.asset";
+        private const string SurfaceFolder = "Assets/Textures/Surface/";
         public const string FlatMaterialPath = "Assets/Materials/Placeholder/FlatShaded.mat";
         private const string AudioFolder = "Assets/Audio/";
         public const string FontAsset = "Assets/Fonts/PTSans-Regular SDF.asset";
@@ -74,11 +78,12 @@ namespace Core.EditorTools
             Create<ScreenLayoutConfig>(ScreenConfigPath);
             Create<MoveStickConfig>(MoveStickConfigPath);
             BattleView();
+            Surface();
             Sounds();
             Circle();
             AssetDatabase.SaveAssets();
             // fields a config no longer has leave the files; the values the owner set stay
-            AssetDatabase.ForceReserializeAssets(new[] { BattleConfigPath, BattleViewConfigPath, ScreenConfigPath, MoveStickConfigPath, SoundVolumesPath });
+            AssetDatabase.ForceReserializeAssets(new[] { BattleConfigPath, BattleViewConfigPath, SurfaceConfigPath, ScreenConfigPath, MoveStickConfigPath, SoundVolumesPath });
         }
 
         private static void BattleView()
@@ -87,11 +92,101 @@ namespace Core.EditorTools
             var flat = MaterialAsset(FlatMaterialPath, "Borderbite/World/Flat Lit");
             Create<BattleViewConfig>(BattleViewConfigPath);
             var config = AssetDatabase.LoadAssetAtPath<BattleViewConfig>(BattleViewConfigPath);
+            var outlined = Shader.Find("Borderbite/World/Flat Lit Outlined");
+            if (config.OutlinedShader != outlined)
+            {
+                config.SetOutlinedShaderForEditor(outlined);
+                EditorUtility.SetDirty(config);
+            }
+
             if (config.CellsMaterial != null && config.FlatMaterial != null)
                 return;
 
             config.InitForEditor(config.CellsMaterial != null ? config.CellsMaterial : cells, config.FlatMaterial != null ? config.FlatMaterial : flat);
             EditorUtility.SetDirty(config);
+        }
+
+        /// <summary>
+        /// The grass of the 3D artist (Assets/Textures/Surface): textures readable with the point filter, and the stamps and kinds
+        /// of the decor from grass_decor.json into SurfaceConfig. The numbers of the paint are the config's own and stay.
+        /// </summary>
+        private static void Surface()
+        {
+            var grass = SurfaceTexture("grass_base.png", TextureWrapMode.Repeat);
+            var decor = SurfaceTexture("grass_decor.png", TextureWrapMode.Clamp);
+            var json = AssetDatabase.LoadAssetAtPath<TextAsset>(SurfaceFolder + "grass_decor.json");
+            if (grass == null || decor == null || json == null)
+                return;
+
+            var data = JObject.Parse(json.text);
+            var kinds = new List<SurfaceConfig.Kind>();
+            var kindIndex = new Dictionary<string, int>();
+            foreach (var pair in (JObject)data["kinds"])
+            {
+                var kind = (JObject)pair.Value;
+                kindIndex[pair.Key] = kinds.Count;
+                kinds.Add(new SurfaceConfig.Kind
+                {
+                    Id = pair.Key,
+                    Density = (float)kind["density"],
+                    Spacing = (float)kind["spacing"],
+                    GroupMin = (int)kind["group"][0],
+                    GroupMax = (int)kind["group"][1],
+                    Radius = (float)kind["radius"],
+                });
+            }
+
+            var stamps = new List<SurfaceConfig.Stamp>();
+            foreach (var pair in (JObject)data["stamps"])
+            {
+                var stamp = (JObject)pair.Value;
+                var w = (int)stamp["w"];
+                var h = (int)stamp["h"];
+                // the json counts from the top left of the PNG, Unity keeps rows from the bottom
+                stamps.Add(new SurfaceConfig.Stamp
+                {
+                    Id = pair.Key,
+                    Rect = new RectInt((int)stamp["x"], decor.height - (int)stamp["y"] - h, w, h),
+                    Kind = kindIndex.TryGetValue((string)stamp["kind"], out var index) ? index : -1,
+                });
+            }
+
+            Create<SurfaceConfig>(SurfaceConfigPath);
+            var config = AssetDatabase.LoadAssetAtPath<SurfaceConfig>(SurfaceConfigPath);
+            config.InitForEditor(grass, decor, (int?)data["pxPerMetre"] ?? 8, stamps.ToArray(), kinds.ToArray());
+            EditorUtility.SetDirty(config);
+
+            var view = AssetDatabase.LoadAssetAtPath<BattleViewConfig>(BattleViewConfigPath);
+            if (view.Surface != config)
+            {
+                view.SetSurfaceForEditor(config);
+                EditorUtility.SetDirty(view);
+            }
+        }
+
+        private static Texture2D SurfaceTexture(string file, TextureWrapMode wrap)
+        {
+            var path = SurfaceFolder + file;
+            if (!(AssetImporter.GetAtPath(path) is TextureImporter importer))
+                return null;
+
+            if (importer.textureType != TextureImporterType.Default || importer.filterMode != FilterMode.Point || !importer.isReadable
+                || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
+                || importer.wrapMode != wrap || importer.npotScale != TextureImporterNPOTScale.None)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = true;
+                importer.alphaIsTransparency = false;
+                importer.filterMode = FilterMode.Point;
+                importer.isReadable = true;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.wrapMode = wrap;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
         private static Material MaterialAsset(string path, string shader)

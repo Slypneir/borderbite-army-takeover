@@ -5,6 +5,7 @@ using Core.BattleSystem.Services;
 using Core.BattleSystem.Structs;
 using Meta.BattleSystem.Configuration;
 using Meta.BattleSystem.Interfaces;
+using Meta.BattleSystem.Utils;
 using Meta.BattleSystem.Views;
 using UnityEngine;
 using VContainer.Unity;
@@ -12,10 +13,10 @@ using VContainer.Unity;
 namespace Meta.BattleSystem.Services
 {
     /// <summary>
-    /// Draws the cells: a texel per cell on one quad, the island under it, its shore and rocks and the water around. A cell that
-    /// changed side turns to its colour with a short flash; the cells of an enclosed area wait for a wave that runs from where
-    /// the ring closed. The top of the cells is the plane y = 0; the model `ground_cell` of the 3D artist has one plain colour
-    /// on top, so one quad gives the same picture as 4 096 cells.
+    /// Draws the cells: grass with decor strewn by the seed of the level, and a texel per cell over it on one quad (the colour of
+    /// the side and how much it is painted), the island under it, its shore and rocks and the water around. A cell that changed
+    /// side turns to its colour with a short flash; the cells of an enclosed area wait for a wave that runs from where the ring
+    /// closed. The top of the cells is the plane y = 0.
     /// </summary>
     public sealed class MapView : ILateTickable, IDisposable
     {
@@ -23,6 +24,11 @@ namespace Meta.BattleSystem.Services
         private static readonly int CellsId = Shader.PropertyToID("_Cells");
         private static readonly int GridStrengthId = Shader.PropertyToID("_GridStrength");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int GrassTexId = Shader.PropertyToID("_GrassTex");
+        private static readonly int GrassTilesId = Shader.PropertyToID("_GrassTiles");
+        private static readonly int LightenId = Shader.PropertyToID("_Lighten");
+        private static readonly int PaintAlphaId = Shader.PropertyToID("_PaintAlpha");
+        private static readonly int LumMeanId = Shader.PropertyToID("_LumMean");
 
         private readonly BattleViewConfig _view;
         private readonly BattleConfig _rules;
@@ -35,6 +41,8 @@ namespace Meta.BattleSystem.Services
 
         private BattleSimulation _simulation;
         private Texture2D _texture;
+        private Texture2D _grass;
+        private uint _grassSeed;
         private Material _cells;
         private Color32[] _pixels;
         private Side[] _shown;
@@ -78,6 +86,8 @@ namespace Meta.BattleSystem.Services
                 UnityEngine.Object.Destroy(material);
             if (_texture != null)
                 UnityEngine.Object.Destroy(_texture);
+            if (_grass != null)
+                UnityEngine.Object.Destroy(_grass);
         }
 
         private void Take(BattleRunner runner)
@@ -86,6 +96,7 @@ namespace Meta.BattleSystem.Services
             var size = _simulation.Grid.Size;
             if (_texture == null || _texture.width != size)
                 Build(size);
+            Grass(_simulation.Settings.Seed);
 
             for (var i = 0; i < _shown.Length; i++)
             {
@@ -270,11 +281,46 @@ namespace Meta.BattleSystem.Services
             _texture.Apply(false);
         }
 
+        /// <summary>The grass of this level: the base of the 3D artist with its decor strewn by the seed; once per seed.</summary>
+        private void Grass(uint seed)
+        {
+            var surface = _view.Surface;
+            if (surface == null || (_grass != null && _grassSeed == seed))
+                return;
+
+            var pixels = GrassScatter.Island(surface, seed, out var size);
+            if (pixels == null)
+                return;
+
+            if (_grass == null || _grass.width != size)
+            {
+                if (_grass != null)
+                    UnityEngine.Object.Destroy(_grass);
+                _grass = new Texture2D(size, size, TextureFormat.RGBA32, false)
+                {
+                    name = "Grass",
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Repeat,
+                };
+            }
+
+            _grass.SetPixels32(pixels);
+            _grass.Apply(false, true);
+            _grassSeed = seed;
+            _cells.SetTexture(GrassTexId, _grass);
+            // the grass covers this many meters once; a larger map repeats it
+            _cells.SetFloat(GrassTilesId, _rules.MapSize / ((float)size / surface.PixelsPerMeter));
+            _cells.SetFloat(LightenId, surface.Lighten);
+            _cells.SetFloat(PaintAlphaId, surface.PaintAlpha);
+            _cells.SetFloat(LumMeanId, surface.LumMean);
+        }
+
+        /// <summary>A texel of the cells: the colour of the side, alpha how much it covers the grass (a neutral cell is bare grass).</summary>
         private Color32 ColorOf(Side side) => side switch
         {
             Side.Player => _view.PlayerColor,
             Side.Enemy => _view.EnemyColor,
-            _ => _view.NeutralColor,
+            _ => new Color(_view.NeutralColor.r, _view.NeutralColor.g, _view.NeutralColor.b, 0f),
         };
 
         private static float Distance(int cell, int size, float x, float y)

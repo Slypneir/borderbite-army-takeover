@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76cc3a4092c777e459fb30c6524e51e6, type: 3}
+  m_Name: SurfaceConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Meta.BattleSystem.Configuration.SurfaceConfig
+  grassBase: {fileID: 2800000, guid: a1b3ba183909bcd4f84f89fb368d0009, type: 3}
+  grassDecor: {fileID: 2800000, guid: c3ca238953770624ebf4c88ab9404300, type: 3}
+  pixelsPerMeter: 8
+  stamps:
+  - Id: flower_white_a
+    Rect:
+      x: 1
+      y: 1
+      width: 5
+      height: 5
+    Kind: 0
+  - Id: flower_white_b
+    Rect:
+      x: 7
+      y: 2
+      width: 4
+      height: 4
+    Kind: 0
+  - Id: flower_yellow_a
+    Rect:
+      x: 12
+      y: 3
+      width: 3
+      height: 3
+    Kind: 1
+  - Id: flower_yellow_b
+    Rect:
+      x: 16
+      y: 3
+      width: 2
+      height: 3
+    Kind: 1
+  - Id: flower_lilac_a
+    Rect:
+      x: 19
+      y: 1
+      width: 5
+      height: 5
+    Kind: 2
+  - Id: flower_lilac_b
+    Rect:
+      x: 25
+      y: 3
+      width: 3
+      height: 3
+    Kind: 2
+  - Id: grass_lush_a
+    Rect:
+      x: 29
+      y: 1
+      width: 7
+      height: 5
+    Kind: 3
+  - Id: grass_lush_b
+    Rect:
+      x: 37
+      y: 2
+      width: 5
+      height: 4
+    Kind: 3
+  - Id: grass_dry_a
+    Rect:
+      x: 43
+      y: 2
+      width: 5
+      height: 4
+    Kind: 4
+  - Id: grass_dry_b
+    Rect:
+      x: 49
+      y: 3
+      width: 4
+      height: 3
+    Kind: 4
+  - Id: clover_a
+    Rect:
+      x: 54
+      y: 2
+      width: 6
+      height: 4
+    Kind: 5
+  - Id: clover_b
+    Rect:
+      x: 61
+      y: 3
+      width: 3
+      height: 3
+    Kind: 5
+  - Id: pebble_a
+    Rect:
+      x: 65
+      y: 3
+      width: 4
+      height: 3
+    Kind: 6
+  - Id: pebble_b
+    Rect:
+      x: 70
+      y: 4
+      width: 2
+      height: 2
+    Kind: 6
+  - Id: pebble_c
+    Rect:
+      x: 73
+      y: 2
+      width: 5
+      height: 4
+    Kind: 6
+  kinds:
+  - Id: flower_white
+    Density: 0.035
+    Spacing: 10
+    GroupMin: 2
+    GroupMax: 4
+    Radius: 7
+  - Id: flower_yellow
+    Density: 0.02
+    Spacing: 14
+    GroupMin: 1
+    GroupMax: 2
+    Radius: 4
+  - Id: flower_lilac
+    Density: 0.02
+    Spacing: 14
+    GroupMin: 1
+    GroupMax: 3
+    Radius: 6
+  - Id: grass_lush
+    Density: 0.06
+    Spacing: 8
+    GroupMin: 1
+    GroupMax: 2
+    Radius: 5
+  - Id: grass_dry
+    Density: 0.05
+    Spacing: 8
+    GroupMin: 1
+    GroupMax: 2
+    Radius: 5
+  - Id: clover
+    Density: 0.04
+    Spacing: 9
+    GroupMin: 1
+    GroupMax: 2
+    Radius: 4
+  - Id: pebble
+    Density: 0.03
+    Spacing: 10
+    GroupMin: 1
+    GroupMax: 2
+    Radius: 4
+  lighten: 0.55
+  paintAlpha: 0.7
+  lumMean: 0.491

@@ -104,6 +104,7 @@ namespace Meta.BattleSystem.Services
             _pose = new UnitPose(_world.Hero);
             _renderers = _world.Hero.GetComponentsInChildren<MeshRenderer>(true);
             _materials.Tint(_world.Hero, _view.PlayerHeroColor);
+            _materials.Outline(_world.Hero, Side.Player);
         }
 
         private void Step()

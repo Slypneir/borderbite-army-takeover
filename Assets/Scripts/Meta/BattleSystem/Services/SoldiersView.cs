@@ -141,6 +141,7 @@ namespace Meta.BattleSystem.Services
             body.gameObject.SetActive(true);
             body.localRotation = Quaternion.identity;
             _materials.Tint(body, _view.SoldierColor(side));
+            _materials.Outline(body, side);
             return body;
         }
 
