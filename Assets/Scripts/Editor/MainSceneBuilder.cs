@@ -294,7 +294,7 @@ namespace Core.EditorTools
             var territory = BuildBar(area, view);
             var counters = BuildCounters(area, view);
             Wire(labels, ("hudBottom", counters));
-            Wire(icons, ("hudBottom", counters));
+            Wire(icons, ("hudBottom", counters), ("labels", labels));
             Wire(marks, ("hudBottom", counters));
             var pauseButton = BuildPauseButton(area);
             var hint = BuildHint(root, counters);
@@ -464,7 +464,8 @@ namespace Core.EditorTools
             row.pivot = new Vector2(0.5f, 0f);
             row.sizeDelta = new Vector2(0f, LabelIcon);
             var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 6f;
+            // 8 between an icon and its number, 24 between the groups: 8, the dot of 8, 8 (UI designer, 4 November)
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = true;
             layout.childControlHeight = true;

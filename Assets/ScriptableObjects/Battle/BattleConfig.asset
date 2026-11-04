@@ -76,6 +76,7 @@ MonoBehaviour:
   followerSight: 4
   soldierLeash: 8
   slotSpacing: 1
+  captureSpacing: 3
   soldierSpacing: 0.5
   soldierBody: 0.25
   baseHealth: 200

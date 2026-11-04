@@ -47,6 +47,7 @@ namespace Meta.BattleSystem.Views
         private readonly Vector3[] _corners = new Vector3[4];
 
         private readonly List<Mark> _marks = new List<Mark>();
+        private readonly List<Rect> _shown = new List<Rect>();
         private IBattleDriver _battle;
         private BattleConfig _rules;
         private Camera _camera;
@@ -61,12 +62,16 @@ namespace Meta.BattleSystem.Views
 
         private void Awake() => template.gameObject.SetActive(false);
 
+        /// <summary>The rectangles of the labels shown this frame, canvas units: the icons of resources give way to them.</summary>
+        public IReadOnlyList<Rect> Shown => _shown;
+
         private void LateUpdate()
         {
             var simulation = _battle?.Current?.Simulation;
             if (simulation == null)
                 return;
 
+            _shown.Clear();
             var sites = simulation.Sites;
             while (_marks.Count < sites.Count)
                 _marks.Add(Create());
@@ -119,7 +124,12 @@ namespace Meta.BattleSystem.Views
 
                 var point = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, Height, z)) / scale;
                 if (Inside(point, mark, bounds, ceiling, out var place))
+                {
                     mark.Root.anchoredPosition = place;
+                    var width = Mathf.Max(mark.Row.rect.width, mark.Ring.enabled ? mark.Ring.rectTransform.rect.width : 0f);
+                    var height = mark.Ring.enabled ? mark.Root.rect.height : mark.Row.rect.height;
+                    _shown.Add(new Rect(place.x - width / 2f, place.y, width, height));
+                }
                 else
                     mark.Root.gameObject.SetActive(false);
             }

@@ -77,6 +77,13 @@ namespace Meta.BattleSystem.Configuration
                  "(task 4.9, spec T12). Starting value: 5.")]
         [Min(0f)] [SerializeField] private float barHoldSeconds = 5f;
 
+        [Tooltip("An icon over a pile of gold or a bundle of wood shows only while the player's hero is this close, meters (owner, " +
+                 "4 November, spec 3.1). Starting value: 5 (10 cells).")]
+        [Min(0f)] [SerializeField] private float resourceIconReach = 5f;
+
+        [Tooltip("The icon over a resource fades in and out this long, seconds. Starting value: 0.3.")]
+        [Min(0.01f)] [SerializeField] private float resourceIconFade = 0.3f;
+
         [Tooltip("After a blow or a shot the hero faces its target this long, seconds, then turns back to where it walks. " +
                  "Starting value: 0.35.")]
         [Min(0f)] [SerializeField] private float attackFaceSeconds = 0.35f;
@@ -167,6 +174,8 @@ namespace Meta.BattleSystem.Configuration
         public Shader OutlinedShader => outlinedShader;
         public Shader BarsShader => barsShader;
         public float BarHoldSeconds => barHoldSeconds;
+        public float ResourceIconReach => resourceIconReach;
+        public float ResourceIconFade => resourceIconFade;
         public Material WaterMaterial => waterMaterial;
         public float TurnSpeed => turnSpeed;
         public float AttackFaceSeconds => attackFaceSeconds;
