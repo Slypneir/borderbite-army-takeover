@@ -41,14 +41,19 @@ namespace Core.BattleSystem.Services
             _combat = new CombatRules(_state, _economy);
             _colliders = new BuildingColliders(_state);
 
-            var near = settings.StartOffsetCells;
-            var far = settings.MapCells - settings.StartOffsetCells;
-            PaintStart(near, near, Side.Player);
-            PaintStart(far, far, Side.Enemy);
-            // the bases face the middle of the map across it: the gate of the player's looks east, the enemy's west, so a hero at
-            // its gate is never behind the walls for the camera from the south
-            PlaceBase(Side.Player, near * BattleSettings.UnitsPerCell, settings.BaseGateUnits);
-            PlaceBase(Side.Enemy, far * BattleSettings.UnitsPerCell, -settings.BaseGateUnits);
+            var map = _state.Map;
+            foreach (var side in new[] { Side.Player, Side.Enemy })
+            {
+                var place = map.Bases[(int)side];
+                PaintStart(place.X, place.Y, place.StartRadius, side);
+            }
+
+            foreach (var side in new[] { Side.Player, Side.Enemy })
+            {
+                var place = map.Bases[(int)side];
+                PlaceBase(side, place.X * BattleSettings.UnitsPerCell, place.Y * BattleSettings.UnitsPerCell, settings.BaseGateUnits);
+            }
+
             AddHero(Side.Player);
             if (settings.EnemyHero)
             {
@@ -58,6 +63,13 @@ namespace Core.BattleSystem.Services
 
             _playerCommander = new Commander(_state, Side.Player);
             _state.Sides[(int)Side.Player].Gold = settings.PlayerStartGold;
+            // a special level may start with barracks standing (layer 5 spec 2.3)
+            for (var i = 0; i < map.Sites.Count; i++)
+            {
+                if (map.Sites[i].Barracks != Side.Neutral)
+                    BuildBarracks(i, map.Sites[i].Barracks);
+            }
+
             _economy.LayStartPiles();
         }
 
@@ -157,7 +169,7 @@ namespace Core.BattleSystem.Services
         /// </summary>
         public void FillShare(Side side, int permille)
         {
-            var target = (int)(((long)Grid.Total * permille + 999) / 1000);
+            var target = (int)(((long)Grid.LandTotal * permille + 999) / 1000);
             Fill(side, target, Side.Neutral);
             Fill(side, target, side == Side.Player ? Side.Enemy : Side.Player);
         }
@@ -279,17 +291,17 @@ namespace Core.BattleSystem.Services
             return hash;
         }
 
-        private void PlaceBase(Side side, int middle, int gate)
+        private void PlaceBase(Side side, int x, int y, int gate)
         {
             var settings = _state.Settings;
             _state.Bases[(int)side] = new BaseState
             {
-                X = middle,
-                Y = middle,
+                X = x,
+                Y = y,
                 Health = settings.BaseHealth,
                 // the gate to the camera (south) for both sides (task 4.24): the hero comes back in sight, by the door
-                GateX = middle,
-                GateY = middle - System.Math.Abs(gate),
+                GateX = x,
+                GateY = y - System.Math.Abs(gate),
             };
             _economy.ProtectBase(side);
         }
@@ -309,10 +321,9 @@ namespace Core.BattleSystem.Services
             });
         }
 
-        private void PaintStart(int centerX, int centerY, Side side)
+        private void PaintStart(int centerX, int centerY, int radius, Side side)
         {
             // a cell is in the circle when its middle is: (x + 0.5 - c)^2 + (y + 0.5 - c)^2 <= r^2, doubled to stay in integers
-            var radius = _state.Settings.StartRadiusCells;
             for (var y = 0; y < Grid.Size; y++)
             for (var x = 0; x < Grid.Size; x++)
             {
@@ -375,8 +386,12 @@ namespace Core.BattleSystem.Services
                 // hero walks at the speed of the level
                 var step = hero.Side == Side.Enemy ? (int)((long)settings.HeroStepUnits * settings.EnemySpeedPermille / 1000) : settings.HeroStepUnits;
                 var length = IntMath.Sqrt((long)hero.DirectionX * hero.DirectionX + (long)hero.DirectionY * hero.DirectionY);
+                var fromX = hero.X;
+                var fromY = hero.Y;
                 hero.X = IntMath.Clamp(hero.X + (int)(hero.DirectionX * (long)step / length), min, max);
                 hero.Y = IntMath.Clamp(hero.Y + (int)(hero.DirectionY * (long)step / length), min, max);
+                // nobody walks into water (layer 5 spec 2.2): along the shore instead
+                _state.Settle(ref hero.X, ref hero.Y, fromX, fromY, settings.HeroRadiusUnits);
                 _state.Heroes[i] = hero;
             }
         }

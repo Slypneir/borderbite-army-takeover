@@ -108,6 +108,12 @@ Shader "Borderbite/World/Water"
             // set per battle by MapView: not in the material's buffer
             float4 _Rocks[MAX_ROCKS];
             float _RockCount;
+            // a map with water (layer 5): the distance to the land in a texture, meters up to _LandDistRect.w, over the square
+            // from (x, y) of side z; off it, and on the square island, the distance to the square
+            TEXTURE2D(_LandDist);
+            SAMPLER(sampler_LandDist);
+            float4 _LandDistRect;
+            float _LandDistOn;
 
             struct Attributes
             {
@@ -146,7 +152,13 @@ Shader "Borderbite/World/Water"
 
             float EdgeDistance(float2 p)
             {
-                return length(max(max(-p, p - _MapSize), 0));
+                float square = length(max(max(-p, p - _MapSize), 0));
+                float2 uv = (p - _LandDistRect.xy) / _LandDistRect.z;
+                if (_LandDistOn < 0.5 || any(uv < 0) || any(uv > 1))
+                    return square;
+
+                // the lip under the shore of the 3D artist is not there at a cliff of cells: the foam keeps to the wall
+                return SAMPLE_TEXTURE2D_LOD(_LandDist, sampler_LandDist, uv, 0).r * _LandDistRect.w + max(0, _ShoreLip - 0.06);
             }
 
             float Depth(float2 p, float dEdge)

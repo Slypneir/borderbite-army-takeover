@@ -30,22 +30,28 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
+                var fromX = hero.X;
+                var fromY = hero.Y;
                 if (!hero.Alive || !PushOut(ref hero.X, ref hero.Y, _settings.HeroRadiusUnits))
                     continue;
 
                 hero.X = IntMath.Clamp(hero.X, min, max);
                 hero.Y = IntMath.Clamp(hero.Y, min, max);
+                _state.Settle(ref hero.X, ref hero.Y, fromX, fromY, _settings.HeroRadiusUnits);
                 _state.Heroes[i] = hero;
             }
 
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
+                var fromX = soldier.X;
+                var fromY = soldier.Y;
                 if (!PushOut(ref soldier.X, ref soldier.Y, _settings.SoldierBodyUnits))
                     continue;
 
                 soldier.X = IntMath.Clamp(soldier.X, 0, _settings.MapUnits);
                 soldier.Y = IntMath.Clamp(soldier.Y, 0, _settings.MapUnits);
+                _state.Settle(ref soldier.X, ref soldier.Y, fromX, fromY, _settings.SoldierBodyUnits);
                 _state.Soldiers[i] = soldier;
             }
         }

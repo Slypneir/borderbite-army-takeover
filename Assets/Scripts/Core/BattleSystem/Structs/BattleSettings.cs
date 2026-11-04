@@ -13,6 +13,8 @@ namespace Core.BattleSystem.Structs
         // layer 1: map, hero, painting, enclosure, victory
         public int TicksPerSecond = 30;
         public int MapCells = 64;
+        /// <summary>The place of the battle (layer 5); null — the square island of <see cref="MapCells"/> and the cells below.</summary>
+        public Data.BattleMap Map;
         public int StartRadiusCells = 6;
         public int StartOffsetCells = 8;
         public int HeroStepUnits = 333;

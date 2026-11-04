@@ -222,6 +222,25 @@ namespace Meta.DeveloperTools.Services
             return Battle();
         }
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Plays a map of Assets/ScriptableObjects/Maps by its name from a new battle at once (layer 5 spec 2.6); an empty name — the
+        /// map of the test level again.
+        /// </summary>
+        public static string Map(string name)
+        {
+            var map = string.IsNullOrEmpty(name)
+                ? null
+                : UnityEditor.AssetDatabase.LoadAssetAtPath<Meta.BattleSystem.Configuration.BattleMapAsset>($"Assets/ScriptableObjects/Maps/{name}.asset");
+            if (!string.IsNullOrEmpty(name) && map == null)
+                return $"no map {name}";
+
+            _debug.PlayMap(map);
+            _flow.Begin();
+            return Battle();
+        }
+#endif
+
         /// <summary>Starts the level anew, as «Again» does.</summary>
         public static string Restart()
         {

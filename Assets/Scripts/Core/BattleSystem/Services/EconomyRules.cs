@@ -24,12 +24,9 @@ namespace Core.BattleSystem.Services
         /// <summary>The start piles at the edges of both start areas, the enemy's mirrored through the centre.</summary>
         public void LayStartPiles()
         {
-            var last = _settings.MapCells - 1;
-            foreach (var side in new[] { Side.Player, Side.Enemy })
-            {
-                Lay(_settings.StartGoldCells, ResourceKind.Gold, side == Side.Enemy, last);
-                Lay(_settings.StartWoodCells, ResourceKind.Wood, side == Side.Enemy, last);
-            }
+            var size = _state.Grid.Size;
+            foreach (var pile in _state.Map.Piles)
+                Add(pile.Kind, pile.Y * size + pile.X, pile.Kind == ResourceKind.Gold ? _settings.GoldPortion : _settings.WoodPortion);
         }
 
         public void Step()
@@ -90,17 +87,6 @@ namespace Core.BattleSystem.Services
             for (var x = place.CenterX - 1; x <= place.CenterX + 1; x++)
                 _state.Grid.Set(y * _state.Grid.Size + x, Side.Neutral);
             _state.Emit(EventKind.Destroyed, side, site, 0, BattleState.Middle(place.CenterX), BattleState.Middle(place.CenterY));
-        }
-
-        private void Lay(int[] cells, ResourceKind kind, bool mirrored, int last)
-        {
-            var portion = kind == ResourceKind.Gold ? _settings.GoldPortion : _settings.WoodPortion;
-            for (var i = 0; i + 1 < cells.Length; i += 2)
-            {
-                var x = mirrored ? last - cells[i] : cells[i];
-                var y = mirrored ? last - cells[i + 1] : cells[i + 1];
-                Add(kind, y * _state.Grid.Size + x, portion);
-            }
         }
 
         /// <summary>

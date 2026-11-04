@@ -22,6 +22,7 @@ namespace Core.BattleSystem.Services
         private readonly BattleState _state;
         private readonly BattleSettings _settings;
         private readonly System.Collections.Generic.List<(int X, int Y)> _slots = new System.Collections.Generic.List<(int X, int Y)>();
+        private readonly System.Collections.Generic.List<(int X, int Y)> _from = new System.Collections.Generic.List<(int X, int Y)>();
 
         public ArmyRules(BattleState state)
         {
@@ -52,6 +53,15 @@ namespace Core.BattleSystem.Services
 
         public void Step()
         {
+            // where everyone stood: a soldier walked or pushed into water goes back along the shore (layer 5 spec 2.2)
+            var wet = _state.Grid.HasWater;
+            if (wet)
+            {
+                _from.Clear();
+                foreach (var soldier in _state.Soldiers)
+                    _from.Add((soldier.X, soldier.Y));
+            }
+
             KeepOrder(Side.Player);
             var slot = new int[3];
             var noCell = false;
@@ -107,6 +117,15 @@ namespace Core.BattleSystem.Services
                 SetOrder(Side.Player, ArmyOrder.Rally, true);
 
             Part();
+            if (!wet)
+                return;
+
+            for (var i = 0; i < _state.Soldiers.Count; i++)
+            {
+                var soldier = _state.Soldiers[i];
+                _state.Settle(ref soldier.X, ref soldier.Y, _from[i].X, _from[i].Y, _settings.SoldierBodyUnits);
+                _state.Soldiers[i] = soldier;
+            }
         }
 
         /// <summary>Sets the order of the army of a side and tells the drawing; <paramref name="byItself"/> — no targets were left (T18).</summary>

@@ -35,6 +35,9 @@ namespace Meta.BattleSystem.Services
         /// <summary>The level whose enemy fights now.</summary>
         public int EnemyLevel { get; private set; }
 
+        /// <summary>The map of the next battles (layer 5 spec 2.6); null — the map of the test level.</summary>
+        public void PlayMap(Configuration.BattleMapAsset map) => _config.Play(map);
+
         public void SetEnemyLevel(int level)
         {
             EnemyLevel = UnityEngine.Mathf.Max(1, level);

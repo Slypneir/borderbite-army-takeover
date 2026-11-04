@@ -6,7 +6,8 @@ namespace Core.BattleSystem.Services
 {
     /// <summary>
     /// The enclosure rule: an area of cells not of a side, connected by the four sides of a cell, that does not touch the edge of
-    /// the map is surrounded by the side and becomes its own, protected cells excepted. One pass over the map per side, in the
+    /// the map or water (layer 5 spec 2.2: water is the edge) is surrounded by the side and becomes its own, protected cells
+    /// excepted. One pass over the map per side, in the
     /// order of the indices: the same map gives the same areas in the same order.
     /// </summary>
     public sealed class EnclosureFinder
@@ -14,6 +15,7 @@ namespace Core.BattleSystem.Services
         private readonly int[] _mark;
         private readonly int[] _queue;
         private int _generation;
+        private bool _touchesWater;
 
         public EnclosureFinder(int cells)
         {
@@ -31,7 +33,7 @@ namespace Core.BattleSystem.Services
             var size = grid.Size;
             for (var start = 0; start < grid.Total; start++)
             {
-                if (grid[start] == side || _mark[start] == _generation)
+                if (grid[start] == side || _mark[start] == _generation || grid.IsWater(start))
                     continue;
 
                 var count = Flood(grid, side, start, size, out var touchesEdge, out var open);
@@ -62,6 +64,7 @@ namespace Core.BattleSystem.Services
 
         private int Flood(CellGrid grid, Side side, int start, int size, out bool touchesEdge, out int open)
         {
+            _touchesWater = false;
             touchesEdge = false;
             open = 0;
             var head = 0;
@@ -85,6 +88,7 @@ namespace Core.BattleSystem.Services
                 if (y < size - 1) Visit(grid, side, index + size, ref tail);
             }
 
+            touchesEdge |= _touchesWater;
             return tail;
         }
 
@@ -92,6 +96,12 @@ namespace Core.BattleSystem.Services
         {
             if (_mark[index] == _generation || grid[index] == side)
                 return;
+
+            if (grid.IsWater(index))
+            {
+                _touchesWater = true;
+                return;
+            }
 
             _mark[index] = _generation;
             _queue[tail++] = index;

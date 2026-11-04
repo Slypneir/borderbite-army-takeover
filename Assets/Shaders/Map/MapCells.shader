@@ -3,7 +3,7 @@
 // of territory.json): a crisp line of the side's colour just inside the border, a thin dark edge just outside, and a saturated
 // but see-through fill, strongest at the border and fading inward, never to nothing. _FieldTex holds for each side the signed
 // distance to its border in cells (red the player, green the enemy; + inside), smooth, so the borders have no steps of cells.
-// _CellTex alpha is the white flash of a cell that changed. The formulas work in sRGB 0..1, as the artist's reference.
+// _CellTex alpha is the white flash of a cell that changed, red 0 a cell of water (layer 5): the surface is cut away there. The formulas work in sRGB 0..1, as the artist's reference.
 // _GridStrength draws the grid for the developer.
 Shader "Borderbite/Map/Cells"
 {
@@ -138,7 +138,9 @@ Shader "Borderbite/Map/Cells"
                 color = Land(color, grass, lum, LinearToSRGB(_PlayerColor.rgb), d.x);
 
                 // a cell that changed flashes white for a moment, on its land
-                half flash = SAMPLE_TEXTURE2D(_CellTex, sampler_CellTex, (cell + 0.5) / _Cells).a;
+                half4 texel = SAMPLE_TEXTURE2D(_CellTex, sampler_CellTex, (cell + 0.5) / _Cells);
+                clip(texel.r - 0.5);
+                half flash = texel.a;
                 color = lerp(color, half3(1, 1, 1), flash * _FlashStrength * step(0, max(d.x, d.y)));
                 color = SRGBToLinear(color);
 

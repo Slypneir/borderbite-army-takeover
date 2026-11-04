@@ -19,7 +19,13 @@ namespace Meta.BattleSystem.Configuration
         [Min(1)] [SerializeField] private int maxStepsPerFrame = 8;
 
         [Header("Map")]
-        [Tooltip("Cells along a side of the square map. Starting value: 64.")]
+        [Tooltip("The map of the test level (layer 5 spec 2.6): its land and water, bases, places, piles and rocks. Empty — the " +
+                 "square island of the numbers below and of the places to build.")]
+        [SerializeField] private BattleMapAsset map;
+
+        [System.NonSerialized] private BattleMapAsset _playing;
+
+        [Tooltip("Cells along a side of the square map with no map file. Starting value: 64.")]
         [Min(8)] [SerializeField] private int mapCells = 64;
 
         [Tooltip("Side of a cell, meters. Starting value: 0.5.")]
@@ -219,9 +225,27 @@ namespace Meta.BattleSystem.Configuration
 
         public int MaxStepsPerFrame => maxStepsPerFrame;
         public int TicksPerSecond => ticksPerSecond;
-        public int MapCells => mapCells;
+        public int MapCells => Map != null ? Map.Size : mapCells;
         public float CellSize => cellSize;
-        public float MapSize => mapCells * cellSize;
+        public float MapSize => MapCells * cellSize;
+
+        /// <summary>The map of the next battle: one the developer chose to play, else that of the test level; null — the square island.</summary>
+        public BattleMapAsset Map => _playing != null ? _playing : map;
+
+        /// <summary>The developer plays another map from the next battle (layer 5 spec 2.6); null — back to the map of the test level.</summary>
+        public void Play(BattleMapAsset other) => _playing = other;
+
+        /// <summary>The square island of the numbers of this config, whatever map is set: the test map is made from it (task 5.5).</summary>
+        public Core.BattleSystem.Data.BattleMap SquareMap()
+        {
+            var settings = ToSettings(0);
+            settings.Map = null;
+            return Core.BattleSystem.Data.BattleMap.Square(settings);
+        }
+
+#if UNITY_EDITOR
+        public void SetMapForEditor(BattleMapAsset value) => map = value;
+#endif
         public float VictoryShare => victoryShare;
         public int BarracksWood => barracksWood;
         public int SoldierGold => soldierGold;
@@ -347,6 +371,7 @@ namespace Meta.BattleSystem.Configuration
             {
                 TicksPerSecond = ticksPerSecond,
                 MapCells = mapCells,
+                Map = Map != null ? Map.ToMap() : null,
                 StartRadiusCells = startRadius,
                 StartOffsetCells = startOffset,
                 HeroStepUnits = Units(heroSpeed / ticksPerSecond),

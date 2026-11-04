@@ -89,6 +89,7 @@ namespace Core.EditorTools
             Sounds();
             Ring();
             Circle();
+            MapFiles.Ensure();
             AssetDatabase.SaveAssets();
             // fields a config no longer has leave the files; the values the owner set stay
             AssetDatabase.ForceReserializeAssets(new[] { BattleConfigPath, BattleViewConfigPath, SurfaceConfigPath, ProgressConfigPath, ScreenConfigPath, MoveStickConfigPath, SoundVolumesPath });

@@ -30,12 +30,18 @@ namespace Core.BattleSystem.Data
         public BattleState(BattleSettings settings)
         {
             Settings = settings;
-            Grid = new CellGrid(settings.MapCells);
+            // a battle with no map of its own is fought on the square island of the settings
+            settings.Map ??= BattleMap.Square(settings);
+            settings.MapCells = settings.Map.Size;
+            Map = settings.Map;
+            Grid = new CellGrid(Map.Size, Map.Water);
             Random = new DeterministicRandom(settings.Seed);
-            Sites = new SiteState[settings.SiteCells.Length / 2];
+            Sites = new SiteState[Map.Sites.Count];
             for (var i = 0; i < Sites.Length; i++)
-                Sites[i] = new SiteState { CenterX = settings.SiteCells[i * 2], CenterY = settings.SiteCells[i * 2 + 1] };
+                Sites[i] = new SiteState { CenterX = Map.Sites[i].X, CenterY = Map.Sites[i].Y };
         }
+
+        public BattleMap Map { get; }
 
         public int NextId() => ++_nextId;
 
@@ -70,6 +76,41 @@ namespace Core.BattleSystem.Data
 
         /// <summary>The middle of a cell in units.</summary>
         public static int Middle(int cell) => cell * BattleSettings.UnitsPerCell + BattleSettings.UnitsPerCell / 2;
+
+        /// <summary>A body of <paramref name="radius"/> at a point in units stands on land: no cell under the corners of its square or its middle is water.</summary>
+        public bool Dry(int x, int y, int radius)
+        {
+            if (!Grid.HasWater)
+                return true;
+
+            const int unit = BattleSettings.UnitsPerCell;
+            var x0 = (x - radius) / unit;
+            var x1 = (x + radius) / unit;
+            var y0 = (y - radius) / unit;
+            var y1 = (y + radius) / unit;
+            return !Grid.IsWaterAt(x0, y0) && !Grid.IsWaterAt(x1, y0) && !Grid.IsWaterAt(x0, y1) && !Grid.IsWaterAt(x1, y1) &&
+                   !Grid.IsWaterAt(x / unit, y / unit);
+        }
+
+        /// <summary>
+        /// A body that moved from a dry point into water goes back along the axis that wet it, so it slides along the shore; back
+        /// to where it was when both do. Nothing changes on a map without water.
+        /// </summary>
+        public void Settle(ref int x, ref int y, int fromX, int fromY, int radius)
+        {
+            if (Dry(x, y, radius))
+                return;
+
+            if (Dry(x, fromY, radius))
+                y = fromY;
+            else if (Dry(fromX, y, radius))
+                x = fromX;
+            else
+            {
+                x = fromX;
+                y = fromY;
+            }
+        }
 
         public static long Distance2(int x0, int y0, int x1, int y1)
         {

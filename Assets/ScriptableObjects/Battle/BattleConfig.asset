@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Meta.BattleSystem.Configuration.BattleConfig
   ticksPerSecond: 30
   maxStepsPerFrame: 8
+  map: {fileID: 11400000, guid: d15688f8db412354dbb4b44b5a68439b, type: 2}
   mapCells: 64
   cellSize: 0.5
   startRadius: 6

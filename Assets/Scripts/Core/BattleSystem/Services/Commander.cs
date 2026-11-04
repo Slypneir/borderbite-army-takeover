@@ -271,7 +271,7 @@ namespace Core.BattleSystem.Services
             for (var cy = 0; cy < size; cy++)
             for (var cx = 0; cx < size; cx++)
             {
-                if (grid.At(cx, cy) != colour || (atBorder && !NextToOwn(cx, cy)))
+                if (grid.At(cx, cy) != colour || grid.IsWaterAt(cx, cy) || (atBorder && !NextToOwn(cx, cy)))
                     continue;
 
                 var mx = BattleState.Middle(cx);
