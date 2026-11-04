@@ -26,7 +26,6 @@ namespace Meta.BattleSystem.Views
     {
         private const float BarracksHeight = 2.8f;
         private const float BaseHeight = 4.3f;
-        private const float BarHoldSeconds = 2f;
         private const float SignHoldSeconds = 2f;
         private const float PulseSeconds = 3f;
         private const float PulseRate = 2f;
@@ -62,13 +61,15 @@ namespace Meta.BattleSystem.Views
         private object _simulation;
         private IBattleDriver _battle;
         private BattleConfig _rules;
+        private BattleViewConfig _view;
         private Camera _camera;
 
         [Inject]
-        public void Construct(IBattleDriver battle, BattleConfig rules, Camera mainCamera)
+        public void Construct(IBattleDriver battle, BattleConfig rules, BattleViewConfig view, Camera mainCamera)
         {
             _battle = battle;
             _rules = rules;
+            _view = view;
             _camera = mainCamera;
         }
 
@@ -114,7 +115,7 @@ namespace Meta.BattleSystem.Views
                     Threaten(-100 - _captures, capture.CenterX, capture.CenterY, false, true, now);
             }
 
-            DrawBars(simulation, scale, now);
+            DrawBars(simulation, scale, bounds, ceiling, now);
             DrawSigns(scale, bounds, ceiling, now);
             DrawCountdown(simulation, scale);
         }
@@ -138,7 +139,8 @@ namespace Meta.BattleSystem.Views
             bar.Health = battleEvent.Value;
             bar.X = battleEvent.X;
             bar.Y = battleEvent.Y;
-            bar.Until = now + BarHoldSeconds;
+            // spec T12: a bar after a blow and 5 s more
+            bar.Until = now + _view.BarHoldSeconds;
             bar.Max = isBase ? _rules.BaseHealth * 10f : _rules.BarracksHealth * 10f;
             if (battleEvent.Side == Side.Player)
                 Threaten(key, battleEvent.X, battleEvent.Y, isBase, false, now);
@@ -158,7 +160,7 @@ namespace Meta.BattleSystem.Views
             _threats.Add(new Threat { Key = key, X = x, Y = y, IsBase = isBase, Land = land, Since = now, Until = now + SignHoldSeconds });
         }
 
-        private void DrawBars(Core.BattleSystem.Services.BattleSimulation simulation, float scale, float now)
+        private void DrawBars(Core.BattleSystem.Services.BattleSimulation simulation, float scale, Rect bounds, float ceiling, float now)
         {
             var gone = ListPool.Keys;
             gone.Clear();
@@ -180,9 +182,16 @@ namespace Meta.BattleSystem.Views
                 // over the player's own barracks the price label stays; the bar goes over it
                 if (!bar.IsBase && bar.Side == Side.Player)
                     point.y += LabelHeight + LabelGap;
-                bar.Root.gameObject.SetActive(screen.z > 0f);
+                var width = bar.IsBase ? baseBarWidth : barracksBarWidth;
+                // inside the safe area with the inset and under the HUD, as the labels (UI review)
+                var half = width / 2f;
+                point.x = Mathf.Clamp(point.x, bounds.xMin + EdgeInset + half, Mathf.Max(bounds.xMin + EdgeInset + half, bounds.xMax - EdgeInset - half));
+                point.y = Mathf.Clamp(point.y, bounds.yMin + EdgeInset, Mathf.Max(bounds.yMin + EdgeInset, ceiling - bar.Root.sizeDelta.y));
+                // a building out of the frame shows no bar: its sign at the edge tells of it, as a label hides (UI review)
+                var ground = (Vector2)_camera.WorldToScreenPoint(new Vector3(bar.X * _rules.MetersPerUnit, 0f, bar.Y * _rules.MetersPerUnit)) / scale;
+                bar.Root.gameObject.SetActive(screen.z > 0f && bounds.Contains(ground) && ground.y < ceiling);
                 bar.Root.anchoredPosition = point;
-                bar.Root.sizeDelta = new Vector2(bar.IsBase ? baseBarWidth : barracksBarWidth, bar.Root.sizeDelta.y);
+                bar.Root.sizeDelta = new Vector2(width, bar.Root.sizeDelta.y);
                 bar.Rim.color = bar.Side == Side.Player ? lightRim : darkRim;
                 bar.Fill.anchorMax = new Vector2(Mathf.Clamp01(bar.Health / Mathf.Max(1f, bar.Max)), 1f);
             }

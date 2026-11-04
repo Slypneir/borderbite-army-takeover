@@ -280,21 +280,45 @@ namespace Core.EditorTools
 
             var labels = BuildWorldLabels(root);
             var marks = BuildMarks(root);
-            BuildPopups(root);
+            var popups = BuildPopups(root);
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
-            BuildBar(area, view);
+            var territory = BuildBar(area, view);
             var counters = BuildCounters(area, view);
             Wire(labels, ("hudBottom", counters));
             Wire(marks, ("hudBottom", counters));
-            BuildPauseButton(area);
-            BuildHint(root, counters);
+            var pauseButton = BuildPauseButton(area);
+            var hint = BuildHint(root, counters);
             BuildDebug(area);
             results = BuildResults(area);
             upgrades = BuildUpgrades(area);
             pause = BuildPause(area);
+
+            // the layers of the battle hide under a window (UI review of layers 3–4)
+            var layers = go.AddComponent<BattleLayersView>();
+            var serialized = new SerializedObject(layers);
+            var over = serialized.FindProperty("overWorld");
+            var overLayers = new Component[] { labels, marks, popups, hint };
+            over.arraySize = overLayers.Length;
+            for (var i = 0; i < overLayers.Length; i++)
+                over.GetArrayElementAtIndex(i).objectReferenceValue = Group(overLayers[i].gameObject);
+            var hudProperty = serialized.FindProperty("hud");
+            hudProperty.arraySize = 2;
+            hudProperty.GetArrayElementAtIndex(0).objectReferenceValue = Group(territory.gameObject);
+            hudProperty.GetArrayElementAtIndex(1).objectReferenceValue = Group(counters.gameObject);
+            serialized.FindProperty("pauseButton").objectReferenceValue = Group(pauseButton.gameObject);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
             return go;
+        }
+
+        private static CanvasGroup Group(GameObject go)
+        {
+            var group = go.GetComponent<CanvasGroup>();
+            if (group == null)
+                group = go.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            return group;
         }
 
         private static void BuildStick(RectTransform root)
@@ -317,7 +341,7 @@ namespace Core.EditorTools
             Wire(go.GetComponent<MoveStickView>(), ("stickBase", stickBase), ("knob", knob), ("group", group));
         }
 
-        private static void BuildBar(RectTransform area, BattleViewConfig view)
+        private static RectTransform BuildBar(RectTransform area, BattleViewConfig view)
         {
             var bar = Rect(area, "TerritoryBar", new Vector2(0f, 1f), new Vector2(1f, 1f));
             bar.pivot = new Vector2(0.5f, 1f);
@@ -345,6 +369,7 @@ namespace Core.EditorTools
 
             Wire(bar.gameObject.AddComponent<TerritoryBarView>(), ("playerFill", playerFill), ("enemyFill", enemyFill),
                 ("playerMark", playerMark), ("enemyMark", enemyMark), ("playerLabel", playerLabel), ("enemyLabel", enemyLabel));
+            return bar;
         }
 
         private static RectTransform Mark(RectTransform bar, string name)
@@ -594,8 +619,8 @@ namespace Core.EditorTools
             var balanceIcon = Rect(rect, "BalanceIcon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             balanceIcon.pivot = new Vector2(1f, 1f);
             balanceIcon.sizeDelta = Vector2.one * 64f;
-            // under the HUD of the battle, which stays on top
-            var hud = EdgeMargin * 3 + BarHeight + CounterHeight + 16f;
+            // on top in the middle: the HUD of the battle is hidden between levels (UI review)
+            var hud = EdgeMargin * 2f;
             balanceIcon.anchoredPosition = new Vector2(-8f, -hud);
             Picture(balanceIcon, Icon("crown"), Color.white);
             var balance = Text(rect, "Balance", HeadingSize, TextAlignmentOptions.Left);
@@ -611,19 +636,21 @@ namespace Core.EditorTools
 
             var card = Rect(cards, "CardTemplate", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
             card.sizeDelta = new Vector2(280f, 300f);
-            card.gameObject.AddComponent<CanvasGroup>();
             var back = Picture(card, null, BarBaseColor);
             back.raycastTarget = true;
             card.gameObject.AddComponent<Button>().targetGraphic = back;
-            var icon = Rect(card, "Icon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            // the back stays opaque; what is on it dims when the crowns are short (UI review)
+            var content = Rect(card, "Content", Vector2.zero, Vector2.one);
+            content.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            var icon = Rect(content, "Icon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             icon.pivot = new Vector2(0.5f, 1f);
             icon.sizeDelta = Vector2.one * 96f;
             icon.anchoredPosition = new Vector2(0f, -16f);
             Picture(icon, null, Color.white);
-            CardLine(card, "Name", BodySize, -116f);
-            CardLine(card, "Effect", CaptionSize, -160f);
-            CardLine(card, "Step", CaptionSize, -196f);
-            var ticks = Rect(card, "Ticks", new Vector2(0f, 1f), new Vector2(1f, 1f));
+            CardLine(content, "Name", BodySize, -116f);
+            CardLine(content, "Effect", CaptionSize, -160f);
+            CardLine(content, "Step", CaptionSize, -196f);
+            var ticks = Rect(content, "Ticks", new Vector2(0f, 1f), new Vector2(1f, 1f));
             ticks.pivot = new Vector2(0.5f, 1f);
             ticks.offsetMin = new Vector2(24f, -238f);
             ticks.offsetMax = new Vector2(-24f, -226f);
@@ -635,9 +662,9 @@ namespace Core.EditorTools
                 Picture(tick, null, Color.white);
             }
 
-            var price = CardLine(card, "Price", BodySize, -250f);
+            var price = CardLine(content, "Price", BodySize, -250f);
             price.alignment = TextAlignmentOptions.Center;
-            var priceIcon = Rect(card, "PriceIcon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            var priceIcon = Rect(content, "PriceIcon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             priceIcon.pivot = new Vector2(1f, 1f);
             priceIcon.sizeDelta = Vector2.one * 36f;
             priceIcon.anchoredPosition = new Vector2(-40f, -254f);
@@ -696,28 +723,37 @@ namespace Core.EditorTools
             restart.Rect.anchoredPosition = new Vector2(0f, 32f + 128f + 56f);
             restart.Button.targetGraphic.color = new Color(0.32f, 0.33f, 0.36f);
             restart.Caption.color = TextColor;
+            var rim = restart.Rect.gameObject.AddComponent<Outline>();
+            rim.effectColor = TextColor;
+            rim.effectDistance = new Vector2(4f, -4f);
+            rim.enabled = false;
             var resume = MainButton(window, "Resume", new Vector2(0.5f, 0f), 400f, 128f);
             resume.Rect.anchoredPosition = new Vector2(0f, 32f);
             var view = go.GetComponent<PauseView>();
             Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("title", title), ("resume", resume.Button), ("resumeCaption", resume.Caption),
-                ("restart", restart.Button), ("restartCaption", restart.Caption));
+                ("restart", restart.Button), ("restartCaption", restart.Caption), ("restartRim", rim));
             return view;
         }
 
         /// <summary>The pause button of the HUD, at the right of the row of counters: two bars on a dark square.</summary>
-        private static void BuildPauseButton(RectTransform area)
+        private static RectTransform BuildPauseButton(RectTransform area)
         {
+            // an invisible target of 104 (TouchTarget, STYLE.md §2) round the visible square of the row of counters
+            const float target = 104f;
             var rect = Rect(area, "PauseButton", new Vector2(1f, 1f), new Vector2(1f, 1f));
-            rect.pivot = new Vector2(1f, 1f);
-            rect.sizeDelta = Vector2.one * CounterHeight;
-            rect.anchoredPosition = new Vector2(-EdgeMargin, -EdgeMargin * 2 - BarHeight);
-            var image = Picture(rect, null, BarBaseColor);
-            image.raycastTarget = true;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = Vector2.one * target;
+            rect.anchoredPosition = new Vector2(-EdgeMargin - CounterHeight / 2f, -EdgeMargin * 2 - BarHeight - CounterHeight / 2f);
+            var hit = Picture(rect, null, new Color(0f, 0f, 0f, 0f));
+            hit.raycastTarget = true;
+            var face = Rect(rect, "Face", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            face.sizeDelta = Vector2.one * CounterHeight;
+            var image = Picture(face, null, BarBaseColor);
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             foreach (var x in new[] { -9f, 9f })
             {
-                var bar = Rect(rect, "Bar", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                var bar = Rect(face, "Bar", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
                 bar.sizeDelta = new Vector2(10f, 28f);
                 bar.anchoredPosition = new Vector2(x, 0f);
                 Picture(bar, null, TextColor);
@@ -725,13 +761,14 @@ namespace Core.EditorTools
 
             var view = rect.gameObject.AddComponent<PauseButtonView>();
             Wire(view, ("button", button));
+            return rect;
         }
 
         /// <summary>
         /// The hint of level 1 (screens/first-hint.md): a hand low in the middle (a finger sliding) with one word, the WASD keys
         /// for a computer, and an arrow (a shaft and a head) the view puts by the hero or at the edge. Light with a dark rim.
         /// </summary>
-        private static void BuildHint(RectTransform root, RectTransform hudBottom)
+        private static HintView BuildHint(RectTransform root, RectTransform hudBottom)
         {
             var go = new GameObject("Hint", typeof(RectTransform), typeof(HintView));
             go.transform.SetParent(root, false);
@@ -803,9 +840,10 @@ namespace Core.EditorTools
 
             Wire(go.GetComponent<HintView>(), ("hand", hand), ("finger", finger), ("handWord", word), ("keys", keys), ("arrow", arrow),
                 ("hudBottom", hudBottom));
+            return go.GetComponent<HintView>();
         }
 
-        private static void BuildPopups(RectTransform root)
+        private static CapturePopupView BuildPopups(RectTransform root)
         {
             var go = new GameObject("CapturePopups", typeof(RectTransform), typeof(CapturePopupView));
             go.transform.SetParent(root, false);
@@ -818,6 +856,7 @@ namespace Core.EditorTools
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.sizeDelta = new Vector2(240f, PopupSize * 1.5f);
             Wire(go.GetComponent<CapturePopupView>(), ("template", template));
+            return go.GetComponent<CapturePopupView>();
         }
 
         private static RectTransform Rect(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax)

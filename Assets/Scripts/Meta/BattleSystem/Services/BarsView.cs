@@ -30,6 +30,7 @@ namespace Meta.BattleSystem.Services
         private readonly HeroView _heroes;
         private readonly SoldiersView _soldiers;
         private readonly Camera _camera;
+        private readonly BattleScreen _screen;
         private readonly Dictionary<int, Track> _tracks = new Dictionary<int, Track>();
         private readonly List<int> _gone = new List<int>();
         private readonly HashSet<int> _alive = new HashSet<int>();
@@ -41,8 +42,10 @@ namespace Meta.BattleSystem.Services
         private GameObject _holder;
         private BattleSimulation _simulation;
 
-        public BarsView(BattleViewConfig view, IBattleDriver battle, HeroView heroes, SoldiersView soldiers, Camera mainCamera)
+        public BarsView(BattleViewConfig view, IBattleDriver battle, HeroView heroes, SoldiersView soldiers, Camera mainCamera,
+            BattleScreen screen)
         {
+            _screen = screen;
             _view = view;
             _battle = battle;
             _heroes = heroes;
@@ -58,6 +61,9 @@ namespace Meta.BattleSystem.Services
 
             if (_mesh == null)
                 Build();
+
+            // under a window the bars go with every other mark over the world
+            _holder.SetActive(!_screen.Covered);
 
             if (simulation != _simulation)
             {

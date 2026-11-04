@@ -34,12 +34,14 @@ namespace Meta.FlowSystem.Services
         private readonly PauseView _pause;
         private readonly ProgressService _progress;
         private readonly BattleDebug _debug;
+        private readonly BattleScreen _screen;
         private readonly CancellationTokenSource _life = new CancellationTokenSource();
         private bool _finished;
 
         public BattleFlow(IBattleDriver battle, IMoveInput input, IPlaybackGate gate, ResultsView results, UpgradesView upgrades,
-            PauseView pause, ProgressService progress, BattleDebug debug)
+            PauseView pause, ProgressService progress, BattleDebug debug, BattleScreen screen)
         {
+            _screen = screen;
             _battle = battle;
             _input = input;
             _gate = gate;
@@ -61,6 +63,8 @@ namespace Meta.FlowSystem.Services
             _upgrades.Hide();
             _pause.Hide();
             _gate.SetPlayerPaused(false);
+            _screen.Covered = false;
+            _screen.Between = false;
             _finished = false;
             _input.Enabled = true;
             _battle.StartBattle(Seed, _progress.Apply);
@@ -72,6 +76,7 @@ namespace Meta.FlowSystem.Services
                 return;
 
             _gate.SetPlayerPaused(true);
+            _screen.Covered = true;
             _pause.Show(Resume, Begin);
         }
 
@@ -99,6 +104,7 @@ namespace Meta.FlowSystem.Services
         {
             _pause.Hide();
             _gate.SetPlayerPaused(false);
+            _screen.Covered = false;
         }
 
         /// <summary>The platform or a lost focus froze the game: the pause opens and stays when they let it go.</summary>
@@ -128,6 +134,8 @@ namespace Meta.FlowSystem.Services
             await UniTask.Delay(TimeSpan.FromSeconds(ResultsDelaySeconds), DelayType.DeltaTime, PlayerLoopTiming.Update, ct);
             Debug.Log($"[BattleFlow] results: {result}, +{crowns} crowns, {_progress.Data.Crowns} in all");
             var victory = result == BattleResult.Victory;
+            _screen.Covered = true;
+            _screen.Between = true;
             _results.Show(result, baseFell, share, winner, crowns, () =>
             {
                 _results.Hide();

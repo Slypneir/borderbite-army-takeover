@@ -31,6 +31,7 @@ namespace Meta.BattleSystem.Installers
             builder.RegisterInstance(_viewConfig);
             builder.RegisterInstance(_world);
             builder.Register<BattleDebug>(Lifetime.Singleton);
+            builder.Register<BattleScreen>(Lifetime.Singleton);
             builder.Register<BattleDriver>(Lifetime.Singleton).As<IBattleDriver, ITickable>();
             builder.Register<ViewMaterials>(Lifetime.Singleton).AsSelf().As<IDisposable>();
             builder.Register<EffectsView>(Lifetime.Singleton).AsSelf().As<ILateTickable>();

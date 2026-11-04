@@ -92,8 +92,9 @@ namespace Meta.FlowSystem.Views
         {
             var victory = _result == BattleResult.Victory;
             title.text = Loc.Get(victory ? "results.victory" : "results.defeat");
+            // the share line says it already when the share decided (UI review): the reason only for a fallen base
             if (reason != null)
-                reason.text = _baseFell ? Loc.Get("results.reason.base") : string.Format(Loc.Get("results.reason.share"), _winnerShare);
+                reason.text = _baseFell ? Loc.Get("results.reason.base") : string.Empty;
             if (share != null)
                 share.text = string.Format(Loc.Get("results.share"), _share);
             if (caption != null)

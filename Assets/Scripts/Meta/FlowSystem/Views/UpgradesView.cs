@@ -60,14 +60,14 @@ namespace Meta.FlowSystem.Views
                 var card = new Card
                 {
                     Root = root,
-                    Group = root.GetComponent<CanvasGroup>(),
-                    Icon = root.Find("Icon").GetComponent<Image>(),
-                    Name = root.Find("Name").GetComponent<TMP_Text>(),
-                    Effect = root.Find("Effect").GetComponent<TMP_Text>(),
-                    Step = root.Find("Step").GetComponent<TMP_Text>(),
-                    Ticks = root.Find("Ticks").GetComponentsInChildren<Image>(true),
-                    Price = root.Find("Price").GetComponent<TMP_Text>(),
-                    PriceIcon = root.Find("PriceIcon").gameObject,
+                    Group = root.Find("Content").GetComponent<CanvasGroup>(),
+                    Icon = root.Find("Content/Icon").GetComponent<Image>(),
+                    Name = root.Find("Content/Name").GetComponent<TMP_Text>(),
+                    Effect = root.Find("Content/Effect").GetComponent<TMP_Text>(),
+                    Step = root.Find("Content/Step").GetComponent<TMP_Text>(),
+                    Ticks = root.Find("Content/Ticks").GetComponentsInChildren<Image>(true),
+                    Price = root.Find("Content/Price").GetComponent<TMP_Text>(),
+                    PriceIcon = root.Find("Content/PriceIcon").gameObject,
                 };
                 if (i < icons.Length && icons[i] != null)
                     card.Icon.sprite = icons[i];

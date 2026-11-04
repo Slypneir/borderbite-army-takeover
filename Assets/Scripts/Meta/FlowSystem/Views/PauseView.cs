@@ -21,6 +21,8 @@ namespace Meta.FlowSystem.Views
         [SerializeField] private TMP_Text resumeCaption;
         [SerializeField] private Button restart;
         [SerializeField] private TMP_Text restartCaption;
+        [Tooltip("The light rim of «Really again?»: the second tap must not look like the first (UI review).")]
+        [SerializeField] private Outline restartRim;
 
         private Action _onResume;
         private Action _onRestart;
@@ -85,6 +87,8 @@ namespace Meta.FlowSystem.Views
             title.text = Loc.Get("pause.title");
             resumeCaption.text = Loc.Get("pause.resume");
             restartCaption.text = Loc.Get(_confirmUntil > 0f ? "pause.restart_confirm" : "pause.restart");
+            if (restartRim != null)
+                restartRim.enabled = _confirmUntil > 0f;
         }
     }
 }
