@@ -390,8 +390,52 @@ namespace Core.EditorTools
         /// point: 64 px icons land on the screen at a scale that is not whole (72–110 px), and point sampling gives uneven pixels.
         /// The icons of gold, wood and the barracks (128 px) are over the map, in the labels and in the HUD: with mipmaps.
         /// </summary>
+        /// <summary>
+        /// The art of the top HUD (3D artist 3a3c4f0, README of export/borderbite/hud): sprites, bilinear, no compression, no
+        /// mipmaps, clamped; the fills repeat (Tiled, full rect); the frame, the track and the mask are 9-sliced.
+        /// </summary>
+        private static void HudSprites()
+        {
+            const string folder = "Assets/Sprites/UI/Hud/";
+            var borders = new Dictionary<string, int>
+            {
+                { "hud_frame_256", 48 }, { "hud_frame_128", 24 },
+                { "bar_track_128x64", 24 }, { "bar_track_64x32", 12 },
+                { "bar_mask_128x64", 24 }, { "bar_mask_64x32", 12 },
+            };
+            foreach (var path in System.IO.Directory.GetFiles(folder, "*.png"))
+            {
+                var asset = path.Replace('\\', '/');
+                if (!(AssetImporter.GetAtPath(asset) is TextureImporter importer))
+                    continue;
+
+                var name = System.IO.Path.GetFileNameWithoutExtension(asset);
+                var fill = name.StartsWith("bar_fill_");
+                var border = borders.TryGetValue(name, out var b) ? new Vector4(b, b, b, b) : Vector4.zero;
+                var wrap = fill ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
+                if (importer.textureType == TextureImporterType.Sprite && importer.spriteBorder == border && importer.wrapMode == wrap
+                    && !importer.mipmapEnabled && importer.filterMode == FilterMode.Bilinear)
+                    continue;
+
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.wrapMode = wrap;
+                importer.spriteBorder = border;
+                var settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                settings.spriteMeshType = SpriteMeshType.FullRect;
+                importer.SetTextureSettings(settings);
+                importer.SaveAndReimport();
+            }
+        }
+
         private static void Icons()
         {
+            HudSprites();
             foreach (var name in new[] { "gold", "wood", "army", "crown", "up_hero", "up_brush", "up_soldiers", "up_gold" })
             {
                 var path = IconFolder + name + ".png";

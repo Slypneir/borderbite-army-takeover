@@ -56,7 +56,7 @@ namespace Core.EditorTools
         // the icons of the HUD counters: not smaller than 48 units (UI review of f1d3ccb)
         private const int CounterIcon = 48;
         private const int CounterPadding = 8;
-        private const int CounterTextSize = 30;
+        private const int CounterTextSize = 34;
         private const int RingSize = 56;
         private const int LabelTextSize = 26;
         // the icons in the labels over places and barracks, and over the piles (battle-marks card, «Значки над картой»)
@@ -292,12 +292,12 @@ namespace Core.EditorTools
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
-            var territory = BuildBar(area, view);
-            var counters = BuildCounters(area, view);
+            var hud = BuildHud(area, view, out var pauseButton);
+            var territory = hud;
+            var counters = hud;
             Wire(labels, ("hudBottom", counters));
             Wire(icons, ("hudBottom", counters), ("labels", labels));
             Wire(marks, ("hudBottom", counters));
-            var pauseButton = BuildPauseButton(area);
             var orders = BuildOrders(area);
             Wire(labels, ("orderBar", orders.Row));
             Wire(marks, ("orderBar", orders.Row));
@@ -354,60 +354,132 @@ namespace Core.EditorTools
             Wire(go.GetComponent<MoveStickView>(), ("stickBase", stickBase), ("knob", knob), ("group", group));
         }
 
-        private static RectTransform BuildBar(RectTransform area, BattleViewConfig view)
+        private const string HudFolder = "Assets/Sprites/UI/Hud/";
+
+        private static Sprite Hud(string name) => AssetDatabase.LoadAssetAtPath<Sprite>(HudFolder + name + ".png");
+
+        /// <summary>
+        /// The top HUD as one iron plate (battle-hud card «Вид в стиле игры», art of the 3D artist 3a3c4f0): the frame sliced at a
+        /// scale of 0.75, rivets on the long sides; the territory bar — a track with the fills under a mask, the blue from the left,
+        /// the red from the right, pins with flags at 70 % of each, the percents cream and bold; the counters — icons 48 and
+        /// numbers; the pause — a neutral button 64 with its icon, a target of 104. <see cref="HudLayoutView"/> lays it out in two
+        /// rows on a tall screen and one on a wide one.
+        /// </summary>
+        private static RectTransform BuildHud(RectTransform area, BattleViewConfig view, out RectTransform pause)
         {
-            var bar = Rect(area, "TerritoryBar", new Vector2(0f, 1f), new Vector2(1f, 1f));
-            bar.pivot = new Vector2(0.5f, 1f);
-            bar.offsetMin = new Vector2(EdgeMargin, -EdgeMargin - BarHeight);
-            bar.offsetMax = new Vector2(-EdgeMargin, -EdgeMargin);
+            var plate = Rect(area, "Hud", new Vector2(0f, 1f), new Vector2(1f, 1f));
+            var frame = Picture(plate, Hud("hud_frame_256"), Color.white);
+            frame.type = Image.Type.Sliced;
+            frame.fillCenter = true;
+            // a rim of 48 px at 0.75: 36 units
+            frame.pixelsPerUnitMultiplier = 48f / 36f;
+            frame.raycastTarget = true;
 
-            // an opaque dark base: the red fill and the percents must not merge with red ground
-            var plate = Rect(bar, "Base", Vector2.zero, Vector2.one);
-            plate.offsetMin = new Vector2(-BarPadding, -BarPadding);
-            plate.offsetMax = new Vector2(BarPadding, BarPadding);
-            Picture(plate, null, BarBaseColor);
-            var middle = Rect(bar, "Neutral", Vector2.zero, Vector2.one);
-            Picture(middle, null, BarBackColor);
+            var tops = new RectTransform[3];
+            var bottoms = new RectTransform[3];
+            for (var i = 0; i < 3; i++)
+            {
+                tops[i] = Rivet(plate, "RivetTop" + i);
+                bottoms[i] = Rivet(plate, "RivetBottom" + i);
+            }
 
-            var playerFill = Rect(bar, "PlayerFill", Vector2.zero, new Vector2(0.1f, 1f));
-            Picture(playerFill, null, view.PlayerColor);
-            var enemyFill = Rect(bar, "EnemyFill", new Vector2(0.9f, 0f), Vector2.one);
-            Picture(enemyFill, null, view.EnemyColor);
-            var playerMark = Mark(bar, "PlayerMark");
-            var enemyMark = Mark(bar, "EnemyMark");
-            var playerLabel = Text(bar, "PlayerPercent", BarTextSize, TextAlignmentOptions.Left);
-            ((RectTransform)playerLabel.transform).offsetMin = new Vector2(EdgeMargin / 2f, 0f);
-            var enemyLabel = Text(bar, "EnemyPercent", BarTextSize, TextAlignmentOptions.Right);
-            ((RectTransform)enemyLabel.transform).offsetMax = new Vector2(-EdgeMargin / 2f, 0f);
+            var bar = Rect(plate, "TerritoryBar", Vector2.zero, Vector2.one);
+            var track = Picture(bar, Hud("bar_track_128x64"), Color.white);
+            track.type = Image.Type.Sliced;
+            var inner = Rect(bar, "Inner", Vector2.zero, Vector2.one);
+            inner.offsetMin = new Vector2(8f, 8f);
+            inner.offsetMax = new Vector2(-8f, -8f);
+            var mask = Picture(inner, Hud("bar_mask_128x64"), Color.white);
+            mask.type = Image.Type.Sliced;
+            // the rim of the mask scaled to the inside of the track (48 high)
+            mask.pixelsPerUnitMultiplier = 64f / 48f;
+            inner.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var playerFill = Rect(inner, "PlayerFill", Vector2.zero, new Vector2(0.1f, 1f));
+            var playerImage = Picture(playerFill, Hud("bar_fill_own_128x48"), Color.white);
+            playerImage.type = Image.Type.Tiled;
+            var enemyFill = Rect(inner, "EnemyFill", new Vector2(0.9f, 0f), Vector2.one);
+            var enemyImage = Picture(enemyFill, Hud("bar_fill_enemy_128x48"), Color.white);
+            enemyImage.type = Image.Type.Tiled;
+            var playerMark = Pin(bar, "PlayerMark", "bar_pin_own_64x128");
+            var enemyMark = Pin(bar, "EnemyMark", "bar_pin_enemy_64x128");
+            var playerLabel = Text(inner, "PlayerPercent", BodySize, TextAlignmentOptions.Left);
+            ((RectTransform)playerLabel.transform).offsetMin = new Vector2(12f, 0f);
+            var enemyLabel = Text(inner, "EnemyPercent", BodySize, TextAlignmentOptions.Right);
+            ((RectTransform)enemyLabel.transform).offsetMax = new Vector2(-12f, 0f);
+            foreach (var label in new[] { playerLabel, enemyLabel })
+            {
+                label.fontStyle = FontStyles.Bold;
+                label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+            }
 
             Wire(bar.gameObject.AddComponent<TerritoryBarView>(), ("playerFill", playerFill), ("enemyFill", enemyFill),
                 ("playerMark", playerMark), ("enemyMark", enemyMark), ("playerLabel", playerLabel), ("enemyLabel", enemyLabel));
-            return bar;
-        }
 
-        private static RectTransform Mark(RectTransform bar, string name)
-        {
-            var mark = Rect(bar, name, new Vector2(0.7f, 0.5f), new Vector2(0.7f, 0.5f));
-            mark.sizeDelta = new Vector2(MarkWidth, BarHeight + 16);
-            Picture(mark, null, TextColor);
-            return mark;
-        }
-
-        /// <summary>Gold, wood and the army in a row under the bar; a gain like +5 next to a counter after a pickup.</summary>
-        private static RectTransform BuildCounters(RectTransform area, BattleViewConfig view)
-        {
-            var row = Rect(area, "Counters", new Vector2(0f, 1f), new Vector2(0f, 1f));
-            row.pivot = new Vector2(0f, 1f);
-            row.anchoredPosition = new Vector2(EdgeMargin, -EdgeMargin * 2 - BarHeight);
-            row.sizeDelta = new Vector2(CounterWidth * 3, CounterHeight);
-            Picture(row, null, BarBaseColor);
-
+            var row = Rect(plate, "Counters", Vector2.zero, Vector2.zero);
             var gold = Counter(row, "Gold", 0, "icon_gold_128", view.GoldColor, out var goldGain);
             var wood = Counter(row, "Wood", 1, "icon_wood_128", view.WoodColor, out var woodGain);
             var army = Counter(row, "Army", 2, "army", view.PlayerSoldierColor, out _);
+            // the soldier of the army icon is small in its picture: a larger picture gives a figure as big as gold and wood
+            var armyIcon = (RectTransform)army.transform.parent.Find("Icon");
+            armyIcon.sizeDelta = Vector2.one * 64f;
+            armyIcon.anchoredPosition = new Vector2(CounterPadding - 8f, 0f);
             Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
                 ("goldGain", goldGain), ("woodGain", woodGain));
-            return row;
+
+            pause = BuildPauseButton(plate);
+            Wire(plate.gameObject.AddComponent<HudLayoutView>(), ("plate", plate), ("bar", bar), ("counters", row), ("pause", pause));
+            var layout = new SerializedObject(plate.GetComponent<HudLayoutView>());
+            foreach (var (field, rivets) in new[] { ("topRivets", tops), ("bottomRivets", bottoms) })
+            {
+                var list = layout.FindProperty(field);
+                list.arraySize = rivets.Length;
+                for (var i = 0; i < rivets.Length; i++)
+                    list.GetArrayElementAtIndex(i).objectReferenceValue = rivets[i];
+            }
+
+            layout.ApplyModifiedPropertiesWithoutUndo();
+            return plate;
+        }
+
+        private static RectTransform Rivet(RectTransform plate, string name)
+        {
+            var rivet = Rect(plate, name, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            rivet.sizeDelta = Vector2.one * 24f;
+            Picture(rivet, Hud("hud_rivet_32"), Color.white);
+            return rivet;
+        }
+
+        /// <summary>A pin with a flag over the bar: the middle of the picture is the mark of the goal and the middle of the bar.</summary>
+        private static RectTransform Pin(RectTransform bar, string name, string sprite)
+        {
+            var pin = Rect(bar, name, new Vector2(0.7f, 0.5f), new Vector2(0.7f, 0.5f));
+            pin.sizeDelta = new Vector2(64f, 128f);
+            Picture(pin, Hud(sprite), Color.white);
+            return pin;
+        }
+
+        /// <summary>The pause (spec T10): a neutral iron button 64 with the icon (0.615 of it), pressed a little lower; a target of 104.</summary>
+        private static RectTransform BuildPauseButton(RectTransform plate)
+        {
+            const float target = 104f;
+            var rect = Rect(plate, "PauseButton", Vector2.zero, Vector2.zero);
+            rect.sizeDelta = Vector2.one * target;
+            var hit = Picture(rect, null, new Color(0f, 0f, 0f, 0f));
+            hit.raycastTarget = true;
+            var face = Rect(rect, "Face", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            face.sizeDelta = Vector2.one * 64f;
+            var image = Picture(face, Hud("btn_neutral_normal_256"), Color.white);
+            var icon = Rect(face, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            icon.sizeDelta = Vector2.one * (64f * 0.615f);
+            Picture(icon, Hud("icon_pause_256"), Color.white);
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.SpriteSwap;
+            button.spriteState = new SpriteState { pressedSprite = Hud("btn_neutral_pressed_256"), highlightedSprite = null, selectedSprite = null };
+            rect.gameObject.AddComponent<CanvasGroup>();
+            var view = rect.gameObject.AddComponent<PauseButtonView>();
+            Wire(view, ("button", button));
+            return rect;
         }
 
         private static TMP_Text Counter(RectTransform row, string name, int index, string icon, Color color, out TMP_Text gain)
@@ -421,6 +493,8 @@ namespace Core.EditorTools
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.IconFolder + icon + ".png");
             Picture(iconRect, sprite != null ? sprite : AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), sprite != null ? Color.white : color);
             var label = Text(cell, "Value", CounterTextSize, TextAlignmentOptions.Left);
+            label.fontStyle = FontStyles.Bold;
+            label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             ((RectTransform)label.transform).offsetMin = new Vector2(CounterPadding * 2 + CounterIcon, 0f);
             gain = Text(cell, "Gain", CounterTextSize, TextAlignmentOptions.Right);
             ((RectTransform)gain.transform).offsetMax = new Vector2(-8f, 0f);
@@ -920,34 +994,6 @@ namespace Core.EditorTools
         }
 
         /// <summary>The pause button of the HUD, at the right of the row of counters: two bars on a dark square.</summary>
-        private static RectTransform BuildPauseButton(RectTransform area)
-        {
-            // an invisible target of 104 (TouchTarget, STYLE.md §2) round the visible square of the row of counters
-            const float target = 104f;
-            var rect = Rect(area, "PauseButton", new Vector2(1f, 1f), new Vector2(1f, 1f));
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = Vector2.one * target;
-            rect.anchoredPosition = new Vector2(-EdgeMargin - CounterHeight / 2f, -EdgeMargin * 2 - BarHeight - CounterHeight / 2f);
-            var hit = Picture(rect, null, new Color(0f, 0f, 0f, 0f));
-            hit.raycastTarget = true;
-            var face = Rect(rect, "Face", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            face.sizeDelta = Vector2.one * CounterHeight;
-            var image = Picture(face, null, BarBaseColor);
-            var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = image;
-            foreach (var x in new[] { -9f, 9f })
-            {
-                var bar = Rect(face, "Bar", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-                bar.sizeDelta = new Vector2(10f, 28f);
-                bar.anchoredPosition = new Vector2(x, 0f);
-                Picture(bar, null, TextColor);
-            }
-
-            var view = rect.gameObject.AddComponent<PauseButtonView>();
-            Wire(view, ("button", button));
-            return rect;
-        }
-
         /// <summary>
         /// The hint of level 1 (screens/first-hint.md): a hand low in the middle (a finger sliding) with one word, the WASD keys
         /// for a computer, and an arrow (a shaft and a head) the view puts by the hero or at the edge. Light with a dark rim.
