@@ -9,6 +9,7 @@ Shader "Borderbite/World/Flat Lit"
         _BaseMap ("Texture", 2D) = "white" {}
         _BaseColor ("Colour", Color) = (1, 1, 1, 1)
         _Hit ("Red flash of a hit, 0..1 (task 4.20)", Range(0, 1)) = 0
+        _HitColor ("Colour of the flash (red of a hit, gold of a coin, task 4.25)", Color) = (1, 0.231, 0.184, 1)
         _Shadow ("Brightness of the side away from the light", Range(0, 1)) = 0.55
     }
 
@@ -34,6 +35,7 @@ Shader "Borderbite/World/Flat Lit"
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half _Hit;
+                half4 _HitColor;
                 half _Shadow;
             CBUFFER_END
 
@@ -66,7 +68,7 @@ Shader "Borderbite/World/Flat Lit"
             {
                 half3 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb;
                 // a hit (task 4.20): the surface goes red and glows, seen in the shade and on the red side alike
-                const half3 hitRed = half3(1.0, 0.231, 0.184);
+                half3 hitRed = _HitColor.rgb;
                 color = lerp(color, hitRed, 0.72 * _Hit);
                 return half4(color * input.shade + hitRed * 0.55 * _Hit, 1);
             }

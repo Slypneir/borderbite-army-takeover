@@ -28,6 +28,7 @@ namespace Core.EditorTools
         public const string MoveStickConfigPath = "Assets/ScriptableObjects/Input/MoveStickConfig.asset";
         public const string SoundVolumesPath = "Assets/ScriptableObjects/Audio/SoundVolumes.asset";
         public const string CirclePath = "Assets/Sprites/UI/Placeholder/Circle.png";
+        public const string RingPath = "Assets/Sprites/UI/Placeholder/Ring.png";
         public const string IconFolder = "Assets/Sprites/UI/Icons/";
         public const string OutlineFontMaterial = "Assets/Fonts/PTSans-Regular Outline.mat";
 
@@ -86,6 +87,7 @@ namespace Core.EditorTools
             Surface();
             Water();
             Sounds();
+            Ring();
             Circle();
             AssetDatabase.SaveAssets();
             // fields a config no longer has leave the files; the values the owner set stay
@@ -315,6 +317,37 @@ namespace Core.EditorTools
 
             if (changed)
                 EditorUtility.SetDirty(volumes);
+        }
+
+        /// <summary>A white ring 128 px with a line of 10 px: drawn at 64 units it is 5 thick (the landing of a flight, task 4.25).</summary>
+        private static void Ring()
+        {
+            if (AssetDatabase.LoadAssetAtPath<Sprite>(RingPath) != null)
+                return;
+
+            const int size = 128;
+            const float line = 10f;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var dx = x + 0.5f - size / 2f;
+                var dy = y + 0.5f - size / 2f;
+                var r = Mathf.Sqrt(dx * dx + dy * dy);
+                var alpha = Mathf.Clamp01(size / 2f - 1f - r) * Mathf.Clamp01(r - (size / 2f - 1f - line));
+                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+            }
+
+            Folder(RingPath);
+            File.WriteAllBytes(RingPath, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(RingPath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(RingPath);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
         }
 
         /// <summary>A soft white circle for the placeholder of the stick, until the kit of the interface.</summary>

@@ -46,6 +46,13 @@ namespace Meta.BattleSystem.Services
             _battle.OnStarted += Take;
         }
 
+        /// <summary>A soldier flashes a colour: the gold of the coin that hired him (task 4.25).</summary>
+        public void Flash(int id, Color color)
+        {
+            if (_bodies.TryGetValue(id, out var body))
+                body.Flash.Hit(color);
+        }
+
         /// <summary>Where a soldier is drawn now; false when it has no body.</summary>
         public bool TryGetPosition(int id, out Vector3 position)
         {

@@ -14,6 +14,8 @@ namespace Meta.BattleSystem.Utils
         private const float Rise = 0.045f;
         private const float Fall = 0.22f;
         private static readonly int HitId = Shader.PropertyToID("_Hit");
+        private static readonly int HitColorId = Shader.PropertyToID("_HitColor");
+        private static readonly Color Red = new Color(1f, 0.231f, 0.184f, 1f);
 
         private readonly Renderer[] _renderers;
         private readonly MaterialPropertyBlock _block = new MaterialPropertyBlock();
@@ -21,11 +23,16 @@ namespace Meta.BattleSystem.Utils
         private float _from;
         private float _since = 1000f;
         private bool _set;
+        private Color _color = Red;
 
         public HitFlash(Transform root) => _renderers = root.GetComponentsInChildren<Renderer>(true);
 
-        public void Hit()
+        public void Hit() => Hit(Red);
+
+        /// <summary>A flash of another colour: the gold of a coin reaching a hired soldier (task 4.25).</summary>
+        public void Hit(Color color)
         {
+            _color = color;
             _from = _k;
             _since = 0f;
         }
@@ -72,6 +79,7 @@ namespace Meta.BattleSystem.Utils
             }
 
             _block.SetFloat(HitId, k);
+            _block.SetColor(HitColorId, _color);
             foreach (var renderer in _renderers)
                 renderer.SetPropertyBlock(_block);
             _set = true;

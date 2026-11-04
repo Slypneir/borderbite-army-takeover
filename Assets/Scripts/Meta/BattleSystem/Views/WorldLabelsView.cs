@@ -36,6 +36,8 @@ namespace Meta.BattleSystem.Views
         // the hero closer than this to the middle of a place sees through its pin and price (UI review of 4.26)
         private const float NearHero = 1.5f;
         private const float NearAlpha = 0.4f;
+        // the top of the health bar over the hero, meters (BarsView: 2.15 m, 0.2 high)
+        private const float HeroBar = 2.25f;
         private static readonly Color Grey = new Color(0.55f, 0.56f, 0.6f, 1f);
         // over the roof of the barracks model (2.5 m)
         private const float Height = 2.8f;
@@ -118,10 +120,15 @@ namespace Meta.BattleSystem.Views
             var purse = simulation.SideOf(Side.Player);
             var army = simulation.ArmyOf(Side.Player);
             var hero = Vector2.positiveInfinity;
+            var heroBarTop = float.NegativeInfinity;
             foreach (var state in simulation.Heroes)
             {
-                if (state.Side == Side.Player && state.Alive)
-                    hero = new Vector2(state.X, state.Y) * _rules.MetersPerUnit;
+                if (state.Side != Side.Player || !state.Alive)
+                    continue;
+
+                hero = new Vector2(state.X, state.Y) * _rules.MetersPerUnit;
+                // the top of the hero's bar (2.15 m, 0.2 high) on the screen, + 8 units
+                heroBarTop = _camera.WorldToScreenPoint(new Vector3(hero.x, HeroBar, hero.y)).y / scale + 8f;
             }
 
             var buildTicks = Mathf.Max(1, simulation.Settings.BuildTicks);
@@ -141,7 +148,7 @@ namespace Meta.BattleSystem.Views
 
                 var own = owner == Side.Player;
                 // over the hero building there: the medallion and the price see-through, the ring stays solid
-                var near = (new Vector2(x, z) - hero).sqrMagnitude < NearHero * NearHero && !site.Built;
+                var near = (new Vector2(x, z) - hero).sqrMagnitude < NearHero * NearHero;
                 foreach (var graphic in mark.PinGraphics)
                     graphic.canvasRenderer.SetAlpha(near ? NearAlpha : 1f);
                 mark.RowGroup.alpha = near ? NearAlpha : 1f;
@@ -175,6 +182,10 @@ namespace Meta.BattleSystem.Views
                 }
 
                 var point = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, site.Built ? Height : PinHeight, z)) / scale;
+                // by the hero: the tip of the pin goes over the hero's health bar (+ 8), so the bar is never covered
+                if (near && !site.Built && heroBarTop > point.y)
+                    point.y = heroBarTop;
+
                 if (Inside(point, mark, bounds, ceiling, out var place))
                 {
                     mark.Root.anchoredPosition = place;

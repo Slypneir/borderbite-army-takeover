@@ -42,6 +42,16 @@ namespace Meta.BattleSystem.Services
             _effects = effects;
         }
 
+        /// <summary>
+        /// A log of the player's building landed at its place (task 4.25): the barracks grows by a fifth of its height a log, so it
+        /// is seen to be built by these logs. Without flights it grows by time.
+        /// </summary>
+        public void LogLanded(int site)
+        {
+            if (site >= 0 && site < _places.Count)
+                _places[site].Logs++;
+        }
+
         /// <summary>A place in the world: the middle of its centre cell on the ground.</summary>
         public Vector3 WorldOf(SiteState site) =>
             new Vector3((site.CenterX + 0.5f) * _rules.CellSize, 0f, (site.CenterY + 0.5f) * _rules.CellSize);
@@ -107,6 +117,8 @@ namespace Meta.BattleSystem.Services
                 place.Barracks.gameObject.SetActive(site.Built);
                 place.Pad.gameObject.SetActive(!site.Built);
                 place.GrowAge = 0f;
+                place.Logs = 0;
+                place.ByLogs = site.Barracks == Side.Player && _view.ResourceFlights;
                 if (site.Built)
                     _materials.Tint(place.Barracks, _view.SoldierColor(site.Barracks));
             }
@@ -122,6 +134,12 @@ namespace Meta.BattleSystem.Services
             place.Barracks.localRotation = Quaternion.Euler(0f, 180f, 0f);
             place.GrowAge += Time.deltaTime;
             var grow = _view.GrowSeconds <= 0f ? 1f : Mathf.Clamp01(place.GrowAge / _view.GrowSeconds);
+            if (place.ByLogs)
+            {
+                // towards the logs landed so far, smoothly; a stuck flight never leaves it half built (2 s at most)
+                place.Shown = Mathf.MoveTowards(place.Shown, place.Logs / 5f, Time.deltaTime * 4f);
+                grow = place.GrowAge > 2f ? 1f : place.Shown;
+            }
             // a short overshoot: it pops out of the ground
             var scale = grow < 1f ? Mathf.Sin(grow * Mathf.PI * 0.5f) * (1f + 0.15f * Mathf.Sin(grow * Mathf.PI)) : 1f;
             place.Barracks.localScale = new Vector3(1f, Mathf.Max(0.01f, scale), 1f);
@@ -166,6 +184,9 @@ namespace Meta.BattleSystem.Services
             public Side Owner;
             public Side Built;
             public float GrowAge;
+            public int Logs;
+            public bool ByLogs;
+            public float Shown;
             public Transform[] Flags;
             public Quaternion[] FlagRests;
         }

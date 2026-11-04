@@ -48,6 +48,9 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private Sprite woodIcon;
         [SerializeField] private ResourceHudView hud;
 
+        [Tooltip("The colour a hired soldier flashes when his coin reaches him. Starting value: #ffd34d.")]
+        [SerializeField] private Color coinFlash = new Color(1f, 0.827f, 0.302f, 1f);
+
         private readonly List<Flight> _flights = new List<Flight>();
         private readonly List<Spark> _sparks = new List<Spark>();
         private readonly List<Ring> _rings = new List<Ring>();
@@ -58,6 +61,7 @@ namespace Meta.BattleSystem.Views
         private Camera _camera;
         private BattleScreen _screen;
         private SoldiersView _soldiers;
+        private SitesView _sites;
         private EventCursor _events;
         private BattleSimulation _simulation;
         private RectTransform _layer;
@@ -67,8 +71,9 @@ namespace Meta.BattleSystem.Views
 
         [Inject]
         public void Construct(IBattleDriver battle, BattleConfig rules, BattleViewConfig view, Camera mainCamera, BattleScreen screen,
-            SoldiersView soldiers)
+            SoldiersView soldiers, SitesView sites)
         {
+            _sites = sites;
             _battle = battle;
             _rules = rules;
             _view = view;
@@ -138,7 +143,7 @@ namespace Meta.BattleSystem.Views
                 }
                 case EventKind.Built:
                     for (var i = 0; i < 5; i++)
-                        Add(new Flight { Kind = FlightKind.Log, Gold = false, World = World(e.X, e.Y, 0.2f), Delay = i * LogGap, Index = i });
+                        Add(new Flight { Kind = FlightKind.Log, Gold = false, World = World(e.X, e.Y, 0.2f), Delay = i * LogGap, Index = i, Target = e.Id });
                     break;
                 case EventKind.Hired:
                 {
@@ -298,6 +303,7 @@ namespace Meta.BattleSystem.Views
                     Sparks(counter, f.Gold ? GoldColor : WoodColor, 6, 8f);
                     break;
                 case FlightKind.Log:
+                    _sites.LogLanded(f.Target);
                     if (!atOnce)
                         Sparks(Screen(f.World), DustColor, 7, 6f);
                     break;
@@ -305,6 +311,8 @@ namespace Meta.BattleSystem.Views
                     hud.Change(2, 1, true);
                     if (atOnce)
                         return;
+
+                    _soldiers.Flash(f.Target, coinFlash);
 
                     var at = Screen(f.World);
                     Sparks(at, GoldColor, 8, 7f);
@@ -475,8 +483,7 @@ namespace Meta.BattleSystem.Views
                 r.Age += dt;
                 var t = Mathf.Clamp01(r.Age / r.Seconds);
                 r.Image.rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(r.From, r.To, Ease(t));
-                // a soft cream puff growing and fading: no outline sprite yet, a filled disc kept light
-                r.Image.color = new Color(Cream.r, Cream.g, Cream.b, 0.35f * (1f - t));
+                r.Image.color = new Color(Cream.r, Cream.g, Cream.b, 1f - t);
                 if (t >= 1f)
                     r.Image.gameObject.SetActive(false);
             }

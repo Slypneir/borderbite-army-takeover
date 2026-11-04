@@ -429,7 +429,9 @@ namespace Core.EditorTools
             armyIcon.anchoredPosition = new Vector2(CounterPadding - 8f, 0f);
             Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
                 ("goldGain", goldGain), ("woodGain", woodGain), ("goldIcon", gold.transform.parent.Find("Icon")),
-                ("woodIcon", wood.transform.parent.Find("Icon")), ("armyIcon", armyIcon));
+                ("woodIcon", wood.transform.parent.Find("Icon")), ("armyIcon", armyIcon),
+                ("goldFlash", Silhouette(gold.transform.parent.Find("Icon"))), ("woodFlash", Silhouette(wood.transform.parent.Find("Icon"))),
+                ("armyFlash", Silhouette(armyIcon)));
 
             pause = BuildPauseButton(plate);
             Wire(plate.gameObject.AddComponent<HudLayoutView>(), ("plate", plate), ("bar", bar), ("counters", row), ("pause", pause));
@@ -601,6 +603,36 @@ namespace Core.EditorTools
             return ordersView;
         }
 
+        /// <summary>A white silhouette of an icon over it, unseen until a flash (task 4.25).</summary>
+        private static Image Silhouette(Transform icon)
+        {
+            var rect = Rect((RectTransform)icon, "Flash", Vector2.zero, Vector2.one);
+            var image = Picture(rect, icon.GetComponent<Image>().sprite, new Color(1f, 1f, 1f, 0f));
+            image.preserveAspect = icon.GetComponent<Image>().preserveAspect;
+            image.material = WhiteMaterial();
+            return image;
+        }
+
+        /// <summary>A UI material that draws a sprite as a white silhouette (Grayscale lightened to white), made once.</summary>
+        private static Material WhiteMaterial()
+        {
+            const string path = "Assets/Materials/UI/White.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null)
+                return material;
+
+            var shader = Shader.Find("Borderbite/UI/Grayscale");
+            if (shader == null)
+                return null;
+
+            if (!AssetDatabase.IsValidFolder("Assets/Materials/UI"))
+                AssetDatabase.CreateFolder("Assets/Materials", "UI");
+            material = new Material(shader);
+            material.SetFloat("_Lighten", 1f);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
         /// <summary>The material of a grey UI image (shader Borderbite/UI/Grayscale), made once.</summary>
         private static Material GreyMaterial()
         {
@@ -638,7 +670,7 @@ namespace Core.EditorTools
             var sparkImage = Picture(spark, null, Color.white);
             var ring = Rect((RectTransform)go.transform, "Ring", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
             ring.sizeDelta = Vector2.one * 26f;
-            var ringImage = Picture(ring, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), new Color(1f, 1f, 1f, 0.6f));
+            var ringImage = Picture(ring, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.RingPath), Color.white);
             Wire(go.GetComponent<ResourceFlightView>(), ("template", iconImage), ("sparkTemplate", sparkImage), ("ringTemplate", ringImage),
                 ("goldIcon", Icon("icon_gold_128")), ("woodIcon", Icon("icon_wood_128")), ("hud", hud.GetComponentInChildren<ResourceHudView>()));
         }
@@ -713,6 +745,10 @@ namespace Core.EditorTools
                 plate.GetComponent<Image>().sprite = markOwn;
                 Object.DestroyImmediate(siteIcon.gameObject);
                 Object.DestroyImmediate(tail.gameObject);
+                // the medallion of the art is W / 1.15 across, its middle 56 of 152 px from the top (c1fd3cb): the ring of
+                // building round it, radius 0.52 of the width
+                ring.anchoredPosition = new Vector2(0f, -PinTall * 56f / 152f);
+                ring.sizeDelta = Vector2.one * (PinMedallion * 1.04f);
             }
             var row = Rect(template, "Row", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             row.pivot = new Vector2(0.5f, 0f);

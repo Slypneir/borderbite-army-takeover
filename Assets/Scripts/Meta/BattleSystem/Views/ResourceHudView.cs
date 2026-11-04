@@ -30,6 +30,11 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private RectTransform woodIcon;
         [SerializeField] private RectTransform armyIcon;
 
+        [Tooltip("White silhouettes over the icons (material Borderbite/UI/Grayscale lightened to white): the flash of a landing.")]
+        [SerializeField] private UnityEngine.UI.Image goldFlash;
+        [SerializeField] private UnityEngine.UI.Image woodFlash;
+        [SerializeField] private UnityEngine.UI.Image armyFlash;
+
         private readonly Counter[] _counters = new Counter[3];
         private IBattleDriver _battle;
         private BattleConfig _rules;
@@ -51,9 +56,11 @@ namespace Meta.BattleSystem.Views
 
         private void Awake()
         {
-            _counters[0] = new Counter { Icon = goldIcon, Label = goldLabel, Gain = goldGain, Color = GoldGain };
-            _counters[1] = new Counter { Icon = woodIcon, Label = woodLabel, Gain = woodGain, Color = WoodGain };
-            _counters[2] = new Counter { Icon = armyIcon, Label = armyLabel };
+            _counters[0] = new Counter { Icon = goldIcon, Label = goldLabel, Gain = goldGain, Color = GoldGain, Flash = goldFlash };
+            _counters[1] = new Counter { Icon = woodIcon, Label = woodLabel, Gain = woodGain, Color = WoodGain, Flash = woodFlash };
+            _counters[2] = new Counter { Icon = armyIcon, Label = armyLabel, Flash = armyFlash };
+            foreach (var counter in _counters)
+                counter.LabelColor = counter.Label != null ? counter.Label.color : Color.white;
             foreach (var counter in _counters)
                 counter.Age = GainSeconds;
         }
@@ -111,6 +118,13 @@ namespace Meta.BattleSystem.Views
             if (c.Label != null)
                 c.Label.rectTransform.localScale = Vector3.one * (1f + swing * 0.5f);
 
+            // a landing flashes the icon and the number white for 0.06 s
+            var white = c.Up && c.Bump < 0.06f;
+            if (c.Flash != null)
+                c.Flash.color = new Color(1f, 1f, 1f, white ? 1f : 0f);
+            if (c.Label != null)
+                c.Label.color = white ? Color.white : c.LabelColor;
+
             if (c.Gain == null)
                 return;
 
@@ -126,6 +140,8 @@ namespace Meta.BattleSystem.Views
             public TMP_Text Label;
             public TMP_Text Gain;
             public Color Color = Color.white;
+            public UnityEngine.UI.Image Flash;
+            public Color LabelColor;
             public float Bump = 1f;
             public bool Up;
             public int Sum;
