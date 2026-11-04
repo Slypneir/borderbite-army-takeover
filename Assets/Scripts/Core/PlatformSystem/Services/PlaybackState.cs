@@ -8,9 +8,11 @@ namespace Core.PlatformSystem.Services
         public bool FocusLost;
         public bool AdRequested;
         public bool AdPlaying;
+        /// <summary>The player's pause screen is open: it holds the game until the player goes on, whatever the focus does.</summary>
+        public bool PlayerPaused;
 
-        public bool Frozen => PlatformPaused || FocusLost || AdRequested || AdPlaying;
+        public bool Frozen => PlatformPaused || FocusLost || AdRequested || AdPlaying || PlayerPaused;
 
-        public bool Muted => PlatformMuted || PlatformPaused || FocusLost || AdPlaying;
+        public bool Muted => PlatformMuted || PlatformPaused || FocusLost || AdPlaying || PlayerPaused;
     }
 }

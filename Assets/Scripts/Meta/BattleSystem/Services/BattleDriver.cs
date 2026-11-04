@@ -40,9 +40,11 @@ namespace Meta.BattleSystem.Services
 
         public event Action<BattleResult> OnFinished;
 
-        public BattleRunner StartBattle(uint seed)
+        public BattleRunner StartBattle(uint seed, Action<BattleSettings> prepare = null)
         {
-            Current = new BattleRunner(_config.ToSettings(seed), _config.MaxStepsPerFrame);
+            var settings = _config.ToSettings(seed);
+            prepare?.Invoke(settings);
+            Current = new BattleRunner(settings, _config.MaxStepsPerFrame);
             _sent = Vector2Int.zero;
             _finished = false;
             _platform.SignalGameplay(true);

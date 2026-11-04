@@ -63,7 +63,7 @@ namespace Core.BattleSystem.Services
                 hero.RespawnTick = 0;
                 hero.X = hero.HomeX;
                 hero.Y = hero.HomeY;
-                hero.Health = _settings.HeroHealth;
+                hero.Health = _settings.HeroHealthOf(hero.Side);
                 hero.Cooldown = 0;
                 hero.InvulnerableUntil = _state.Tick + _settings.InvulnerableTicks;
                 _state.Heroes[i] = hero;
@@ -121,7 +121,7 @@ namespace Core.BattleSystem.Services
                 hero.FacingY = target.Y - hero.Y;
                 _state.Heroes[i] = hero;
                 _state.Emit(melee ? EventKind.Strike : EventKind.Shot, hero.Side, -1, 0, hero.X, hero.Y, target.X, target.Y);
-                Hurt(target, melee ? _settings.MeleeDamage : _settings.GunDamage);
+                Hurt(target, _settings.HeroDamageOf(hero.Side, melee ? _settings.MeleeDamage : _settings.GunDamage));
             }
         }
 

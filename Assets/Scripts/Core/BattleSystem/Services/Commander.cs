@@ -144,7 +144,7 @@ namespace Core.BattleSystem.Services
             switch (priority)
             {
                 case 1:
-                    return hero.Health * 1000 < _settings.HeroHealth * _settings.CommanderRetreatPermille && NearestCell(hero, _side, false, out x, out y);
+                    return hero.Health * 1000 < _settings.HeroHealthOf(_side) * _settings.CommanderRetreatPermille && NearestCell(hero, _side, false, out x, out y);
                 case 2:
                     return purse.Wood >= _settings.BarracksWood && _state.Tick >= BuildFrom() && NearestPlace(hero, out x, out y);
                 case 3:

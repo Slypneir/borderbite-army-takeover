@@ -12,6 +12,8 @@ using Meta.BattleSystem.Views;
 using Meta.DeveloperTools.Installers;
 using Meta.FlowSystem.Installers;
 using Meta.FlowSystem.Views;
+using Meta.ProgressSystem.Configuration;
+using Meta.ProgressSystem.Installers;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -36,6 +38,9 @@ namespace Core.DependencyInjection
         [SerializeField] private Camera mainCamera;
         [SerializeField] private BattleWorld battleWorld;
         [SerializeField] private ResultsView resultsView;
+        [SerializeField] private UpgradesView upgradesView;
+        [SerializeField] private PauseView pauseView;
+        [SerializeField] private ProgressConfig progressConfig;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -44,7 +49,8 @@ namespace Core.DependencyInjection
             new InputManagementInstaller(moveStickConfig).Install(builder);
             new AudioManagementInstaller(soundVolumes).Install(builder);
             new BattleSystemInstaller(battleConfig, battleViewConfig, battleWorld).Install(builder);
-            new FlowSystemInstaller(resultsView).Install(builder);
+            new ProgressSystemInstaller(progressConfig).Install(builder);
+            new FlowSystemInstaller(resultsView, upgradesView, pauseView).Install(builder);
             new DeveloperToolsInstaller().Install(builder);
         }
     }

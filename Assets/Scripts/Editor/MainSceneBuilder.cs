@@ -8,6 +8,7 @@ using Core.ScreenSystem.Views;
 using Meta.BattleSystem.Configuration;
 using Meta.BattleSystem.Views;
 using Meta.FlowSystem.Views;
+using Meta.ProgressSystem.Configuration;
 using Meta.LocalizationSystem.Views;
 using TMPro;
 using UnityEditor;
@@ -39,6 +40,10 @@ namespace Core.EditorTools
         private const int MarkWidth = 4;
         private const int TitleSize = 96;
         private const int CountdownSize = 64;
+        private const int BodySize = 32;
+        private const int CaptionSize = 24;
+        private const int HeadingSize = 48;
+        private const int CrownsSize = 72;
         private const int ButtonHeight = 128;
         private const int ButtonWidth = 360;
         private const int ButtonTextSize = 44;
@@ -72,8 +77,8 @@ namespace Core.EditorTools
 
             var camera = BuildCamera(view);
             var world = BuildWorld();
-            var canvas = BuildCanvas(view, out var results);
-            BuildRoot(camera, world, results, canvas);
+            var canvas = BuildCanvas(view, out var results, out var upgrades, out var pause);
+            BuildRoot(camera, world, results, upgrades, pause, canvas);
             BuildEventSystem();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -235,7 +240,7 @@ namespace Core.EditorTools
             return renderer;
         }
 
-        private static void BuildRoot(Camera camera, BattleWorld world, ResultsView results, GameObject canvas)
+        private static void BuildRoot(Camera camera, BattleWorld world, ResultsView results, UpgradesView upgrades, PauseView pause, GameObject canvas)
         {
             var go = new GameObject("RootInstaller");
             go.SetActive(false);
@@ -250,6 +255,9 @@ namespace Core.EditorTools
             serialized.FindProperty("mainCamera").objectReferenceValue = camera;
             serialized.FindProperty("battleWorld").objectReferenceValue = world;
             serialized.FindProperty("resultsView").objectReferenceValue = results;
+            serialized.FindProperty("upgradesView").objectReferenceValue = upgrades;
+            serialized.FindProperty("pauseView").objectReferenceValue = pause;
+            serialized.FindProperty("progressConfig").objectReferenceValue = AssetDatabase.LoadAssetAtPath<ProgressConfig>(ProjectSetup.ProgressConfigPath);
             var inject = serialized.FindProperty("autoInjectGameObjects");
             inject.arraySize = 1;
             inject.GetArrayElementAtIndex(0).objectReferenceValue = canvas;
@@ -257,7 +265,7 @@ namespace Core.EditorTools
             go.SetActive(true);
         }
 
-        private static GameObject BuildCanvas(BattleViewConfig view, out ResultsView results)
+        private static GameObject BuildCanvas(BattleViewConfig view, out ResultsView results, out UpgradesView upgrades, out PauseView pause)
         {
             var go = new GameObject("Canvas");
             var canvas = go.AddComponent<Canvas>();
@@ -281,8 +289,12 @@ namespace Core.EditorTools
             var counters = BuildCounters(area, view);
             Wire(labels, ("hudBottom", counters));
             Wire(marks, ("hudBottom", counters));
+            BuildPauseButton(area);
+            BuildHint(root, counters);
             BuildDebug(area);
             results = BuildResults(area);
+            upgrades = BuildUpgrades(area);
+            pause = BuildPause(area);
             return go;
         }
 
@@ -531,11 +543,284 @@ namespace Core.EditorTools
             retry.targetGraphic = image;
             var caption = Text(button, "Label", ButtonTextSize, TextAlignmentOptions.Center);
             caption.color = ButtonTextColor;
-            Localize(caption, "results.retry");
+
+            // under the outcome: the reason, the blue share, the crowns large with the crown
+            var reason = Line(rect, "Reason", BodySize, TitleHeight, -TitleSize * 0.95f);
+            var share = Line(rect, "Share", BodySize, TitleHeight, -TitleSize * 0.95f - BodySize * 1.6f);
+            var crowns = Line(rect, "Crowns", CrownsSize, TitleHeight, -TitleSize * 0.95f - BodySize * 3.2f - CrownsSize * 0.6f);
+            crowns.alignment = TextAlignmentOptions.Left;
+            var crownsRect = (RectTransform)crowns.transform;
+            crownsRect.anchorMin = new Vector2(0.5f, TitleHeight);
+            crownsRect.anchorMax = new Vector2(0.5f, TitleHeight);
+            crownsRect.pivot = new Vector2(0f, 0.5f);
+            crownsRect.sizeDelta = new Vector2(240f, CrownsSize * 1.4f);
+            crownsRect.anchoredPosition = new Vector2(-20f, crownsRect.anchoredPosition.y);
+            var crownIcon = Rect(rect, "CrownIcon", new Vector2(0.5f, TitleHeight), new Vector2(0.5f, TitleHeight));
+            crownIcon.pivot = new Vector2(1f, 0.5f);
+            crownIcon.sizeDelta = Vector2.one * CrownsSize;
+            crownIcon.anchoredPosition = new Vector2(-32f, crownsRect.anchoredPosition.y);
+            Picture(crownIcon, Icon("crown"), Color.white);
 
             var view = go.GetComponent<ResultsView>();
-            Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("title", title), ("retry", retry), ("retryRect", button));
+            Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("title", title), ("reason", reason), ("share", share),
+                ("crowns", crowns), ("caption", caption), ("retry", retry), ("retryRect", button));
             return view;
+        }
+
+        /// <summary>A line of text across the screen at a height (a share of it) and an offset, units.</summary>
+        private static TextMeshProUGUI Line(RectTransform parent, string name, int size, float height, float offset)
+        {
+            var text = Text(parent, name, size, TextAlignmentOptions.Center);
+            var rect = (RectTransform)text.transform;
+            rect.anchorMin = new Vector2(0f, height);
+            rect.anchorMax = new Vector2(1f, height);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(0f, size * 1.4f);
+            rect.anchoredPosition = new Vector2(0f, offset);
+            return text;
+        }
+
+        private static Sprite Icon(string name) => AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.IconFolder + name + ".png");
+
+        /// <summary>A light button with a dark caption: the main action of a screen.</summary>
+        private static (Button Button, RectTransform Rect, TextMeshProUGUI Caption) MainButton(RectTransform parent, string name, Vector2 anchor, float width, float height)
+        {
+            var rect = Rect(parent, name, anchor, anchor);
+            rect.pivot = anchor;
+            rect.sizeDelta = new Vector2(width, height);
+            var image = Picture(rect, null, ButtonColor);
+            image.raycastTarget = true;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            var caption = Text(rect, "Label", ButtonTextSize, TextAlignmentOptions.Center);
+            caption.color = ButtonTextColor;
+            return (button, rect, caption);
+        }
+
+        /// <summary>
+        /// The upgrades (screens/upgrades.md): the crowns on top, a holder of the four cards in the middle (the view lays them out)
+        /// and the main button below; a card template — the whole card one button: icon, name, effect, step, ten ticks, price.
+        /// </summary>
+        private static UpgradesView BuildUpgrades(RectTransform area)
+        {
+            var go = new GameObject("Upgrades", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(UpgradesView));
+            go.transform.SetParent(area, false);
+            var rect = (RectTransform)go.transform;
+            Stretch(rect);
+            go.GetComponent<Image>().color = DimColor;
+
+            var balanceIcon = Rect(rect, "BalanceIcon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            balanceIcon.pivot = new Vector2(1f, 1f);
+            balanceIcon.sizeDelta = Vector2.one * 64f;
+            // under the HUD of the battle, which stays on top
+            var hud = EdgeMargin * 3 + BarHeight + CounterHeight + 16f;
+            balanceIcon.anchoredPosition = new Vector2(-8f, -hud);
+            Picture(balanceIcon, Icon("crown"), Color.white);
+            var balance = Text(rect, "Balance", HeadingSize, TextAlignmentOptions.Left);
+            var balanceRect = (RectTransform)balance.transform;
+            balanceRect.anchorMin = balanceRect.anchorMax = new Vector2(0.5f, 1f);
+            balanceRect.pivot = new Vector2(0f, 1f);
+            balanceRect.sizeDelta = new Vector2(240f, 64f);
+            balanceRect.anchoredPosition = new Vector2(8f, -hud);
+
+            var cards = Rect(rect, "Cards", Vector2.zero, Vector2.one);
+            cards.offsetMin = new Vector2(EdgeMargin, ButtonHeight + EdgeMargin * 3);
+            cards.offsetMax = new Vector2(-EdgeMargin, -(hud + 64f + EdgeMargin));
+
+            var card = Rect(cards, "CardTemplate", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            card.sizeDelta = new Vector2(280f, 300f);
+            card.gameObject.AddComponent<CanvasGroup>();
+            var back = Picture(card, null, BarBaseColor);
+            back.raycastTarget = true;
+            card.gameObject.AddComponent<Button>().targetGraphic = back;
+            var icon = Rect(card, "Icon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            icon.pivot = new Vector2(0.5f, 1f);
+            icon.sizeDelta = Vector2.one * 96f;
+            icon.anchoredPosition = new Vector2(0f, -16f);
+            Picture(icon, null, Color.white);
+            CardLine(card, "Name", BodySize, -116f);
+            CardLine(card, "Effect", CaptionSize, -160f);
+            CardLine(card, "Step", CaptionSize, -196f);
+            var ticks = Rect(card, "Ticks", new Vector2(0f, 1f), new Vector2(1f, 1f));
+            ticks.pivot = new Vector2(0.5f, 1f);
+            ticks.offsetMin = new Vector2(24f, -238f);
+            ticks.offsetMax = new Vector2(-24f, -226f);
+            for (var i = 0; i < 10; i++)
+            {
+                var tick = Rect(ticks, "Tick" + i, new Vector2(i / 10f, 0f), new Vector2((i + 1) / 10f, 1f));
+                tick.offsetMin = new Vector2(2f, 0f);
+                tick.offsetMax = new Vector2(-2f, 0f);
+                Picture(tick, null, Color.white);
+            }
+
+            var price = CardLine(card, "Price", BodySize, -250f);
+            price.alignment = TextAlignmentOptions.Center;
+            var priceIcon = Rect(card, "PriceIcon", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            priceIcon.pivot = new Vector2(1f, 1f);
+            priceIcon.sizeDelta = Vector2.one * 36f;
+            priceIcon.anchoredPosition = new Vector2(-40f, -254f);
+            Picture(priceIcon, Icon("crown"), Color.white);
+
+            var main = MainButton(rect, "Play", new Vector2(0.5f, 0f), ButtonWidth, ButtonHeight);
+            main.Rect.anchoredPosition = new Vector2(0f, EdgeMargin * 2);
+
+            var view = go.GetComponent<UpgradesView>();
+            Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("cards", cards), ("cardTemplate", card), ("balance", balance),
+                ("play", main.Button), ("playRect", main.Rect), ("playCaption", main.Caption));
+            var serialized = new SerializedObject(view);
+            var icons = serialized.FindProperty("icons");
+            icons.arraySize = 4;
+            var names = new[] { "up_hero", "up_brush", "up_soldiers", "up_gold" };
+            for (var i = 0; i < 4; i++)
+                icons.GetArrayElementAtIndex(i).objectReferenceValue = Icon(names[i]);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        private static TextMeshProUGUI CardLine(RectTransform card, string name, int size, float y)
+        {
+            var text = Text(card, name, size, TextAlignmentOptions.Center);
+            var rect = (RectTransform)text.transform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(-16f, size * 1.3f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 20;
+            text.fontSizeMax = size;
+            return text;
+        }
+
+        /// <summary>The pause (screens/pause.md): a window in the middle over the dim, «Pause», «Again» above, «Go on» below.</summary>
+        private static PauseView BuildPause(RectTransform area)
+        {
+            var go = new GameObject("Pause", typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(PauseView));
+            go.transform.SetParent(area, false);
+            var rect = (RectTransform)go.transform;
+            Stretch(rect);
+            go.GetComponent<Image>().color = DimColor;
+            var window = Rect(rect, "Window", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            window.sizeDelta = new Vector2(480f, 520f);
+            Picture(window, null, BarBaseColor);
+            var title = Text(window, "Title", HeadingSize, TextAlignmentOptions.Center);
+            var titleRect = (RectTransform)title.transform;
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.sizeDelta = new Vector2(0f, HeadingSize * 1.6f);
+            titleRect.anchoredPosition = new Vector2(0f, -32f);
+            var restart = MainButton(window, "Restart", new Vector2(0.5f, 0f), 400f, 104f);
+            restart.Rect.anchoredPosition = new Vector2(0f, 32f + 128f + 56f);
+            restart.Button.targetGraphic.color = new Color(0.32f, 0.33f, 0.36f);
+            restart.Caption.color = TextColor;
+            var resume = MainButton(window, "Resume", new Vector2(0.5f, 0f), 400f, 128f);
+            resume.Rect.anchoredPosition = new Vector2(0f, 32f);
+            var view = go.GetComponent<PauseView>();
+            Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("title", title), ("resume", resume.Button), ("resumeCaption", resume.Caption),
+                ("restart", restart.Button), ("restartCaption", restart.Caption));
+            return view;
+        }
+
+        /// <summary>The pause button of the HUD, at the right of the row of counters: two bars on a dark square.</summary>
+        private static void BuildPauseButton(RectTransform area)
+        {
+            var rect = Rect(area, "PauseButton", new Vector2(1f, 1f), new Vector2(1f, 1f));
+            rect.pivot = new Vector2(1f, 1f);
+            rect.sizeDelta = Vector2.one * CounterHeight;
+            rect.anchoredPosition = new Vector2(-EdgeMargin, -EdgeMargin * 2 - BarHeight);
+            var image = Picture(rect, null, BarBaseColor);
+            image.raycastTarget = true;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            foreach (var x in new[] { -9f, 9f })
+            {
+                var bar = Rect(rect, "Bar", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                bar.sizeDelta = new Vector2(10f, 28f);
+                bar.anchoredPosition = new Vector2(x, 0f);
+                Picture(bar, null, TextColor);
+            }
+
+            var view = rect.gameObject.AddComponent<PauseButtonView>();
+            Wire(view, ("button", button));
+        }
+
+        /// <summary>
+        /// The hint of level 1 (screens/first-hint.md): a hand low in the middle (a finger sliding) with one word, the WASD keys
+        /// for a computer, and an arrow (a shaft and a head) the view puts by the hero or at the edge. Light with a dark rim.
+        /// </summary>
+        private static void BuildHint(RectTransform root, RectTransform hudBottom)
+        {
+            var go = new GameObject("Hint", typeof(RectTransform), typeof(HintView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var hint = (RectTransform)go.transform;
+            var circle = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath);
+
+            var hand = Rect(hint, "Hand", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            hand.sizeDelta = new Vector2(320f, 160f);
+            hand.anchoredPosition = new Vector2(0f, 200f + 80f);
+            var track = Rect(hand, "Track", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            track.sizeDelta = new Vector2(240f, 8f);
+            track.anchoredPosition = new Vector2(0f, 20f);
+            Picture(track, null, new Color(0.96f, 0.95f, 0.88f, 0.5f));
+            var finger = Rect(hand, "Finger", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            finger.sizeDelta = Vector2.one * 64f;
+            finger.anchoredPosition = new Vector2(0f, 20f);
+            var fingerRim = Picture(finger, circle, BarBaseColor);
+            var fingerFill = Rect(finger, "Fill", Vector2.zero, Vector2.one);
+            fingerFill.offsetMin = new Vector2(4f, 4f);
+            fingerFill.offsetMax = new Vector2(-4f, -4f);
+            Picture(fingerFill, circle, TextColor);
+            var word = Text(hand, "Word", BodySize, TextAlignmentOptions.Center);
+            var wordRect = (RectTransform)word.transform;
+            wordRect.anchorMin = new Vector2(0f, 0f);
+            wordRect.anchorMax = new Vector2(1f, 0f);
+            wordRect.pivot = new Vector2(0.5f, 0f);
+            wordRect.sizeDelta = new Vector2(0f, BodySize * 1.4f);
+            word.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+
+            var keys = Rect(hint, "Keys", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            keys.sizeDelta = new Vector2(220f, 150f);
+            keys.anchoredPosition = new Vector2(0f, 200f + 75f);
+            foreach (var (letter, x, y) in new[] { ("W", 0f, 38f), ("A", -72f, -34f), ("S", 0f, -34f), ("D", 72f, -34f) })
+            {
+                var key = Rect(keys, letter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                key.sizeDelta = Vector2.one * 64f;
+                key.anchoredPosition = new Vector2(x, y);
+                Picture(key, null, BarBaseColor);
+                var face = Rect(key, "Face", Vector2.zero, Vector2.one);
+                face.offsetMin = new Vector2(4f, 4f);
+                face.offsetMax = new Vector2(-4f, -4f);
+                Picture(face, null, TextColor);
+                var label = Text(key, "Letter", BodySize, TextAlignmentOptions.Center);
+                label.text = letter;
+                label.color = ButtonTextColor;
+            }
+
+            var arrow = Rect(hint, "Arrow", Vector2.zero, Vector2.zero);
+            arrow.sizeDelta = new Vector2(64f, 96f);
+            arrow.pivot = new Vector2(0.5f, 0.5f);
+            var shaft = Rect(arrow, "Shaft", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            shaft.pivot = new Vector2(0.5f, 0f);
+            shaft.sizeDelta = new Vector2(22f, 56f);
+            Picture(shaft, null, BarBaseColor);
+            var shaftFill = Rect(shaft, "Fill", Vector2.zero, Vector2.one);
+            shaftFill.offsetMin = new Vector2(4f, 4f);
+            shaftFill.offsetMax = new Vector2(-4f, 0f);
+            Picture(shaftFill, null, TextColor);
+            var head = Rect(arrow, "Head", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            head.sizeDelta = Vector2.one * 46f;
+            head.anchoredPosition = new Vector2(0f, -36f);
+            head.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Picture(head, null, BarBaseColor);
+            var headFill = Rect(head, "Fill", Vector2.zero, Vector2.one);
+            headFill.offsetMin = new Vector2(5f, 5f);
+            headFill.offsetMax = new Vector2(-5f, -5f);
+            Picture(headFill, null, TextColor);
+
+            Wire(go.GetComponent<HintView>(), ("hand", hand), ("finger", finger), ("handWord", word), ("keys", keys), ("arrow", arrow),
+                ("hudBottom", hudBottom));
         }
 
         private static void BuildPopups(RectTransform root)

@@ -23,6 +23,8 @@ namespace Core.PlatformSystem.Services
 
         public bool Muted => _state.Muted;
 
+        public bool PlayerPaused => _state.PlayerPaused;
+
         public event Action OnChanged;
 
         public void Start()
@@ -40,6 +42,15 @@ namespace Core.PlatformSystem.Services
             _platform.OnAudioChanged -= HandleAudio;
             _platform.OnFocusChanged -= HandleFocus;
             _platform.OnAdPlayingChanged -= HandleAdPlaying;
+        }
+
+        public void SetPlayerPaused(bool paused)
+        {
+            if (_state.PlayerPaused == paused)
+                return;
+
+            _state.PlayerPaused = paused;
+            Apply();
         }
 
         public void SetAdRequested(bool requested)

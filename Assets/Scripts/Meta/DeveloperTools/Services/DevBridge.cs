@@ -33,11 +33,13 @@ namespace Meta.DeveloperTools.Services
         private static IAdService _ads;
         private static BattleDebug _debug;
         private static BattleFlow _flow;
+        private static Meta.ProgressSystem.Services.ProgressService _progress;
         private static readonly Dictionary<int, ulong> Hashes = new Dictionary<int, ulong>();
 
         public static void Bind(IPlatform platform, IPlaybackGate gate, IScreenLayout layout, IBattleDriver battle, IAdService ads,
-            BattleDebug debug, BattleFlow flow)
+            BattleDebug debug, BattleFlow flow, Meta.ProgressSystem.Services.ProgressService progress)
         {
+            _progress = progress;
             _platform = platform;
             _gate = gate;
             _layout = layout;
@@ -129,6 +131,51 @@ namespace Meta.DeveloperTools.Services
             }
 
             return string.Join(" | ", lines);
+        }
+
+        /// <summary>The progress: level, crowns, steps of the upgrades, the step of the hint.</summary>
+        public static string Progress()
+        {
+            var data = _progress.Data;
+            return $"level {data.Level}, crowns {data.Crowns}, upgrades {string.Join(",", data.Upgrades)}, hint {data.HintStep}";
+        }
+
+        /// <summary>Sets the crowns, for the screens of the upgrades.</summary>
+        public static string Crowns(int crowns)
+        {
+            _progress.Data.Crowns = crowns;
+            _progress.Save();
+            return Progress();
+        }
+
+        /// <summary>Starts anew: no crowns, no upgrades, the hint from its first step; saved.</summary>
+        public static string ResetProgress()
+        {
+            _progress.Load(null);
+            _progress.Save();
+            return Progress();
+        }
+
+        /// <summary>Buys a step of an upgrade 0–3 (HeroPower, HeroBrush, ArmyPower, StartGold) if the crowns allow.</summary>
+        public static string Buy(int upgrade)
+        {
+            _progress.Buy((Meta.ProgressSystem.Enums.Upgrade)upgrade);
+            return Progress();
+        }
+
+        /// <summary>Sets the step of the hint of level 1, 0–4 (4: done), for its screenshots.</summary>
+        public static string Hint(int step)
+        {
+            _progress.Data.HintStep = step;
+            _progress.Save();
+            return Progress();
+        }
+
+        /// <summary>Opens the pause as the HUD button would.</summary>
+        public static string Pause()
+        {
+            _flow.OpenPause();
+            return State();
         }
 
         /// <summary>The enemy of a level of GDD 5.9 at once, without starting anew (spec 2.7); a new battle keeps it.</summary>
@@ -307,8 +354,11 @@ namespace Meta.DeveloperTools.Services
         }
 
 #if UNITY_EDITOR
+        /// <summary>The pause of the platform, as the SDK would send it: it opens the pause screen (unless a screenshot froze it).</summary>
         public static string SimulatePause(bool paused)
         {
+            if (!paused)
+                _debug.QuietFreeze = false;
             ((EditorPlatform)_platform).SimulatePause(paused);
             return State();
         }
@@ -328,6 +378,7 @@ namespace Meta.DeveloperTools.Services
         /// <summary>Pauses the game as the platform would, this many real seconds from now: a moment kept for a screenshot.</summary>
         public static string FreezeIn(float seconds)
         {
+            _debug.QuietFreeze = true;
             UniTask.Delay(System.TimeSpan.FromSeconds(seconds), DelayType.Realtime)
                 .ContinueWith(() => ((EditorPlatform)_platform).SimulatePause(true)).Forget();
             return "pause in " + seconds;
@@ -339,6 +390,7 @@ namespace Meta.DeveloperTools.Services
         /// </summary>
         public static string FreezeAfterCapture(float seconds)
         {
+            _debug.QuietFreeze = true;
             var runner = _battle.Current;
             var seen = runner.Simulation.Captures.Count;
             void Check()

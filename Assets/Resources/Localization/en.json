@@ -6,6 +6,26 @@
     { "key": "results.defeat", "text": "Defeat" },
     { "key": "results.retry", "text": "Again" },
     { "key": "hud.build", "text": "{0} wood" },
-    { "key": "hud.hire", "text": "{0} gold — {1}/{2}" }
+    { "key": "hud.hire", "text": "{0} gold — {1}/{2}" },
+    { "key": "results.reason.share", "text": "{0}% of the land" },
+    { "key": "results.reason.base", "text": "Base destroyed" },
+    { "key": "results.share", "text": "Blue {0}%" },
+    { "key": "results.next", "text": "Next" },
+    { "key": "upgrades.hero_power", "text": "Hero power" },
+    { "key": "upgrades.hero_brush", "text": "Hero brush" },
+    { "key": "upgrades.army_power", "text": "Army power" },
+    { "key": "upgrades.start_gold", "text": "Start gold" },
+    { "key": "upgrades.effect.percent", "text": "+{0}%" },
+    { "key": "upgrades.effect.cells", "text": "+{0} cells" },
+    { "key": "upgrades.effect.gold", "text": "+{0} gold" },
+    { "key": "upgrades.need", "text": "{0} more" },
+    { "key": "upgrades.max", "text": "Max" },
+    { "key": "upgrades.next", "text": "Next" },
+    { "key": "upgrades.retry", "text": "Again" },
+    { "key": "pause.title", "text": "Pause" },
+    { "key": "pause.resume", "text": "Resume" },
+    { "key": "pause.restart", "text": "Restart" },
+    { "key": "pause.restart_confirm", "text": "Restart for sure?" },
+    { "key": "hint.move", "text": "Drag" }
   ]
 }

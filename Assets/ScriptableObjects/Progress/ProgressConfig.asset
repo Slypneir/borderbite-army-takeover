@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5105f303157503f4caf43e52647f18b3, type: 3}
+  m_Name: ProgressConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Meta.ProgressSystem.Configuration.ProgressConfig
+  victoryCrowns: 10
+  crownsPerLevel: 2
+  defeatCrowns: 3
+  steps: 10
+  firstPrice: 20
+  priceGrowth: 1.5
+  heroPowerStep: 0.1
+  heroBrushStep: 0.25
+  armyPowerStep: 0.08
+  startGoldStep: 5

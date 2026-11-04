@@ -6,6 +6,7 @@ using Core.InputManagement.Configuration;
 using Core.PlatformSystem.Configuration;
 using Core.ScreenSystem.Configuration;
 using Meta.BattleSystem.Configuration;
+using Meta.ProgressSystem.Configuration;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEditor;
@@ -31,6 +32,7 @@ namespace Core.EditorTools
         public const string OutlineFontMaterial = "Assets/Fonts/PTSans-Regular Outline.mat";
 
         private const string CellsMaterialPath = "Assets/Materials/Battle/Cells.mat";
+        public const string ProgressConfigPath = "Assets/ScriptableObjects/Progress/ProgressConfig.asset";
         public const string SurfaceConfigPath = "Assets/ScriptableObjects/Battle/SurfaceConfig.asset";
         private const string SurfaceFolder = "Assets/Textures/Surface/";
         private const string WaterFolder = "Assets/Textures/Water/";
@@ -77,6 +79,7 @@ namespace Core.EditorTools
             Policy("AdPolicy_Yandex", false, true, true, 0f, false);
             Policy("AdPolicy_Editor", true, true, false, 0f, false);
             Create<BattleConfig>(BattleConfigPath);
+            Create<ProgressConfig>(ProgressConfigPath);
             Create<ScreenLayoutConfig>(ScreenConfigPath);
             Create<MoveStickConfig>(MoveStickConfigPath);
             BattleView();
@@ -86,7 +89,7 @@ namespace Core.EditorTools
             Circle();
             AssetDatabase.SaveAssets();
             // fields a config no longer has leave the files; the values the owner set stay
-            AssetDatabase.ForceReserializeAssets(new[] { BattleConfigPath, BattleViewConfigPath, SurfaceConfigPath, ScreenConfigPath, MoveStickConfigPath, SoundVolumesPath });
+            AssetDatabase.ForceReserializeAssets(new[] { BattleConfigPath, BattleViewConfigPath, SurfaceConfigPath, ProgressConfigPath, ScreenConfigPath, MoveStickConfigPath, SoundVolumesPath });
         }
 
         private static void BattleView()
@@ -365,7 +368,7 @@ namespace Core.EditorTools
         /// </summary>
         private static void Icons()
         {
-            foreach (var name in new[] { "gold", "wood", "army" })
+            foreach (var name in new[] { "gold", "wood", "army", "crown", "up_hero", "up_brush", "up_soldiers", "up_gold" })
             {
                 var path = IconFolder + name + ".png";
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite

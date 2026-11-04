@@ -15,11 +15,13 @@ namespace Meta.FlowSystem.Services
     {
         private readonly IPlatform _platform;
         private readonly BattleFlow _battle;
+        private readonly Meta.ProgressSystem.Services.ProgressService _progress;
 
-        public BootFlow(IPlatform platform, BattleFlow battle)
+        public BootFlow(IPlatform platform, BattleFlow battle, Meta.ProgressSystem.Services.ProgressService progress)
         {
             _platform = platform;
             _battle = battle;
+            _progress = progress;
         }
 
         public async UniTask StartAsync(CancellationToken ct)
@@ -34,7 +36,7 @@ namespace Meta.FlowSystem.Services
             Debug.Log("[BootFlow] first frame");
 
             Loc.Set(_platform.Language);
-            await _platform.LoadAsync(ct);
+            _progress.Load(await _platform.LoadAsync(ct));
 
             _platform.SignalReady();
             Debug.Log($"[BootFlow] ready, language {Loc.Language}");

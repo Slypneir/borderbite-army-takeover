@@ -26,6 +26,9 @@ namespace Meta.BattleSystem.Services
 
         public bool ShowDebug { get; set; }
 
+        /// <summary>The developer froze the game for a screenshot: the pause screen stays shut.</summary>
+        public bool QuietFreeze { get; set; }
+
         /// <summary>The camera shows the whole map from straight above, for screenshots of the map.</summary>
         public bool Overview { get; set; }
 

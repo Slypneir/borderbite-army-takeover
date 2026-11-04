@@ -94,10 +94,24 @@ namespace Core.BattleSystem.Structs
         public int CommanderRetreatPermille = 300;
         public int CommanderAttackArmy = 8;
         public int CommanderAttackPermille = 800;
+        // layer 4: the lasting upgrades of the player (GDD 6), given by the meta at the start of a level
+        /// <summary>Health and damage of the player's hero, permille.</summary>
+        public int PlayerHeroPermille = 1000;
+        /// <summary>Added to the brush of the player's hero, units.</summary>
+        public int PlayerBrushBonusUnits;
+        /// <summary>Gold the player starts a level with.</summary>
+        public int PlayerStartGold;
+
         /// <summary>The developer's autopilot: the same commander walks the hero of the player; its commands are ignored.</summary>
         public bool PlayerAutopilot;
 
         public int MapUnits => MapCells * UnitsPerCell;
+
+        /// <summary>The full health of the hero of a side: the player's grows with its upgrade.</summary>
+        public int HeroHealthOf(Enums.Side side) => side == Enums.Side.Player ? HeroHealth * PlayerHeroPermille / 1000 : HeroHealth;
+
+        /// <summary>A blow or shot of the hero of a side: the player's grows with its upgrade.</summary>
+        public int HeroDamageOf(Enums.Side side, int damage) => side == Enums.Side.Player ? damage * PlayerHeroPermille / 1000 : damage;
 
         /// <summary>A copy to change for another battle; the arrays of places and piles are shared, nobody writes them.</summary>
         public BattleSettings Clone() => (BattleSettings)MemberwiseClone();

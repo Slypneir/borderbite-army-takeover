@@ -52,6 +52,7 @@ namespace Core.BattleSystem.Services
             }
 
             _playerCommander = new Commander(_state, Side.Player);
+            _state.Sides[(int)Side.Player].Gold = settings.PlayerStartGold;
             _economy.LayStartPiles();
         }
 
@@ -263,7 +264,7 @@ namespace Core.BattleSystem.Services
                 HomeX = place.GateX,
                 HomeY = place.GateY,
                 FacingX = side == Side.Player ? 1 : -1,
-                Health = _state.Settings.HeroHealth,
+                Health = _state.Settings.HeroHealthOf(side),
             });
         }
 
@@ -332,7 +333,7 @@ namespace Core.BattleSystem.Services
             foreach (var hero in _state.Heroes)
             {
                 if (hero.Side == side && hero.Alive)
-                    PaintCircle(hero.X, hero.Y, _state.Settings.HeroBrushUnits, side);
+                    PaintCircle(hero.X, hero.Y, _state.Settings.HeroBrushUnits + (side == Side.Player ? _state.Settings.PlayerBrushBonusUnits : 0), side);
             }
 
             _army.Paint(side, PaintCircle);

@@ -6,6 +6,26 @@
     { "key": "results.defeat", "text": "Поражение" },
     { "key": "results.retry", "text": "Ещё раз" },
     { "key": "hud.build", "text": "{0} дерева" },
-    { "key": "hud.hire", "text": "{0} золота — {1}/{2}" }
+    { "key": "hud.hire", "text": "{0} золота — {1}/{2}" },
+    { "key": "results.reason.share", "text": "{0}% земли" },
+    { "key": "results.reason.base", "text": "Штаб разрушен" },
+    { "key": "results.share", "text": "Синие {0}%" },
+    { "key": "results.next", "text": "Дальше" },
+    { "key": "upgrades.hero_power", "text": "Сила героя" },
+    { "key": "upgrades.hero_brush", "text": "Кисть героя" },
+    { "key": "upgrades.army_power", "text": "Сила бойцов" },
+    { "key": "upgrades.start_gold", "text": "Стартовое золото" },
+    { "key": "upgrades.effect.percent", "text": "+{0}%" },
+    { "key": "upgrades.effect.cells", "text": "+{0} клетки" },
+    { "key": "upgrades.effect.gold", "text": "+{0} золота" },
+    { "key": "upgrades.need", "text": "нужно ещё {0}" },
+    { "key": "upgrades.max", "text": "Максимум" },
+    { "key": "upgrades.next", "text": "Дальше" },
+    { "key": "upgrades.retry", "text": "Ещё раз" },
+    { "key": "pause.title", "text": "Пауза" },
+    { "key": "pause.resume", "text": "Продолжить" },
+    { "key": "pause.restart", "text": "Заново" },
+    { "key": "pause.restart_confirm", "text": "Точно заново?" },
+    { "key": "hint.move", "text": "Веди" }
   ]
 }

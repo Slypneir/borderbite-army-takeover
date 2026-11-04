@@ -18,7 +18,8 @@ namespace Meta.BattleSystem.Interfaces
         /// <summary>
         /// Starts a new battle in place of the old one
         /// </summary>
-        BattleRunner StartBattle(uint seed);
+        /// <summary>A new battle from the config; <paramref name="prepare"/> may change its settings first (the upgrades).</summary>
+        BattleRunner StartBattle(uint seed, System.Action<Core.BattleSystem.Structs.BattleSettings> prepare = null);
 
         /// <summary>
         /// Stops the battle

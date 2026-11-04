@@ -23,6 +23,16 @@ namespace Core.PlatformSystem.Interfaces
         event Action OnChanged;
 
         /// <summary>
+        /// The player's pause screen is open (stage 1 spec 5.4)
+        /// </summary>
+        bool PlayerPaused { get; }
+
+        /// <summary>
+        /// The player's pause screen opens (true) or closes (false): it stops the game and its sound until closed
+        /// </summary>
+        void SetPlayerPaused(bool paused);
+
+        /// <summary>
         /// An advert was requested: the game waits from the request to the answer, the sound stops only when the advert plays
         /// </summary>
         void SetAdRequested(bool requested);

@@ -211,7 +211,8 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
-                if (!hero.Alive || hero.Health >= _settings.HeroHealth)
+                var full = _settings.HeroHealthOf(hero.Side);
+                if (!hero.Alive || hero.Health >= full)
                     continue;
 
                 var cell = _state.Grid.At(hero.X / BattleSettings.UnitsPerCell, hero.Y / BattleSettings.UnitsPerCell);
@@ -225,8 +226,8 @@ namespace Core.BattleSystem.Services
                     hero.Health++;
                 }
 
-                if (hero.Health > _settings.HeroHealth)
-                    hero.Health = _settings.HeroHealth;
+                if (hero.Health > full)
+                    hero.Health = full;
                 _state.Heroes[i] = hero;
             }
         }
