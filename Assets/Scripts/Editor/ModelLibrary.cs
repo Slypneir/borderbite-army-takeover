@@ -25,6 +25,8 @@ namespace Core.EditorTools
         {
             { "ground_cell", "Assets/Models/World/ground_cell.glb" },
             { "shore_straight", "Assets/Models/World/shore_straight.glb" },
+            { "shore_straight_b", "Assets/Models/World/shore_straight_b.glb" },
+            { "shore_straight_c", "Assets/Models/World/shore_straight_c.glb" },
             { "shore_corner", "Assets/Models/World/shore_corner.glb" },
             { "rock_small", "Assets/Models/World/rock_small.glb" },
             { "rock_large", "Assets/Models/World/rock_large.glb" },
@@ -33,6 +35,7 @@ namespace Core.EditorTools
             { "soldier", "Assets/Models/Units/soldier.glb" },
             { "barracks", "Assets/Models/Buildings/barracks.glb" },
             { "build_spot", "Assets/Models/Buildings/build_spot.glb" },
+            { "base", "Assets/Models/Buildings/base.glb" },
             { "gold_pile", "Assets/Models/Pickups/gold_pile.glb" },
             { "wood_bundle", "Assets/Models/Pickups/wood_bundle.glb" },
         };
