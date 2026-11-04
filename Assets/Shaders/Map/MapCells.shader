@@ -1,19 +1,37 @@
 // The surface of the map: one quad. Grass of the 3D artist underneath (_GrassTex, the whole island once, a texel a voxel), and
-// a texel of _CellTex per cell over it: rgb the colour of the side, a how much it is painted (0 neutral grass, 1 a side; the
-// flash and the wave go between). The paint is the side lightened to white and scaled by the brightness of the grass, so the
-// grass shows through and the land is lighter than the army of the same side (stage 1 spec 2.1, owner's numbers of 4 November).
-// The formula works in sRGB 0..1, as the artist's reference. _GridStrength draws the grid for the developer.
+// over it the land of the sides as borders of «Civilization V» (task 4.21, the artist's surface README «Земля сторон», numbers
+// of territory.json): a crisp line of the side's colour just inside the border, a thin dark edge just outside, and a saturated
+// but see-through fill, strongest at the border and fading inward, never to nothing. _FieldTex holds for each side the signed
+// distance to its border in cells (red the player, green the enemy; + inside), smooth, so the borders have no steps of cells.
+// _CellTex alpha is the white flash of a cell that changed. The formulas work in sRGB 0..1, as the artist's reference.
+// _GridStrength draws the grid for the developer.
 Shader "Borderbite/Map/Cells"
 {
     Properties
     {
-        _CellTex ("Cells (a texel per cell, point filter)", 2D) = "white" {}
+        _CellTex ("Cells: alpha the flash of a change (a texel per cell, point filter)", 2D) = "black" {}
+        _FieldTex ("Distance to the borders, cells: r the player, g the enemy (bilinear)", 2D) = "black" {}
         _GrassTex ("Grass (point filter)", 2D) = "white" {}
         _GrassTiles ("Grass tiles over the map", Float) = 1
-        _Lighten ("Side lightened to white", Range(0, 1)) = 0.55
-        _PaintAlpha ("Paint over the grass", Range(0, 1)) = 0.7
-        _LumMean ("Mean brightness of the grass", Range(0.05, 1)) = 0.491
         _Cells ("Cells per side", Float) = 64
+        _CellSize ("Side of a cell, meters", Float) = 0.5
+        _FieldRange ("Distance kept in the field, cells", Float) = 4
+        _PlayerColor ("Land of the player", Color) = (0.25, 0.5, 0.95, 1)
+        _EnemyColor ("Land of the enemy", Color) = (0.9, 0.3, 0.27, 1)
+        _LumMean ("Mean brightness of the grass", Range(0.05, 1)) = 0.491
+        _LineWidth ("Line inside the border, meters", Float) = 0.14
+        _LineSoft ("Softness of the edges, meters", Float) = 0.025
+        _LineLighten ("Line lightened to white", Range(0, 1)) = 0.04
+        _LineAlpha ("Line opacity", Range(0, 1)) = 1
+        _EdgeWidth ("Dark edge outside the border, meters", Float) = 0.035
+        _EdgeDarken ("Dark edge darkened", Range(0, 1)) = 0.5
+        _EdgeAlpha ("Dark edge opacity", Range(0, 1)) = 0.7
+        _FillEdgeAlpha ("Fill at the border", Range(0, 1)) = 0.7
+        _FillInnerAlpha ("Fill deep inside", Range(0, 1)) = 0.26
+        _FillFade ("Fill fades over, meters", Float) = 2
+        _FillLighten ("Fill lightened to white", Range(0, 1)) = 0.14
+        _FillKeepTexture ("Grass pattern kept in the fill", Range(0, 1)) = 0.4
+        _FlashStrength ("White of the flash of a change", Range(0, 1)) = 0.6
         _GridStrength ("Grid of the developer", Range(0, 1)) = 0
     }
 
@@ -34,18 +52,36 @@ Shader "Borderbite/Map/Cells"
 
             TEXTURE2D(_CellTex);
             SAMPLER(sampler_CellTex);
+            TEXTURE2D(_FieldTex);
+            SAMPLER(sampler_FieldTex);
             TEXTURE2D(_GrassTex);
             SAMPLER(sampler_GrassTex);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _CellTex_ST;
+                float4 _FieldTex_ST;
                 float4 _GrassTex_ST;
                 float _Cells;
+                float _CellSize;
+                float _FieldRange;
                 float _GridStrength;
                 float _GrassTiles;
-                float _Lighten;
-                float _PaintAlpha;
+                float4 _PlayerColor;
+                float4 _EnemyColor;
                 float _LumMean;
+                float _LineWidth;
+                float _LineSoft;
+                float _LineLighten;
+                float _LineAlpha;
+                float _EdgeWidth;
+                float _EdgeDarken;
+                float _EdgeAlpha;
+                float _FillEdgeAlpha;
+                float _FillInnerAlpha;
+                float _FillFade;
+                float _FillLighten;
+                float _FillKeepTexture;
+                float _FlashStrength;
             CBUFFER_END
 
             struct Attributes
@@ -68,17 +104,43 @@ Shader "Borderbite/Map/Cells"
                 return output;
             }
 
+            // the land of one side over the colour so far; d is the distance to its border in meters, + inside
+            half3 Land(half3 color, half3 grass, half lum, half3 side, float d)
+            {
+                float soft = _LineSoft;
+                if (d > 0)
+                {
+                    half3 fill = lerp(side, half3(1, 1, 1), _FillLighten) * (1 + (lum / _LumMean - 1) * _FillKeepTexture);
+                    half a = lerp(_FillInnerAlpha, _FillEdgeAlpha, 1 - smoothstep(0, _FillFade, d));
+                    color = lerp(color, min(fill, 1), a * smoothstep(-soft, soft, d));
+                }
+
+                half edge = smoothstep(-_EdgeWidth - soft, -_EdgeWidth + soft, d) * (1 - smoothstep(-soft, soft, d));
+                color = lerp(color, side * (1 - _EdgeDarken), edge * _EdgeAlpha);
+                half border = smoothstep(-soft, soft, d) * (1 - smoothstep(_LineWidth - soft, _LineWidth + soft, d));
+                color = lerp(color, lerp(side, half3(1, 1, 1), _LineLighten), border * _LineAlpha);
+                return color;
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 float2 grid = input.uv * _Cells;
                 float2 cell = floor(grid);
                 float2 f = frac(grid);
-                half4 paint = SAMPLE_TEXTURE2D(_CellTex, sampler_CellTex, (cell + 0.5) / _Cells);
+                // the middle of cell i of the map is texel i + 1 of the field (a neutral ring around the map)
+                half2 field = SAMPLE_TEXTURE2D(_FieldTex, sampler_FieldTex, (grid + 1) / (_Cells + 2)).rg;
+                float2 d = (field * 2 - 1) * _FieldRange * _CellSize;
+
                 half3 grass = LinearToSRGB(SAMPLE_TEXTURE2D(_GrassTex, sampler_GrassTex, input.uv * _GrassTiles).rgb);
-                half3 side = lerp(LinearToSRGB(paint.rgb), half3(1, 1, 1), _Lighten);
                 half lum = dot(grass, half3(0.2126, 0.7152, 0.0722));
-                half3 painted = lerp(grass, min(1, side * lum / _LumMean), _PaintAlpha);
-                half3 color = SRGBToLinear(lerp(grass, painted, paint.a));
+                half3 color = grass;
+                color = Land(color, grass, lum, LinearToSRGB(_EnemyColor.rgb), d.y);
+                color = Land(color, grass, lum, LinearToSRGB(_PlayerColor.rgb), d.x);
+
+                // a cell that changed flashes white for a moment, on its land
+                half flash = SAMPLE_TEXTURE2D(_CellTex, sampler_CellTex, (cell + 0.5) / _Cells).a;
+                color = lerp(color, half3(1, 1, 1), flash * _FlashStrength * step(0, max(d.x, d.y)));
+                color = SRGBToLinear(color);
 
                 float rim = min(min(f.x, f.y), min(1 - f.x, 1 - f.y));
                 color = lerp(color, half3(0, 0, 0), _GridStrength * step(rim, 0.04));

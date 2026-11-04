@@ -22,6 +22,13 @@ namespace Meta.BattleSystem.Services
     {
         private static readonly int CellTexId = Shader.PropertyToID("_CellTex");
         private static readonly int CellsId = Shader.PropertyToID("_Cells");
+        private static readonly int FieldTexId = Shader.PropertyToID("_FieldTex");
+        private static readonly int FieldRangeId = Shader.PropertyToID("_FieldRange");
+        private static readonly int CellSizeId = Shader.PropertyToID("_CellSize");
+        private static readonly int PlayerColorId = Shader.PropertyToID("_PlayerColor");
+        private static readonly int EnemyColorId = Shader.PropertyToID("_EnemyColor");
+        // the borders are rebuilt at most this often, seconds (README of the 3D artist: 5–10 times a second)
+        private const float FieldEvery = 0.1f;
         private static readonly int GridStrengthId = Shader.PropertyToID("_GridStrength");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int GrassTexId = Shader.PropertyToID("_GrassTex");
@@ -59,6 +66,11 @@ namespace Meta.BattleSystem.Services
         private Material _cells;
         private Color32[] _pixels;
         private Side[] _shown;
+        // the owner each cell shows now: it changes when the flash of the cell starts, so the borders follow the wave
+        private Side[] _visible;
+        private TerritoryField _field;
+        private bool _fieldDirty;
+        private float _fieldAt;
         private Color[] _from;
         private float[] _start;
         private float[] _delay;
@@ -89,6 +101,13 @@ namespace Meta.BattleSystem.Services
             if (_active.Count > 0)
                 Animate(now);
 
+            if (_fieldDirty && now >= _fieldAt)
+            {
+                _field.Build(_visible);
+                _fieldDirty = false;
+                _fieldAt = now + FieldEvery;
+            }
+
             _cells.SetFloat(GridStrengthId, _debug.ShowDebug ? 0.6f : 0f);
         }
 
@@ -99,6 +118,8 @@ namespace Meta.BattleSystem.Services
                 UnityEngine.Object.Destroy(material);
             if (_texture != null)
                 UnityEngine.Object.Destroy(_texture);
+            if (_field != null)
+                UnityEngine.Object.Destroy(_field.Texture);
             if (_grass != null)
                 UnityEngine.Object.Destroy(_grass);
             if (_seaGrid != null)
@@ -118,7 +139,8 @@ namespace Meta.BattleSystem.Services
             for (var i = 0; i < _shown.Length; i++)
             {
                 _shown[i] = _simulation.Grid[i];
-                _pixels[i] = ColorOf(_shown[i]);
+                _visible[i] = _shown[i];
+                _pixels[i] = new Color32(255, 255, 255, 0);
                 _delay[i] = -1f;
                 _animating[i] = false;
             }
@@ -128,6 +150,8 @@ namespace Meta.BattleSystem.Services
             _captures = _simulation.Captures.Count;
             _texture.SetPixels32(_pixels);
             _texture.Apply(false);
+            _field.Build(_visible);
+            _fieldDirty = false;
         }
 
         private void Build(int size)
@@ -135,6 +159,7 @@ namespace Meta.BattleSystem.Services
             var cells = size * size;
             _pixels = new Color32[cells];
             _shown = new Side[cells];
+            _visible = new Side[cells];
             _from = new Color[cells];
             _start = new float[cells];
             _delay = new float[cells];
@@ -152,6 +177,15 @@ namespace Meta.BattleSystem.Services
             _cells = Copy(_view.CellsMaterial);
             _cells.SetTexture(CellTexId, _texture);
             _cells.SetFloat(CellsId, size);
+            if (_field != null)
+                UnityEngine.Object.Destroy(_field.Texture);
+            _field = new TerritoryField(size);
+            _cells.SetTexture(FieldTexId, _field.Texture);
+            _cells.SetFloat(FieldRangeId, TerritoryField.Range);
+            _cells.SetFloat(CellSizeId, _rules.CellSize);
+            _cells.SetColor(PlayerColorId, _view.PlayerColor);
+            _cells.SetColor(EnemyColorId, _view.EnemyColor);
+            _cells.SetFloat(Shader.PropertyToID("_FlashStrength"), _view.FlashStrength);
             _world.Surface.sharedMaterial = _cells;
             _world.Surface.transform.localPosition = new Vector3(mapSize / 2f, 0f, mapSize / 2f);
             _world.Surface.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -440,10 +474,16 @@ namespace Meta.BattleSystem.Services
                 if (t < 0f)
                     continue;
 
-                var target = ColorOf(_shown[i]);
+                // the cell shows its new owner from the start of its flash: the borders move with the wave
+                if (_visible[i] != _shown[i])
+                {
+                    _visible[i] = _shown[i];
+                    _fieldDirty = true;
+                }
+
                 if (t >= 1f)
                 {
-                    _pixels[i] = target;
+                    _pixels[i] = new Color32(255, 255, 255, 0);
                     _animating[i] = false;
                     // the last one was already seen in this backward pass: it takes the free place
                     _active[a] = _active[_active.Count - 1];
@@ -451,8 +491,7 @@ namespace Meta.BattleSystem.Services
                     continue;
                 }
 
-                var color = Color.Lerp(_from[i], target, t);
-                _pixels[i] = Color.Lerp(color, Color.white, _view.FlashStrength * (1f - t));
+                _pixels[i] = new Color32(255, 255, 255, (byte)(255f * (1f - t)));
             }
 
             _texture.SetPixels32(_pixels);
@@ -492,14 +531,6 @@ namespace Meta.BattleSystem.Services
             _cells.SetFloat(PaintAlphaId, surface.PaintAlpha);
             _cells.SetFloat(LumMeanId, surface.LumMean);
         }
-
-        /// <summary>A texel of the cells: the colour of the side, alpha how much it covers the grass (a neutral cell is bare grass).</summary>
-        private Color32 ColorOf(Side side) => side switch
-        {
-            Side.Player => _view.PlayerColor,
-            Side.Enemy => _view.EnemyColor,
-            _ => new Color(_view.NeutralColor.r, _view.NeutralColor.g, _view.NeutralColor.b, 0f),
-        };
 
         private static float Distance(int cell, int size, float x, float y)
         {
