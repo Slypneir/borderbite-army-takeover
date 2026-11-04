@@ -280,16 +280,14 @@ namespace Core.BattleSystem.Services
         }
 
         /// <summary>
-        /// The hero is on the 3 × 3 place or right by it: the edge of its body within the reach of building from the edge of the
-        /// place (owner, 4 November: whatever touches the place builds, not only standing in its middle).
+        /// The hero is near the place: the edge of its body within the reach of building from the walls of the barracks to be,
+        /// the same «near» as hiring (owner, 5 November: a hero standing by the place builds, it need not step on it).
         /// </summary>
         private bool ByPlace(HeroState hero, SiteState site)
         {
-            const int unit = BattleSettings.UnitsPerCell;
-            var reach = unit * 3 / 2 + _settings.HeroRadiusUnits + _settings.BuildReachUnits;
-            var dx = System.Math.Abs(hero.X - BattleState.Middle(site.CenterX));
-            var dy = System.Math.Abs(hero.Y - BattleState.Middle(site.CenterY));
-            return dx <= reach && dy <= reach;
+            var reach = (long)_settings.BarracksHalfUnits + _settings.HeroRadiusUnits + _settings.BuildReachUnits;
+            var distance = BattleState.Distance2(hero.X, hero.Y, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY));
+            return distance <= reach * reach;
         }
 
         private void ForAura(SiteState site, System.Action<int> visit)

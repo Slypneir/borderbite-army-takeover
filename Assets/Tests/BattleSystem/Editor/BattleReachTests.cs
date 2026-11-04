@@ -54,6 +54,36 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
+        public void Build_HeroNearThePlace_Builds()
+        {
+            // owner, 5 November: near is enough — 2.3 m from the middle, the edge of the body under 1 m from the walls to be
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings());
+            var site = simulation.Sites[0];
+            simulation.PaintRect(Side.Player, site.CenterX - 1, site.CenterY - 1, site.CenterX + 1, site.CenterY + 1);
+            simulation.Give(Side.Player, 0, 10);
+            simulation.TeleportHero(Side.Player, BattleStateMiddle(site.CenterX) + 3200, BattleStateMiddle(site.CenterY) + 3200);
+
+            Run(simulation, 31);
+
+            simulation.Sites[0].Barracks.Should().Be(Side.Player);
+        }
+
+        [Test]
+        public void Build_HeroFarFromThePlace_DoesNotBuild()
+        {
+            // 2.8 m from the middle: beyond the reach of building
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings());
+            var site = simulation.Sites[0];
+            simulation.PaintRect(Side.Player, site.CenterX - 1, site.CenterY - 1, site.CenterX + 1, site.CenterY + 1);
+            simulation.Give(Side.Player, 0, 10);
+            simulation.TeleportHero(Side.Player, BattleStateMiddle(site.CenterX) + 5600, BattleStateMiddle(site.CenterY));
+
+            Run(simulation, 31);
+
+            simulation.Sites[0].Built.Should().BeFalse();
+        }
+
+        [Test]
         public void Strike_HeroAtTheWallOfABarracks_HitsIt()
         {
             var simulation = new BattleSimulation(BattleDeterminismTests.Settings());

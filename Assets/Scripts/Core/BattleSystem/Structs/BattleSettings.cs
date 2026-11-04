@@ -53,8 +53,8 @@ namespace Core.BattleSystem.Structs
         public int BarracksHealth = 50;
         /// <summary>Half the side of a barracks (2.25 m): blows, hiring and the reach of everything go to its walls.</summary>
         public int BarracksHalfUnits = 2250;
-        /// <summary>A hero builds when the edge of its body is this close to the edge of the place (or on it).</summary>
-        public int BuildReachUnits = 600;
+        /// <summary>A hero builds when the edge of its body is this close to the walls of the barracks to be (or on the place).</summary>
+        public int BuildReachUnits = 2000;
         public int AuraCells = 3;
         /// <summary>Hiring reaches from the edge of the hero to the walls of the barracks.</summary>
         public int HireUnits = 2000;

@@ -152,8 +152,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Half the side of a barracks, meters: blows and hiring reach its walls. Starting value: 1.125 (the model is 2.25 m).")]
         [Min(0f)] [SerializeField] private float barracksHalfSize = 1.125f;
 
-        [Tooltip("A hero builds when the edge of its body is this close to the edge of the place, or on it, meters. Starting value: 0.3.")]
-        [Min(0f)] [SerializeField] private float buildReach = 0.3f;
+        [Tooltip("A hero builds when the edge of its body is this close to the walls of the barracks to be, or on the place, meters. " +
+                 "Starting value: 1 (owner, 5 November: near the place, as near as hiring; was 0.3 m from the 1.5 m place).")]
+        [Min(0f)] [SerializeField] private float buildReach = 1f;
 
         [Tooltip("Radius of the aura of a barracks: cells always of its colour, cells. Starting value: 3.")]
         [Min(1)] [SerializeField] private int auraCells = 3;

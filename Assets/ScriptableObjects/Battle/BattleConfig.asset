@@ -61,7 +61,7 @@ MonoBehaviour:
   barracksWood: 5
   barracksHealth: 15
   barracksHalfSize: 1.125
-  buildReach: 0.3
+  buildReach: 1
   auraCells: 3
   hireReach: 1
   hireEvery: 0.5
