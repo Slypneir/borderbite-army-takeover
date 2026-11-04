@@ -139,7 +139,8 @@ namespace Meta.BattleSystem.Services
             body.gameObject.SetActive(true);
             body.localScale = Vector3.one;
             body.name = kind.ToString();
-            _materials.Paint(body, kind == ResourceKind.Gold ? _view.GoldColor : _view.WoodColor);
+            // a model keeps its texture; a placeholder takes the colour of its resource
+            _materials.Tint(body, kind == ResourceKind.Gold ? _view.GoldColor : _view.WoodColor);
             return body;
         }
 

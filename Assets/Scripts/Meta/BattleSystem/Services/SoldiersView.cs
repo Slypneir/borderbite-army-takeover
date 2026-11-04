@@ -12,8 +12,9 @@ using VContainer.Unity;
 namespace Meta.BattleSystem.Services
 {
     /// <summary>
-    /// Draws the soldiers between the last two ticks, a copy of the template per soldier in the colour of its side, turned to
-    /// where it goes or strikes. A fallen soldier breaks into cubes.
+    /// Draws the soldiers between the last two ticks, a copy of the template per soldier with its `paint` parts in the colour
+    /// of its side, turned to where it goes or strikes; legs step, the weapon arm swings a blow. A fallen soldier breaks into
+    /// cubes.
     /// </summary>
     public sealed class SoldiersView : ILateTickable
     {
@@ -27,6 +28,7 @@ namespace Meta.BattleSystem.Services
         private readonly Stack<Transform> _free = new Stack<Transform>();
         private readonly HashSet<int> _alive = new HashSet<int>();
         private readonly List<int> _gone = new List<int>();
+        private readonly Dictionary<Transform, UnitPose> _poses = new Dictionary<Transform, UnitPose>();
         private BattleRunner _runner;
         private EventCursor _events;
 
@@ -51,7 +53,9 @@ namespace Meta.BattleSystem.Services
             var alpha = (float)_runner.Alpha;
             foreach (var body in _bodies.Values)
             {
-                body.Transform.localPosition = Vector3.Lerp(body.Previous, body.Current, alpha);
+                var position = Vector3.Lerp(body.Previous, body.Current, alpha);
+                body.Pose.Update(Vector3.Distance(position, body.Transform.localPosition), Time.deltaTime);
+                body.Transform.localPosition = position;
                 if (body.Facing.sqrMagnitude > 0f)
                     body.Transform.localRotation = Quaternion.RotateTowards(body.Transform.localRotation, Quaternion.LookRotation(body.Facing), 720f * Time.deltaTime);
             }
@@ -82,7 +86,8 @@ namespace Meta.BattleSystem.Services
                 var position = WorldOf(soldier.X, soldier.Y);
                 if (!_bodies.TryGetValue(soldier.Id, out var body))
                 {
-                    body = new Body { Transform = Take(soldier.Side), Previous = position };
+                    var transform = Take(soldier.Side);
+                    body = new Body { Transform = transform, Pose = Pose(transform), Previous = position };
                     body.Transform.localPosition = position;
                     _bodies[soldier.Id] = body;
                 }
@@ -114,6 +119,20 @@ namespace Meta.BattleSystem.Services
         {
             if (battleEvent.Kind == EventKind.SoldierDied)
                 _effects.Debris(WorldOf(battleEvent.X, battleEvent.Y), _view.SoldierColor(battleEvent.Side), 6, 0.6f);
+            else if (battleEvent.Kind == EventKind.Strike && _bodies.TryGetValue(battleEvent.Id, out var body))
+                body.Pose.Blow();
+        }
+
+        /// <summary>The pose of a pooled body is made once and kept with it.</summary>
+        private UnitPose Pose(Transform body)
+        {
+            if (!_poses.TryGetValue(body, out var pose))
+            {
+                pose = new UnitPose(body);
+                _poses[body] = pose;
+            }
+
+            return pose;
         }
 
         private Transform Take(Side side)
@@ -121,7 +140,7 @@ namespace Meta.BattleSystem.Services
             var body = _free.Count > 0 ? _free.Pop() : _world.Copy(_world.SoldierTemplate);
             body.gameObject.SetActive(true);
             body.localRotation = Quaternion.identity;
-            _materials.Paint(body, _view.SoldierColor(side));
+            _materials.Tint(body, _view.SoldierColor(side));
             return body;
         }
 
@@ -136,6 +155,7 @@ namespace Meta.BattleSystem.Services
         private sealed class Body
         {
             public Transform Transform;
+            public UnitPose Pose;
             public Vector3 Previous;
             public Vector3 Current;
             public Vector3 Facing;

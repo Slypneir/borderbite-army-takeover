@@ -5,7 +5,8 @@ namespace Meta.BattleSystem.Views
     /// <summary>
     /// The objects of the battle in the scene, placed by Editor/MainSceneBuilder; the services of the battle size and colour
     /// them from the configs. The map lies on the ground plane: x of the map is world x, y of the map is world z. The templates
-    /// are inactive placeholders the views copy: soldiers, piles, places, barracks, debris, shots.
+    /// are inactive copies of the models of the 3D artist (Editor/ModelLibrary), or placeholders of boxes where a model is
+    /// missing; the views copy them: soldiers, piles, places, barracks, the shore and rocks, debris, shots.
     /// </summary>
     public sealed class BattleWorld : MonoBehaviour
     {
@@ -13,13 +14,14 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private MeshRenderer island;
         [SerializeField] private MeshRenderer water;
         [SerializeField] private Transform hero;
-        [SerializeField] private MeshRenderer heroBody;
-        [SerializeField] private MeshRenderer heroNose;
         [SerializeField] private Transform soldierTemplate;
         [SerializeField] private Transform goldTemplate;
         [SerializeField] private Transform woodTemplate;
         [SerializeField] private Transform siteTemplate;
         [SerializeField] private Transform barracksTemplate;
+        [SerializeField] private Transform shoreTemplate;
+        [SerializeField] private Transform shoreCornerTemplate;
+        [SerializeField] private Transform[] rockTemplates;
         [SerializeField] private Transform debrisTemplate;
         [SerializeField] private Transform shotTemplate;
 
@@ -27,13 +29,14 @@ namespace Meta.BattleSystem.Views
         public MeshRenderer Island => island;
         public MeshRenderer Water => water;
         public Transform Hero => hero;
-        public MeshRenderer HeroBody => heroBody;
-        public MeshRenderer HeroNose => heroNose;
         public Transform SoldierTemplate => soldierTemplate;
         public Transform GoldTemplate => goldTemplate;
         public Transform WoodTemplate => woodTemplate;
         public Transform SiteTemplate => siteTemplate;
         public Transform BarracksTemplate => barracksTemplate;
+        public Transform ShoreTemplate => shoreTemplate;
+        public Transform ShoreCornerTemplate => shoreCornerTemplate;
+        public Transform[] RockTemplates => rockTemplates;
         public Transform DebrisTemplate => debrisTemplate;
         public Transform ShotTemplate => shotTemplate;
 

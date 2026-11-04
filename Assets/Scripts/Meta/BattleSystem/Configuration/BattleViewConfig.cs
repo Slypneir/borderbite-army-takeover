@@ -34,14 +34,12 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("An empty place to build that no side owns: a dull grey pad. Starting value: grey.")]
         [SerializeField] private Color siteColor = new Color(0.5f, 0.5f, 0.48f);
 
-        [Tooltip("The rim of a place to build. Starting value: dark grey.")]
-        [SerializeField] private Color siteRimColor = new Color(0.25f, 0.25f, 0.26f);
 
         [Tooltip("Shots and the flash of a gun. Starting value: warm white.")]
         [SerializeField] private Color shotColor = new Color(1f, 0.93f, 0.7f);
 
-        [Tooltip("The water around the island, to the horizon. Starting value: sea blue.")]
-        [SerializeField] private Color waterColor = new Color(0.16f, 0.43f, 0.6f);
+        [Tooltip("The water around the island, to the horizon; teal, so the blue of the player never reads as water (voxel-forge profile). Starting value: #2F8487.")]
+        [SerializeField] private Color waterColor = new Color(0.184f, 0.518f, 0.529f);
 
         [Tooltip("The sides of the island under the cells. Starting value: earth brown.")]
         [SerializeField] private Color islandColor = new Color(0.46f, 0.36f, 0.26f);
@@ -61,14 +59,10 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Depth of the island under the cells, meters. Starting value: 1.5.")]
         [Min(0.1f)] [SerializeField] private float islandDepth = 1.5f;
 
-        [Tooltip("The water lies this far under the cells, meters. Starting value: 0.4.")]
-        [Min(0f)] [SerializeField] private float waterDepth = 0.4f;
+        [Tooltip("The water lies this far under the top of the cells, meters (voxel-forge profile). Starting value: 0.5.")]
+        [Min(0f)] [SerializeField] private float waterDepth = 0.5f;
 
-        [Tooltip("Height of the placeholder hero, meters. Starting value: 1.")]
-        [Min(0.1f)] [SerializeField] private float heroHeight = 1f;
 
-        [Tooltip("Width of the placeholder hero, meters. Starting value: 0.6.")]
-        [Min(0.1f)] [SerializeField] private float heroWidth = 0.6f;
 
         [Tooltip("How softly the camera follows the hero: the time to close most of the gap, seconds. Starting value: 0.12.")]
         [Min(0f)] [SerializeField] private float cameraSmoothing = 0.12f;
@@ -97,7 +91,7 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The material of the cells: shader Borderbite/Map/Cells.")]
         [SerializeField] private Material cellsMaterial;
 
-        [Tooltip("The material of placeholders: shader Borderbite/Placeholder/Flat Shaded; each view takes a copy in its colour.")]
+        [Tooltip("The material of placeholders: shader Borderbite/World/Flat Lit; each view takes a copy in its colour.")]
         [SerializeField] private Material flatMaterial;
 
         public Color NeutralColor => neutralColor;
@@ -119,7 +113,6 @@ namespace Meta.BattleSystem.Configuration
         public Color GoldColor => goldColor;
         public Color WoodColor => woodColor;
         public Color SiteColor => siteColor;
-        public Color SiteRimColor => siteRimColor;
         public Color ShotColor => shotColor;
         public Color WaterColor => waterColor;
         public Color IslandColor => islandColor;
@@ -128,8 +121,6 @@ namespace Meta.BattleSystem.Configuration
         public float WaveSeconds => waveSeconds;
         public float IslandDepth => islandDepth;
         public float WaterDepth => waterDepth;
-        public float HeroHeight => heroHeight;
-        public float HeroWidth => heroWidth;
         public float CameraSmoothing => cameraSmoothing;
         public float PickupSeconds => pickupSeconds;
         public float GrowSeconds => growSeconds;

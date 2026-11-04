@@ -12,8 +12,10 @@ using VContainer.Unity;
 namespace Meta.BattleSystem.Services
 {
     /// <summary>
-    /// Draws the cells: a texel per cell on one quad, the island under it and the water around. A cell that changed side turns
-    /// to its colour with a short flash; the cells of an enclosed area wait for a wave that runs from where the ring closed.
+    /// Draws the cells: a texel per cell on one quad, the island under it, its shore and rocks and the water around. A cell that
+    /// changed side turns to its colour with a short flash; the cells of an enclosed area wait for a wave that runs from where
+    /// the ring closed. The top of the cells is the plane y = 0; the model `ground_cell` of the 3D artist has one plain colour
+    /// on top, so one quad gives the same picture as 4 096 cells.
     /// </summary>
     public sealed class MapView : ILateTickable, IDisposable
     {
@@ -29,6 +31,7 @@ namespace Meta.BattleSystem.Services
         private readonly BattleWorld _world;
         private readonly List<int> _active = new List<int>();
         private readonly List<Material> _materials = new List<Material>();
+        private readonly List<Transform> _shore = new List<Transform>();
 
         private BattleSimulation _simulation;
         private Texture2D _texture;
@@ -136,6 +139,65 @@ namespace Meta.BattleSystem.Services
             _world.Water.transform.localPosition = new Vector3(mapSize / 2f, -_view.WaterDepth, mapSize / 2f);
             _world.Water.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             _world.Water.transform.localScale = new Vector3(mapSize * 20f, mapSize * 20f, 1f);
+            BuildShore(mapSize);
+        }
+
+        /// <summary>
+        /// The shore of the 3D artist around the island: 2 m pieces along each edge, a corner piece at each corner, all facing
+        /// out to the water (their +z), and a few rocks in the water, bottoms 0.5 m under it. After import the corner piece
+        /// covers -x, +z of its origin.
+        /// </summary>
+        private void BuildShore(float mapSize)
+        {
+            foreach (var piece in _shore)
+                UnityEngine.Object.Destroy(piece.gameObject);
+            _shore.Clear();
+            if (_world.ShoreTemplate == null)
+                return;
+
+            const float length = 2f;
+            for (var along = length / 2f; along < mapSize; along += length)
+            {
+                Place(_world.ShoreTemplate, new Vector3(along, 0f, 0f), 180f);
+                Place(_world.ShoreTemplate, new Vector3(along, 0f, mapSize), 0f);
+                Place(_world.ShoreTemplate, new Vector3(0f, 0f, along), -90f);
+                Place(_world.ShoreTemplate, new Vector3(mapSize, 0f, along), 90f);
+            }
+
+            if (_world.ShoreCornerTemplate != null)
+            {
+                Place(_world.ShoreCornerTemplate, new Vector3(0f, 0f, mapSize), 0f);
+                Place(_world.ShoreCornerTemplate, new Vector3(mapSize, 0f, mapSize), 90f);
+                Place(_world.ShoreCornerTemplate, new Vector3(mapSize, 0f, 0f), 180f);
+                Place(_world.ShoreCornerTemplate, new Vector3(0f, 0f, 0f), -90f);
+            }
+
+            var rocks = _world.RockTemplates;
+            if (rocks == null || rocks.Length == 0)
+                return;
+
+            // the same rocks every time, a few meters off the shore on each side
+            var spots = new[]
+            {
+                new Vector2(-3f, 6f), new Vector2(-2.6f, 21f), new Vector2(9f, -3.2f), new Vector2(24f, -2.6f),
+                new Vector2(mapSize + 3f, 26f), new Vector2(mapSize + 2.6f, 11f), new Vector2(23f, mapSize + 3.2f),
+                new Vector2(8f, mapSize + 2.6f), new Vector2(-3.4f, mapSize + 3.4f), new Vector2(mapSize + 3.4f, -3.4f),
+            };
+            var bottom = -_view.WaterDepth - 0.5f;
+            for (var i = 0; i < spots.Length; i++)
+            {
+                var rock = Place(rocks[i % rocks.Length], new Vector3(spots[i].x, bottom, spots[i].y), i * 47f);
+                rock.localScale = Vector3.one * (0.8f + 0.1f * (i % 4));
+            }
+        }
+
+        private Transform Place(Transform template, Vector3 position, float yaw)
+        {
+            var piece = _world.Copy(template);
+            piece.localPosition = position;
+            piece.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            _shore.Add(piece);
+            return piece;
         }
 
         /// <summary>The cells of new enclosures wait for the wave: the farther from the closing of the ring, the later.</summary>

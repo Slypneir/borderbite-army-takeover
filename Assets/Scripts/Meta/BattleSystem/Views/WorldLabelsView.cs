@@ -19,7 +19,8 @@ namespace Meta.BattleSystem.Views
     /// </summary>
     public sealed class WorldLabelsView : MonoBehaviour
     {
-        private const float Height = 1.8f;
+        // over the roof of the barracks model (2.5 m)
+        private const float Height = 2.8f;
         private const float DullAlpha = 0.45f;
 
         [SerializeField] private RectTransform template;

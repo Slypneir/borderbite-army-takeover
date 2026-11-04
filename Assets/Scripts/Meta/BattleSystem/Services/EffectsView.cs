@@ -13,7 +13,6 @@ namespace Meta.BattleSystem.Services
     public sealed class EffectsView : ILateTickable
     {
         private const float Gravity = 9f;
-        private const float MuzzleHeight = 0.6f;
 
         private readonly BattleViewConfig _view;
         private readonly BattleWorld _world;
@@ -44,12 +43,10 @@ namespace Meta.BattleSystem.Services
             }
         }
 
-        /// <summary>A trace from the shooter to the target.</summary>
+        /// <summary>A trace from the muzzle to the target, both in the world.</summary>
         public void Shot(Vector3 from, Vector3 to)
         {
             var piece = Free(_shots, _world.ShotTemplate);
-            from.y += MuzzleHeight;
-            to.y += MuzzleHeight * 0.7f;
             var line = to - from;
             piece.Transform.localPosition = (from + to) / 2f;
             piece.Transform.localRotation = line.sqrMagnitude > 0f ? Quaternion.LookRotation(line) : Quaternion.identity;

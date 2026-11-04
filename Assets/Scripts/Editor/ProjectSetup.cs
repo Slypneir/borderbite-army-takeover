@@ -25,9 +25,11 @@ namespace Core.EditorTools
         public const string MoveStickConfigPath = "Assets/ScriptableObjects/Input/MoveStickConfig.asset";
         public const string SoundVolumesPath = "Assets/ScriptableObjects/Audio/SoundVolumes.asset";
         public const string CirclePath = "Assets/Sprites/UI/Placeholder/Circle.png";
+        public const string IconFolder = "Assets/Sprites/UI/Icons/";
+        public const string OutlineFontMaterial = "Assets/Fonts/PTSans-Regular Outline.mat";
 
         private const string CellsMaterialPath = "Assets/Materials/Battle/Cells.mat";
-        private const string FlatMaterialPath = "Assets/Materials/Placeholder/FlatShaded.mat";
+        public const string FlatMaterialPath = "Assets/Materials/Placeholder/FlatShaded.mat";
         private const string AudioFolder = "Assets/Audio/";
         public const string FontAsset = "Assets/Fonts/PTSans-Regular SDF.asset";
 
@@ -52,6 +54,9 @@ namespace Core.EditorTools
             }
 
             BuildFont();
+            OutlineFont();
+            Icons();
+            ModelLibrary.Build();
             MainSceneBuilder.Build();
             AssetDatabase.SaveAssets();
             Debug.Log("[ProjectSetup] everything built");
@@ -79,7 +84,7 @@ namespace Core.EditorTools
         private static void BattleView()
         {
             var cells = MaterialAsset(CellsMaterialPath, "Borderbite/Map/Cells");
-            var flat = MaterialAsset(FlatMaterialPath, "Borderbite/Placeholder/Flat Shaded");
+            var flat = MaterialAsset(FlatMaterialPath, "Borderbite/World/Flat Lit");
             Create<BattleViewConfig>(BattleViewConfigPath);
             var config = AssetDatabase.LoadAssetAtPath<BattleViewConfig>(BattleViewConfigPath);
             if (config.CellsMaterial != null && config.FlatMaterial != null)
@@ -184,6 +189,39 @@ namespace Core.EditorTools
 
             AssetDatabase.ImportPackage(TmpEssentials, false);
             return true;
+        }
+
+        /// <summary>The icons of the 3D artist for the HUD (gold, wood, army): sprites, point filter, no compression.</summary>
+        private static void Icons()
+        {
+            foreach (var name in new[] { "gold", "wood", "army" })
+            {
+                var path = IconFolder + name + ".png";
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite)
+                    continue;
+
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.filterMode = FilterMode.Point;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+            }
+        }
+
+        /// <summary>The font with a dark rim, for labels over the map: they must read on blue soldiers and any land.</summary>
+        private static void OutlineFont()
+        {
+            if (AssetDatabase.LoadAssetAtPath<Material>(OutlineFontMaterial) != null)
+                return;
+
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAsset);
+            var material = new Material(font.material) { name = "PTSans-Regular Outline" };
+            material.EnableKeyword("OUTLINE_ON");
+            material.SetFloat("_OutlineWidth", 0.25f);
+            material.SetColor("_OutlineColor", new Color(0.08f, 0.08f, 0.12f, 1f));
+            AssetDatabase.CreateAsset(material, OutlineFontMaterial);
         }
 
         /// <summary>A static atlas of Latin and Cyrillic: the source font stays out of the build, the default fonts of TMP are removed.</summary>

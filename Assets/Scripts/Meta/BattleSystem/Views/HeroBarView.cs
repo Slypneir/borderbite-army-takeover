@@ -13,7 +13,8 @@ namespace Meta.BattleSystem.Views
     /// </summary>
     public sealed class HeroBarView : MonoBehaviour
     {
-        private const float Height = 1.5f;
+        // over the top of the hero model (1.9 m) with a gap
+        private const float Height = 2.15f;
 
         [SerializeField] private RectTransform bar;
         [SerializeField] private RectTransform fill;

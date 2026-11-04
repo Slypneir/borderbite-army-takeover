@@ -109,32 +109,45 @@ namespace Core.EditorTools
             var water = Mesh(go.transform, "Water", "Quad.fbx");
             var hero = new GameObject("Hero").transform;
             hero.SetParent(go.transform, false);
-            var body = Mesh(hero, "Body", "Capsule.fbx");
-            var nose = Mesh(hero, "Nose", "Cube.fbx");
+            Model(hero, "hero", true,
+                // the built-in capsule mesh is 2 × 4 × 2 units: a hero 0.6 m wide and 1 m tall
+                ("paint", "Capsule.fbx", new Vector3(0f, 0.5f, 0f), new Vector3(0.3f, 0.25f, 0.3f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 0.7f, 0.3f), Vector3.one * 0.24f));
             var templates = new GameObject("Templates").transform;
             templates.SetParent(go.transform, false);
 
             var serialized = new SerializedObject(world);
-            serialized.FindProperty("soldierTemplate").objectReferenceValue = Template(templates, "Soldier",
-                // the built-in capsule mesh is 2 × 4 × 2 units: a soldier 0.45 m wide and 0.7 m tall
-                ("Body", "Capsule.fbx", new Vector3(0f, 0.35f, 0f), new Vector3(0.225f, 0.175f, 0.225f)),
-                ("Nose", "Cube.fbx", new Vector3(0f, 0.5f, 0.22f), Vector3.one * 0.18f));
-            serialized.FindProperty("goldTemplate").objectReferenceValue = Template(templates, "Gold",
-                ("Coin0", "Cube.fbx", new Vector3(-0.1f, 0.1f, -0.05f), Vector3.one * 0.22f),
-                ("Coin1", "Cube.fbx", new Vector3(0.12f, 0.1f, 0.06f), Vector3.one * 0.22f),
-                ("Coin2", "Cube.fbx", new Vector3(0.02f, 0.3f, 0f), Vector3.one * 0.2f));
-            serialized.FindProperty("woodTemplate").objectReferenceValue = Template(templates, "Wood",
-                ("Log0", "Cube.fbx", new Vector3(0f, 0.08f, -0.09f), new Vector3(0.6f, 0.15f, 0.15f)),
-                ("Log1", "Cube.fbx", new Vector3(0f, 0.08f, 0.09f), new Vector3(0.6f, 0.15f, 0.15f)),
-                ("Log2", "Cube.fbx", new Vector3(0f, 0.23f, 0f), new Vector3(0.6f, 0.15f, 0.15f)));
-            // a place is 1 x 1 here; the view scales it to 3 cells. Child 0 is the rim, child 1 the pad
-            serialized.FindProperty("siteTemplate").objectReferenceValue = Template(templates, "Site",
-                ("Rim", "Cube.fbx", new Vector3(0f, 0.01f, 0f), new Vector3(1f, 0.02f, 1f)),
-                ("Pad", "Cube.fbx", new Vector3(0f, 0.015f, 0f), new Vector3(0.84f, 0.03f, 0.84f)));
-            serialized.FindProperty("barracksTemplate").objectReferenceValue = Template(templates, "Barracks",
-                ("Body", "Cube.fbx", new Vector3(0f, 0.45f, 0f), new Vector3(1.3f, 0.9f, 1.3f)),
-                ("Roof", "Cube.fbx", new Vector3(0f, 1f, 0f), new Vector3(1.45f, 0.22f, 1.45f)),
-                ("Door", "Cube.fbx", new Vector3(0f, 0.3f, -0.62f), new Vector3(0.4f, 0.6f, 0.1f)));
+            serialized.FindProperty("soldierTemplate").objectReferenceValue = Model(templates, "soldier", false,
+                ("paint", "Capsule.fbx", new Vector3(0f, 0.35f, 0f), new Vector3(0.225f, 0.175f, 0.225f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 0.5f, 0.22f), Vector3.one * 0.18f));
+            serialized.FindProperty("goldTemplate").objectReferenceValue = Model(templates, "gold_pile", false,
+                ("paint", "Cube.fbx", new Vector3(-0.1f, 0.1f, -0.05f), Vector3.one * 0.22f),
+                ("paint", "Cube.fbx", new Vector3(0.12f, 0.1f, 0.06f), Vector3.one * 0.22f),
+                ("paint", "Cube.fbx", new Vector3(0.02f, 0.3f, 0f), Vector3.one * 0.2f));
+            serialized.FindProperty("woodTemplate").objectReferenceValue = Model(templates, "wood_bundle", false,
+                ("paint", "Cube.fbx", new Vector3(0f, 0.08f, -0.09f), new Vector3(0.6f, 0.15f, 0.15f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 0.08f, 0.09f), new Vector3(0.6f, 0.15f, 0.15f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 0.23f, 0f), new Vector3(0.6f, 0.15f, 0.15f)));
+            serialized.FindProperty("siteTemplate").objectReferenceValue = Model(templates, "build_spot", false,
+                ("body", "Cube.fbx", new Vector3(0f, 0.015f, 0f), new Vector3(1.26f, 0.03f, 1.26f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 0.01f, 0f), new Vector3(1.5f, 0.02f, 1.5f)));
+            serialized.FindProperty("barracksTemplate").objectReferenceValue = Model(templates, "barracks", false,
+                ("body", "Cube.fbx", new Vector3(0f, 0.45f, 0f), new Vector3(1.3f, 0.9f, 1.3f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 1f, 0f), new Vector3(1.45f, 0.22f, 1.45f)));
+            serialized.FindProperty("shoreTemplate").objectReferenceValue = Model(templates, "shore_straight", false);
+            serialized.FindProperty("shoreCornerTemplate").objectReferenceValue = Model(templates, "shore_corner", false);
+            var rocks = serialized.FindProperty("rockTemplates");
+            rocks.arraySize = 0;
+            foreach (var id in new[] { "rock_small", "rock_large", "rock_tall" })
+            {
+                var rock = Model(templates, id, false);
+                if (rock == null)
+                    continue;
+
+                rocks.arraySize++;
+                rocks.GetArrayElementAtIndex(rocks.arraySize - 1).objectReferenceValue = rock;
+            }
+
             serialized.FindProperty("debrisTemplate").objectReferenceValue = Template(templates, "Debris",
                 ("Cube", "Cube.fbx", Vector3.zero, Vector3.one));
             serialized.FindProperty("shotTemplate").objectReferenceValue = Template(templates, "Shot",
@@ -143,10 +156,37 @@ namespace Core.EditorTools
             serialized.FindProperty("island").objectReferenceValue = island;
             serialized.FindProperty("water").objectReferenceValue = water;
             serialized.FindProperty("hero").objectReferenceValue = hero;
-            serialized.FindProperty("heroBody").objectReferenceValue = body;
-            serialized.FindProperty("heroNose").objectReferenceValue = nose;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return world;
+        }
+
+        /// <summary>
+        /// The model of the 3D artist under <paramref name="parent"/> (Editor/ModelLibrary), or, while it is missing, a placeholder
+        /// of the given parts with the flat material; null when there is neither. A template is inactive, a part of the scene stays.
+        /// </summary>
+        private static Transform Model(Transform parent, string id, bool active,
+            params (string Name, string Mesh, Vector3 Position, Vector3 Scale)[] placeholder)
+        {
+            var prefab = ModelLibrary.Prefab(id);
+            Transform model;
+            if (prefab != null)
+            {
+                model = ((GameObject)PrefabUtility.InstantiatePrefab(prefab, parent)).transform;
+            }
+            else if (placeholder.Length > 0)
+            {
+                model = Template(parent, id, placeholder);
+                var flat = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.FlatMaterialPath);
+                foreach (var renderer in model.GetComponentsInChildren<MeshRenderer>(true))
+                    renderer.sharedMaterial = flat;
+            }
+            else
+            {
+                return null;
+            }
+
+            model.gameObject.SetActive(active);
+            return model;
         }
 
         /// <summary>An inactive placeholder of boxes and capsules; the views copy it and colour it.</summary>
@@ -291,21 +331,23 @@ namespace Core.EditorTools
             row.sizeDelta = new Vector2(CounterWidth * 3, CounterHeight);
             Picture(row, null, BarBaseColor);
 
-            var gold = Counter(row, "Gold", 0, view.GoldColor, out var goldGain);
-            var wood = Counter(row, "Wood", 1, view.WoodColor, out var woodGain);
-            var army = Counter(row, "Army", 2, view.PlayerSoldierColor, out _);
+            var gold = Counter(row, "Gold", 0, "gold", view.GoldColor, out var goldGain);
+            var wood = Counter(row, "Wood", 1, "wood", view.WoodColor, out var woodGain);
+            var army = Counter(row, "Army", 2, "army", view.PlayerSoldierColor, out _);
             Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
                 ("goldGain", goldGain), ("woodGain", woodGain));
         }
 
-        private static TMP_Text Counter(RectTransform row, string name, int index, Color color, out TMP_Text gain)
+        private static TMP_Text Counter(RectTransform row, string name, int index, string icon, Color color, out TMP_Text gain)
         {
             var cell = Rect(row, name, new Vector2(index / 3f, 0f), new Vector2((index + 1) / 3f, 1f));
-            var icon = Rect(cell, "Icon", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-            icon.pivot = new Vector2(0f, 0.5f);
-            icon.anchoredPosition = new Vector2(10f, 0f);
-            icon.sizeDelta = Vector2.one * (CounterHeight - 16);
-            Picture(icon, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), color);
+            var iconRect = Rect(cell, "Icon", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+            iconRect.pivot = new Vector2(0f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(10f, 0f);
+            iconRect.sizeDelta = Vector2.one * (CounterHeight - 8);
+            // the icon of the 3D artist, or a coloured circle while it is missing
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.IconFolder + icon + ".png");
+            Picture(iconRect, sprite != null ? sprite : AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), sprite != null ? Color.white : color);
             var label = Text(cell, "Value", CounterTextSize, TextAlignmentOptions.Left);
             ((RectTransform)label.transform).offsetMin = new Vector2(CounterHeight, 0f);
             gain = Text(cell, "Gain", CounterTextSize, TextAlignmentOptions.Right);
@@ -333,8 +375,7 @@ namespace Core.EditorTools
             image.fillClockwise = true;
             var label = Text(template, "Price", LabelTextSize, TextAlignmentOptions.Bottom);
             label.fontStyle = FontStyles.Bold;
-            label.outlineWidth = 0.25f;
-            label.outlineColor = new Color32(20, 20, 30, 255);
+            label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             Wire(go.GetComponent<WorldLabelsView>(), ("template", template));
         }
 
@@ -409,8 +450,7 @@ namespace Core.EditorTools
             Stretch((RectTransform)go.transform);
             var template = Text((RectTransform)go.transform, "Template", PopupSize, TextAlignmentOptions.Center);
             template.fontStyle = FontStyles.Bold;
-            template.outlineWidth = 0.2f;
-            template.outlineColor = new Color32(20, 20, 30, 255);
+            template.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             var rect = (RectTransform)template.transform;
             rect.anchorMin = rect.anchorMax = Vector2.zero;
             rect.pivot = new Vector2(0.5f, 0.5f);

@@ -11,8 +11,9 @@ using VContainer.Unity;
 namespace Meta.BattleSystem.Services
 {
     /// <summary>
-    /// The places to build (stage 1 spec 3.2): a dull grey pad with a rim, glowing in the colour of the side whose colour its
-    /// centre is. A barracks grows on its place, a fallen one breaks into cubes (3.3).
+    /// The places to build (stage 1 spec 3.2): a pad whose `paint` rim is dull grey, or glows in the colour of the side whose
+    /// colour its centre is. A barracks grows on its place, its `paint` roof and flag in the colour of its side; a fallen one
+    /// breaks into cubes (3.3).
     /// </summary>
     public sealed class SitesView : ILateTickable
     {
@@ -63,8 +64,6 @@ namespace Meta.BattleSystem.Services
             return new Place
             {
                 Pad = pad,
-                Rim = pad.GetChild(0),
-                Top = pad.GetChild(1),
                 Barracks = barracks,
                 Owner = (Side)255,
                 Built = (Side)255,
@@ -75,14 +74,12 @@ namespace Meta.BattleSystem.Services
         {
             var position = WorldOf(site);
             place.Pad.localPosition = position;
-            place.Pad.localScale = Vector3.one * (_rules.CellSize * 3f);
             if (owner != place.Owner)
             {
                 place.Owner = owner;
-                _materials.Paint(place.Rim, _view.SiteRimColor);
                 // a place of a side glows lighter than its land, a neutral one is dull
                 var glow = owner == Side.Neutral ? _view.SiteColor : Color.Lerp(_view.SideColor(owner), Color.white, 0.35f);
-                _materials.Paint(place.Top, glow);
+                _materials.Tint(place.Pad, glow);
             }
 
             if (site.Barracks != place.Built)
@@ -91,13 +88,15 @@ namespace Meta.BattleSystem.Services
                 place.Barracks.gameObject.SetActive(site.Built);
                 place.GrowAge = 0f;
                 if (site.Built)
-                    _materials.Paint(place.Barracks, _view.SoldierColor(site.Barracks));
+                    _materials.Tint(place.Barracks, _view.SoldierColor(site.Barracks));
             }
 
             if (!site.Built)
                 return;
 
             place.Barracks.localPosition = position;
+            // the door to the south, where the hired soldiers come out and the camera looks from
+            place.Barracks.localRotation = Quaternion.Euler(0f, 180f, 0f);
             place.GrowAge += Time.deltaTime;
             var grow = _view.GrowSeconds <= 0f ? 1f : Mathf.Clamp01(place.GrowAge / _view.GrowSeconds);
             // a short overshoot: it pops out of the ground
@@ -117,8 +116,6 @@ namespace Meta.BattleSystem.Services
         private sealed class Place
         {
             public Transform Pad;
-            public Transform Rim;
-            public Transform Top;
             public Transform Barracks;
             public Side Owner;
             public Side Built;
