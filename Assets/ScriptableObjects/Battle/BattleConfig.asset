@@ -32,7 +32,7 @@ MonoBehaviour:
   respawnSeconds: 3
   invulnerableSeconds: 1
   enclosureEveryTicks: 1
-  maxEnclosureShare: 100
+  maxEnclosureCells: 250
   victoryShare: 70
   goldPortion: 5
   goldEvery: 2
