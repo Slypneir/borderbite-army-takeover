@@ -17,6 +17,11 @@ namespace Meta.BattleSystem.Services
     /// </summary>
     public sealed class ResourcesView : ILateTickable
     {
+        private const float GoldScale = 1.3f;
+        private const float GoldHop = 0.12f;
+        private const float GoldHopsPerSecond = 1.4f;
+        private const float GlintEvery = 3f;
+
         private readonly BattleViewConfig _view;
         private readonly BattleConfig _rules;
         private readonly IBattleDriver _battle;
@@ -82,7 +87,19 @@ namespace Meta.BattleSystem.Services
                 }
 
                 var position = body.localPosition;
-                position.y = 0.05f + bob;
+                if (resource.Kind == ResourceKind.Gold)
+                {
+                    // gold must not pass for a yellow flower (spec T8): larger, it hops, and now and then it swells for a glint
+                    var phase = Time.time * GoldHopsPerSecond + resource.Id * 0.37f;
+                    position.y = 0.05f + Mathf.Abs(Mathf.Sin(phase * Mathf.PI)) * GoldHop;
+                    var glint = Mathf.Repeat(phase, GlintEvery) < 0.25f ? 1f + 0.12f * Mathf.Sin(Mathf.Repeat(phase, GlintEvery) / 0.25f * Mathf.PI) : 1f;
+                    body.localScale = Vector3.one * (GoldScale * glint);
+                }
+                else
+                {
+                    position.y = 0.05f + bob;
+                }
+
                 body.localPosition = position;
             }
 
