@@ -74,8 +74,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The enclosure is looked for every this many ticks; 3 is the fallback for a slow device. Starting value: 1.")]
         [Min(1)] [SerializeField] private int enclosureEveryTicks = 1;
 
-        [Tooltip("The largest area one enclosure takes, percent of the map; a larger one stays as it is. Starting value: 100 (no limit).")]
-        [Range(1f, 100f)] [SerializeField] private float maxEnclosureShare = 100f;
+        [Tooltip("The largest area one enclosure takes, cells, protected ones not counted; a larger one stays as it is, whole. The same " +
+                 "for both sides. Starting value: 250 (about 6% of the map, owner's decision of 4 November, stage 1 spec 2.5).")]
+        [Min(1)] [SerializeField] private int maxEnclosureCells = 250;
 
         [Tooltip("A side with this share of the map wins, percent. Starting value: 70.")]
         [Range(1f, 100f)] [SerializeField] private float victoryShare = 70f;
@@ -210,7 +211,7 @@ namespace Meta.BattleSystem.Configuration
                 HeroRadiusUnits = Units(heroRadius),
                 HeroBrushUnits = Mathf.RoundToInt(heroBrush * BattleSettings.UnitsPerCell),
                 EnclosureEveryTicks = enclosureEveryTicks,
-                MaxEnclosurePermille = Mathf.RoundToInt(maxEnclosureShare * 10f),
+                MaxEnclosureCells = maxEnclosureCells,
                 VictoryPermille = Mathf.RoundToInt(victoryShare * 10f),
                 Seed = seed,
 

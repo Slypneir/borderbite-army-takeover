@@ -13,8 +13,8 @@ namespace Tests.BattleSystem.Editor
         private const int Ticks = 3000;
 
         /// <summary>The numbers of the stage 1 spec in units: 64 cells, 5 m/s at 30 ticks and 0.5 m cells is 333 units a tick.</summary>
-        public static BattleSettings Settings(uint seed = 777, int enclosureEveryTicks = 1, int maxEnclosurePermille = 1000) =>
-            new BattleSettings { Seed = seed, EnclosureEveryTicks = enclosureEveryTicks, MaxEnclosurePermille = maxEnclosurePermille };
+        public static BattleSettings Settings(uint seed = 777, int enclosureEveryTicks = 1, int maxEnclosureCells = 250) =>
+            new BattleSettings { Seed = seed, EnclosureEveryTicks = enclosureEveryTicks, MaxEnclosureCells = maxEnclosureCells };
 
         /// <summary>
         /// A walk that turns every 13 ticks and crosses the map: paints, encloses, hits the edges, picks resources up; with an army,

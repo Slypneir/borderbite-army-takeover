@@ -196,13 +196,33 @@ namespace Tests.BattleSystem.Editor
         [Test]
         public void Enclose_AreaOverTheLimit_StaysAsItWas()
         {
-            var simulation = new BattleSimulation(BattleDeterminismTests.Settings(maxEnclosurePermille: 10));
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings(maxEnclosureCells: 80));
             Walk(simulation, 0, 0, 1);
             Ring(simulation, 20, 20, 30, 30);
 
             simulation.Step();
 
             simulation.Grid.At(25, 25).Should().Be(Side.Neutral);
+        }
+
+        [Test]
+        public void Enclose_AreaAtTheLimitWithoutProtectedCells_IsTaken()
+        {
+            // 81 cells inside the ring, one of them protected: 80 count, as many as the limit
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings(maxEnclosureCells: 80));
+            Walk(simulation, 0, 0, 1);
+            simulation.Grid.SetProtected(25 * 64 + 25, true);
+            Ring(simulation, 20, 20, 30, 30);
+
+            simulation.Step();
+
+            simulation.Grid.At(24, 25).Should().Be(Side.Player);
+        }
+
+        [Test]
+        public void Enclose_StartingLimit_Is250Cells()
+        {
+            new BattleSettings().MaxEnclosureCells.Should().Be(250);
         }
 
         [Test]
@@ -223,12 +243,12 @@ namespace Tests.BattleSystem.Editor
         public void Capture_PercentOfTheMap()
         {
             var simulation = WithHeroAside();
-            Ring(simulation, 10, 20, 50, 50);
+            Ring(simulation, 20, 20, 36, 34);
 
             simulation.Step();
 
-            // 39 × 29 = 1131 cells of 4096
-            simulation.Captures[0].Percent.Should().Be(28);
+            // 15 × 13 = 195 cells of 4096 (under the limit of 250), 4.76% rounds to 5
+            simulation.Captures[0].Percent.Should().Be(5);
         }
 
         [Test]

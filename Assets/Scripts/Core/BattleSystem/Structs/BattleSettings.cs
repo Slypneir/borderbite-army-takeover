@@ -19,7 +19,7 @@ namespace Core.BattleSystem.Structs
         public int HeroRadiusUnits = 600;
         public int HeroBrushUnits = 2000;
         public int EnclosureEveryTicks = 1;
-        public int MaxEnclosurePermille = 1000;
+        public int MaxEnclosureCells = 250;
         public int VictoryPermille = 700;
         public uint Seed = 1;
 

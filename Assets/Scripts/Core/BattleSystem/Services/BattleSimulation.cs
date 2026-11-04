@@ -296,8 +296,7 @@ namespace Core.BattleSystem.Services
         private void Enclose(Side side)
         {
             _taken.Clear();
-            var maxCells = (int)((long)Grid.Total * _state.Settings.MaxEnclosurePermille / 1000);
-            _enclosure.Enclose(Grid, side, maxCells, _taken);
+            _enclosure.Enclose(Grid, side, _state.Settings.MaxEnclosureCells, _taken);
             foreach (var cells in _taken)
                 _state.Captures.Add(CaptureOf(side, cells));
         }

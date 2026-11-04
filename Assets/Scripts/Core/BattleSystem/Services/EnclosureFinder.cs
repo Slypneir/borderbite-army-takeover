@@ -21,7 +21,10 @@ namespace Core.BattleSystem.Services
             _queue = new int[cells];
         }
 
-        /// <summary>Gives <paramref name="side"/> every area it surrounds; an area over <paramref name="maxCells"/> stays as it is.</summary>
+        /// <summary>
+        /// Gives <paramref name="side"/> every area it surrounds; an area of more than <paramref name="maxCells"/> cells that are not
+        /// protected stays as it is, whole (stage 1 spec 2.5).
+        /// </summary>
         public void Enclose(CellGrid grid, Side side, int maxCells, List<int[]> taken)
         {
             _generation++;
@@ -31,8 +34,8 @@ namespace Core.BattleSystem.Services
                 if (grid[start] == side || _mark[start] == _generation)
                     continue;
 
-                var count = Flood(grid, side, start, size, out var touchesEdge);
-                if (touchesEdge || count > maxCells)
+                var count = Flood(grid, side, start, size, out var touchesEdge, out var open);
+                if (touchesEdge || open > maxCells)
                     continue;
 
                 var cells = new List<int>(count);
@@ -47,9 +50,10 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private int Flood(CellGrid grid, Side side, int start, int size, out bool touchesEdge)
+        private int Flood(CellGrid grid, Side side, int start, int size, out bool touchesEdge, out int open)
         {
             touchesEdge = false;
+            open = 0;
             var head = 0;
             var tail = 0;
             _queue[tail++] = start;
@@ -57,6 +61,9 @@ namespace Core.BattleSystem.Services
             while (head < tail)
             {
                 var index = _queue[head++];
+                if (!grid.IsProtected(index))
+                    open++;
+
                 var x = index % size;
                 var y = index / size;
                 if (x == 0 || y == 0 || x == size - 1 || y == size - 1)
