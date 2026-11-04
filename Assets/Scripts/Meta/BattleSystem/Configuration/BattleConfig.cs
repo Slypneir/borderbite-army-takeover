@@ -188,6 +188,18 @@ namespace Meta.BattleSystem.Configuration
                  "the enemy base (T15). Starting value: 8.")]
         [Min(0.1f)] [SerializeField] private float soldierSight = 8f;
 
+        [Tooltip("The enemy's soldiers follow their hero (task 4.15); off — they attack on their own like the player's. Starting value: on.")]
+        [SerializeField] private bool enemyArmyFollows = true;
+
+        [Tooltip("A soldier that follows its hero sees enemy units, and buildings to strike, this far, meters. Starting value: 4.")]
+        [Min(0.1f)] [SerializeField] private float followerSight = 4f;
+
+        [Tooltip("Further than this from its hero a following soldier drops the enemy and catches up, meters. Starting value: 8.")]
+        [Min(0.1f)] [SerializeField] private float soldierLeash = 8f;
+
+        [Tooltip("Places in the crowd around the hero are this far apart, meters; the crowd keeps within 1–4 m. Starting value: 1.")]
+        [Min(0.1f)] [SerializeField] private float slotSpacing = 1f;
+
         [Tooltip("Soldiers keep this far from each other and from their hero, meters. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float soldierSpacing = 0.5f;
 
@@ -355,6 +367,10 @@ namespace Meta.BattleSystem.Configuration
                 SoldierCooldownTicks = Ticks(soldierEvery),
                 SoldierReachUnits = Units(soldierReach),
                 SoldierSightUnits = Units(soldierSight),
+                EnemyArmyFollows = enemyArmyFollows,
+                FollowerSightUnits = Units(followerSight),
+                SoldierLeashUnits = Units(soldierLeash),
+                SlotSpacingUnits = Units(slotSpacing),
                 SoldierSpacingUnits = Units(soldierSpacing),
                 SoldierBodyUnits = Units(soldierBody),
                 BarracksHalfUnits = Units(barracksHalfSize),

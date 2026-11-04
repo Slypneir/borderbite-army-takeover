@@ -11,7 +11,8 @@ namespace Core.BattleSystem.Services
     /// 1. hero health under 30% — back to its own land;
     /// 2. an empty place of its own colour (or one to paint) and wood for a barracks — go and build;
     /// 3. a barracks, gold for a soldier and room in the army — go and hire;
-    /// 4. an army of 8 or more and at least 80% of the other's — to the nearest building of the other side, else its base;
+    /// 4. an army of 8 or more and at least 80% of the other's — to the nearest building of the other side, else its base
+    ///    (the enemy's soldiers follow its hero there, task 4.15);
     /// 5. else to the nearest pile on neutral land in sight, else to the nearest neutral cell at its own border.
     /// It sees piles only as far as a player sees around the hero, gets nothing beyond the rules, and when its goal comes no
     /// closer for a while it leaves that priority for the next one. Integers only: the same battle on every device.

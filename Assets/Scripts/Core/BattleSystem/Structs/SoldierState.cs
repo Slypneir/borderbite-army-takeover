@@ -3,8 +3,9 @@ using Core.BattleSystem.Enums;
 namespace Core.BattleSystem.Structs
 {
     /// <summary>
-    /// A soldier: once hired it goes to attack on its own (owner, 4 November) — an enemy hero or soldier close by, else the nearest
-    /// enemy barracks, else the enemy base. Health in points; <see cref="Id"/> stays the same for its whole life, for the drawing.
+    /// A soldier: the player's goes to attack on its own once hired (owner, 4 November) — an enemy hero or soldier close by, else
+    /// the nearest enemy barracks, else the enemy base; the enemy's follows its hero (task 4.15). Health in points; <see cref="Id"/>
+    /// stays the same for its whole life, for the drawing.
     /// </summary>
     public struct SoldierState
     {
@@ -20,6 +21,9 @@ namespace Core.BattleSystem.Structs
         public SoldierGoal Goal;
         /// <summary>The index of a hero or a place, the id of a soldier; unused for the base.</summary>
         public int GoalId;
+        /// <summary>Where it was put; a follower of a side without a hero keeps to it (the checks of the rules).</summary>
+        public int AnchorX;
+        public int AnchorY;
         public int FacingX;
         public int FacingY;
     }

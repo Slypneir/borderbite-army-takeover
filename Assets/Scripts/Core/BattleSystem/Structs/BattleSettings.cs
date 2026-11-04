@@ -65,6 +65,14 @@ namespace Core.BattleSystem.Structs
         public int SoldierReachUnits = 2000;
         /// <summary>A soldier turns on an enemy hero or soldier this close, else walks to the nearest enemy barracks, else the base (T15).</summary>
         public int SoldierSightUnits = 16000;
+        /// <summary>The enemy's soldiers follow their hero (task 4.15: the attack on their own is only for the player's).</summary>
+        public bool EnemyArmyFollows = true;
+        /// <summary>A soldier that follows its hero sees enemies, and buildings to strike, this far.</summary>
+        public int FollowerSightUnits = 8000;
+        /// <summary>Further than this from its hero a following soldier drops the enemy and catches up.</summary>
+        public int SoldierLeashUnits = 16000;
+        /// <summary>Places in the crowd around the hero are this far apart: the crowd keeps within 1–4 m.</summary>
+        public int SlotSpacingUnits = 2000;
         public int SoldierSpacingUnits = 1000;
         /// <summary>Radius of the body of a soldier: reaches are measured from the edge of a body to the edge of another.</summary>
         public int SoldierBodyUnits = 500;

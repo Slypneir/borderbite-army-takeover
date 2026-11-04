@@ -220,6 +220,47 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
+        public void EnemyArmy_FollowsItsHero_WithinOneToFourMeters()
+        {
+            // task 4.15: only the player's soldiers attack on their own
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings(layer3: true));
+            simulation.TeleportHero(Side.Player, 10 * Unit, 10 * Unit);
+            var hero = simulation.Heroes[1];
+            simulation.AddSoldiers(Side.Enemy, 8, hero.X - 4000, hero.Y - 4000);
+
+            Run(simulation, 60);
+
+            hero = simulation.Heroes[1];
+            foreach (var soldier in simulation.Soldiers)
+            {
+                soldier.Goal.Should().Be(SoldierGoal.None);
+                Meters(soldier.X, soldier.Y, hero.X, hero.Y).Should().BeInRange(0.45, 4.3);
+            }
+        }
+
+        [Test]
+        public void EnemyArmy_HeroDead_GoesToItsBase()
+        {
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings(layer3: true));
+            simulation.TeleportHero(Side.Player, 10 * Unit, 10 * Unit);
+            simulation.Enqueue(new BattleCommand(1, Side.Player, 0, 0));
+            // the enemy hero falls to the player's army far from home, then its soldiers appear between
+            simulation.TeleportHero(Side.Enemy, 50 * Unit, 10 * Unit);
+            simulation.AddSoldiers(Side.Player, 10, 50 * Unit - 1500, 10 * Unit);
+            for (var i = 0; i < 300 && simulation.Heroes[1].Alive; i++)
+                simulation.Step();
+            simulation.Heroes[1].Alive.Should().BeFalse();
+            simulation.AddSoldiers(Side.Enemy, 3, 32 * Unit, 32 * Unit);
+            var home = simulation.Bases[(int)Side.Enemy];
+            var before = Meters(32 * Unit, 32 * Unit, home.GateX, home.GateY);
+
+            Run(simulation, 45);
+
+            var nearest = simulation.Soldiers.Where(s => s.Side == Side.Enemy).Min(s => Meters(s.X, s.Y, home.GateX, home.GateY));
+            nearest.Should().BeLessThan(before - 3);
+        }
+
+        [Test]
         public void Army_TargetFalls_TakesTheNext()
         {
             var simulation = New();
