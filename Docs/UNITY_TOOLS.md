@@ -4,6 +4,8 @@
 
 `bash Tools/WebGLCheck/bridge.sh '<json>' [секунды]` пишет пакет в `EditorBridge/instructions.json` и печатает `result.json`. Консоль — `EditorBridge/console.log`.
 
+**Правило владельца (2026-11-04):** закончил работу в редакторе и отдаёшь Unity владельцу — выйди из Play Mode и выставь окно Game на 1920 × 1080 (Full HD): `is SetGameView "[1920,1080]"` или меню Tools/Dev/Game View 1920x1080. Так, даже если для проверки ставил другой размер (например, 1080 × 1920).
+
 | Задача | Пакет |
 | --- | --- |
 | Компиляция | `{"commands":[{"op":"refresh","compile":true}]}`, затем опрос `consoleCounts` до `isCompiling: false` |
