@@ -693,7 +693,11 @@ namespace Core.EditorTools
             row.pivot = new Vector2(0.5f, 0f);
             row.sizeDelta = new Vector2(0f, LabelIcon);
             row.gameObject.AddComponent<CanvasGroup>();
+            // a dark rounded backing (surface/1 #1c1d24 at 0.85) so the price reads on the light pad and the woodpile (UI review of 4.26)
+            var backing = Picture(row, Hud("bar_mask_64x32"), new Color(0.11f, 0.114f, 0.141f, 0.85f));
+            backing.type = Image.Type.Sliced;
             var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(12, 14, 0, 0);
             // 8 between an icon and its number, 24 between the groups: 8, the dot of 8, 8 (UI designer, 4 November)
             layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;

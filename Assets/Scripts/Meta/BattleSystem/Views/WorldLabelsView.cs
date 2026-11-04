@@ -28,11 +28,14 @@ namespace Meta.BattleSystem.Views
     {
         // the tip of the pin over the middle of a place, meters
         private const float PinHeight = 1.2f;
-        private const float RowGap = 6f;
+        // the price right under the tip of the pin (UI review of 4.26)
+        private const float RowGap = 4f;
+        // short of a resource: the number in text/disabled, the icon half seen — not the whole label (UI review of 4.26)
+        private static readonly Color DisabledText = new Color(0.55f, 0.56f, 0.6f, 1f);
+        private const float DullIcon = 0.6f;
         private static readonly Color Grey = new Color(0.55f, 0.56f, 0.6f, 1f);
         // over the roof of the barracks model (2.5 m)
         private const float Height = 2.8f;
-        private const float DullAlpha = 0.45f;
         // the inset from the edges of the safe area, canvas units (STYLE.md 1 of the interface, EdgeInset)
         private const float EdgeInset = 24f;
         // the gap between a label and the bottom of the HUD, canvas units
@@ -134,7 +137,7 @@ namespace Meta.BattleSystem.Views
                     mark.Row.gameObject.SetActive(true);
                     mark.Row.anchoredPosition = Vector2.zero;
                     Fill(mark, gold, null, _rules.SoldierGold.ToString(), true, armyIcon, $"{army}/{_rules.ArmyMax}");
-                    mark.RowGroup.alpha = purse.Gold >= _rules.SoldierGold && army < _rules.ArmyMax ? 1f : DullAlpha;
+                    Dull(mark, purse.Gold >= _rules.SoldierGold && army < _rules.ArmyMax);
                     mark.Ring.enabled = false;
                 }
                 else
@@ -149,7 +152,7 @@ namespace Meta.BattleSystem.Views
                     {
                         Fill(mark, wood, null, _rules.BarracksWood.ToString(), false, null, null);
                         mark.Row.anchoredPosition = new Vector2(0f, -mark.Row.rect.height - RowGap);
-                        mark.RowGroup.alpha = purse.Wood >= _rules.BarracksWood ? 1f : DullAlpha;
+                        Dull(mark, purse.Wood >= _rules.BarracksWood);
                     }
 
                     mark.Ring.enabled = own && site.BuildProgress > 0;
@@ -169,6 +172,18 @@ namespace Meta.BattleSystem.Views
                 else
                     mark.Root.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>Short of the resource: the numbers grey, the icons half seen; the dark backing stays as it is.</summary>
+        private void Dull(Mark mark, bool enough)
+        {
+            var text = enough ? (Color)mark.TextColor : DisabledText;
+            mark.Text1.color = text;
+            mark.Text2.color = text;
+            var icon = new Color(1f, 1f, 1f, enough ? 1f : DullIcon);
+            mark.Icon1.color = icon;
+            mark.Icon2.color = icon;
+            mark.Icon3.color = icon;
         }
 
         /// <summary>
@@ -249,6 +264,7 @@ namespace Meta.BattleSystem.Views
                 Dot = row.Find("Dot").gameObject,
                 Icon3 = row.Find("Icon3").GetComponent<Image>(),
                 Text2 = row.Find("Text2").GetComponent<TMP_Text>(),
+                TextColor = row.Find("Text1").GetComponent<TMP_Text>().color,
             };
         }
 
@@ -268,6 +284,7 @@ namespace Meta.BattleSystem.Views
             public GameObject Dot;
             public Image Icon3;
             public TMP_Text Text2;
+            public Color TextColor;
         }
 
         /// <summary>The bottom of the free part of the screen: over the row of the orders + 8, canvas units.</summary>
