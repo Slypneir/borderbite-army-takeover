@@ -224,8 +224,8 @@ namespace Meta.BattleSystem.Configuration
         public float MetersPerUnit => cellSize / BattleSettings.UnitsPerCell;
 
         [Header("Bases")]
-        [Tooltip("Health of a base, points (spec 4.1, T13). Starting value: 100.")]
-        [Min(1)] [SerializeField] private int baseHealth = 100;
+        [Tooltip("Health of a base, points (spec 4.1, T13, task 4.16). Starting value: 200.")]
+        [Min(1)] [SerializeField] private int baseHealth = 200;
 
         [Tooltip("The aura of a base, cells: its colour around it, protected while it stands. Starting value: 4.")]
         [Min(0)] [SerializeField] private int baseAura = 4;

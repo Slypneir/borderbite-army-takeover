@@ -28,7 +28,7 @@ namespace Tests.BattleSystem.Editor
             var player = simulation.Bases[(int)Side.Player];
             var enemy = simulation.Bases[(int)Side.Enemy];
             player.X.Should().Be(8 * Unit);
-            player.Health.Should().Be(100);
+            player.Health.Should().Be(200);
             enemy.X.Should().Be(56 * Unit);
             simulation.Heroes.Should().HaveCount(2);
             simulation.Heroes[0].X.Should().Be(player.GateX).And.BeGreaterThan(player.X);
@@ -82,7 +82,7 @@ namespace Tests.BattleSystem.Editor
 
             Run(simulation, 120);
 
-            simulation.Bases[(int)Side.Player].Health.Should().BeLessThan(100);
+            simulation.Bases[(int)Side.Player].Health.Should().BeLessThan(200);
             simulation.Events.Should().Contain(e => e.Kind == EventKind.BuildingHit && e.Side == Side.Player && e.Id == -1);
         }
 

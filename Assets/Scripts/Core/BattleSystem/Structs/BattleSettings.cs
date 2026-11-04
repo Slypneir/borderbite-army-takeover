@@ -102,7 +102,7 @@ namespace Core.BattleSystem.Structs
         public int InvulnerableTicks = 30;
 
         // layer 3: bases
-        public int BaseHealth = 100;
+        public int BaseHealth = 200;
         public int BaseAuraCells = 4;
         /// <summary>Half the side of a base (3 m): blows and shots reach its walls, not only its middle.</summary>
         public int BaseHalfUnits = 3000;

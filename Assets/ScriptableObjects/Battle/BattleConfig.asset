@@ -74,7 +74,7 @@ MonoBehaviour:
   soldierSight: 8
   soldierSpacing: 0.5
   soldierBody: 0.25
-  baseHealth: 100
+  baseHealth: 200
   baseAura: 4
   baseHalfSize: 1.5
   baseGate: 2
