@@ -35,7 +35,7 @@ namespace Meta.BattleSystem.Views
         private const float HudGap = 8f;
         private const float LabelGap = 8f;
         // the height of a price label over the player's barracks (WorldLabelsView), canvas units
-        private const float LabelHeight = 92f;
+        private const float LabelHeight = 120f;
 
         [SerializeField] private RectTransform barTemplate;
         [SerializeField] private RectTransform signTemplate;

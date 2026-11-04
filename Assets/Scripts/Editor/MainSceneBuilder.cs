@@ -59,6 +59,9 @@ namespace Core.EditorTools
         private const int CounterTextSize = 30;
         private const int RingSize = 56;
         private const int LabelTextSize = 26;
+        // the icons in the labels over places and barracks, and over the piles (battle-marks card, «Значки над картой»)
+        private const int LabelIcon = 64;
+        private const int MapIcon = 48;
         private const int HealthWidth = 90;
         private const int HealthHeight = 12;
         private const float TitleHeight = 0.72f;
@@ -281,6 +284,7 @@ namespace Core.EditorTools
             go.AddComponent<GraphicRaycaster>();
             var root = (RectTransform)go.transform;
 
+            var icons = BuildResourceIcons(root);
             var labels = BuildWorldLabels(root);
             var marks = BuildMarks(root);
             var popups = BuildPopups(root);
@@ -290,6 +294,7 @@ namespace Core.EditorTools
             var territory = BuildBar(area, view);
             var counters = BuildCounters(area, view);
             Wire(labels, ("hudBottom", counters));
+            Wire(icons, ("hudBottom", counters));
             Wire(marks, ("hudBottom", counters));
             var pauseButton = BuildPauseButton(area);
             var hint = BuildHint(root, counters);
@@ -302,7 +307,7 @@ namespace Core.EditorTools
             var layers = go.AddComponent<BattleLayersView>();
             var serialized = new SerializedObject(layers);
             var over = serialized.FindProperty("overWorld");
-            var overLayers = new Component[] { labels, marks, popups, hint };
+            var overLayers = new Component[] { icons, labels, marks, popups, hint };
             over.arraySize = overLayers.Length;
             for (var i = 0; i < overLayers.Length; i++)
                 over.GetArrayElementAtIndex(i).objectReferenceValue = Group(overLayers[i].gameObject);
@@ -392,8 +397,8 @@ namespace Core.EditorTools
             row.sizeDelta = new Vector2(CounterWidth * 3, CounterHeight);
             Picture(row, null, BarBaseColor);
 
-            var gold = Counter(row, "Gold", 0, "gold", view.GoldColor, out var goldGain);
-            var wood = Counter(row, "Wood", 1, "wood", view.WoodColor, out var woodGain);
+            var gold = Counter(row, "Gold", 0, "icon_gold_128", view.GoldColor, out var goldGain);
+            var wood = Counter(row, "Wood", 1, "icon_wood_128", view.WoodColor, out var woodGain);
             var army = Counter(row, "Army", 2, "army", view.PlayerSoldierColor, out _);
             Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
                 ("goldGain", goldGain), ("woodGain", woodGain));
@@ -418,7 +423,26 @@ namespace Core.EditorTools
             return label;
         }
 
-        /// <summary>A label with a ring of progress, copied over each place of the player.</summary>
+        /// <summary>An icon over each pile of gold and bundle of wood (battle-marks card, «Значки над картой»).</summary>
+        private static ResourceIconsView BuildResourceIcons(RectTransform root)
+        {
+            var go = new GameObject("ResourceIcons", typeof(RectTransform), typeof(ResourceIconsView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var template = Rect((RectTransform)go.transform, "Template", Vector2.zero, Vector2.zero);
+            template.pivot = new Vector2(0.5f, 0f);
+            template.sizeDelta = Vector2.one * MapIcon;
+            var image = Picture(template, Icon("icon_gold_128"), Color.white);
+            var view = go.GetComponent<ResourceIconsView>();
+            Wire(view, ("template", image), ("goldIcon", Icon("icon_gold_128")), ("woodIcon", Icon("icon_wood_128")),
+                ("goldIconSmall", Icon("icon_gold_64")), ("woodIconSmall", Icon("icon_wood_64")));
+            return view;
+        }
+
+        /// <summary>
+        /// A label with a ring of progress, copied over each place of the player: a row of icons and numbers, «[barracks][wood] 10»
+        /// or «[gold] 5 · [soldier] N/30» (battle-marks card), the icons 64.
+        /// </summary>
         private static WorldLabelsView BuildWorldLabels(RectTransform root)
         {
             var go = new GameObject("WorldLabels", typeof(RectTransform), typeof(WorldLabelsView));
@@ -426,7 +450,8 @@ namespace Core.EditorTools
             Stretch((RectTransform)go.transform);
             var template = Rect((RectTransform)go.transform, "Template", Vector2.zero, Vector2.zero);
             template.pivot = new Vector2(0.5f, 0f);
-            template.sizeDelta = new Vector2(280f, RingSize + LabelTextSize * 1.4f);
+            template.sizeDelta = new Vector2(280f, RingSize + LabelIcon);
+            template.gameObject.AddComponent<CanvasGroup>();
             var ring = Rect(template, "Ring", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             ring.pivot = new Vector2(0.5f, 1f);
             ring.sizeDelta = Vector2.one * RingSize;
@@ -435,11 +460,48 @@ namespace Core.EditorTools
             image.fillMethod = Image.FillMethod.Radial360;
             image.fillOrigin = (int)Image.Origin360.Top;
             image.fillClockwise = true;
-            var label = Text(template, "Price", LabelTextSize, TextAlignmentOptions.Bottom);
-            label.fontStyle = FontStyles.Bold;
-            label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+            var row = Rect(template, "Row", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            row.pivot = new Vector2(0.5f, 0f);
+            row.sizeDelta = new Vector2(0f, LabelIcon);
+            var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            row.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            foreach (var name in new[] { "Icon1", "Icon2", "Text1", "Dot", "Icon3", "Text2" })
+            {
+                if (name == "Dot")
+                {
+                    var dot = Rect(row, name, Vector2.zero, Vector2.zero);
+                    Picture(dot, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), TextColor);
+                    var size = dot.gameObject.AddComponent<LayoutElement>();
+                    size.preferredWidth = 8f;
+                    size.preferredHeight = 8f;
+                    continue;
+                }
+
+                if (name.StartsWith("Icon"))
+                {
+                    var icon = Rect(row, name, Vector2.zero, Vector2.zero);
+                    Picture(icon, Icon("icon_gold_128"), Color.white).preserveAspect = true;
+                    var element = icon.gameObject.AddComponent<LayoutElement>();
+                    element.preferredWidth = LabelIcon;
+                    element.preferredHeight = LabelIcon;
+                    continue;
+                }
+
+                var label = Text(row, name, LabelTextSize, TextAlignmentOptions.Left);
+                label.fontStyle = FontStyles.Bold;
+                label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+            }
+
             var view = go.GetComponent<WorldLabelsView>();
-            Wire(view, ("template", template));
+            Wire(view, ("template", template), ("goldIcon", Icon("icon_gold_128")), ("woodIcon", Icon("icon_wood_128")),
+                ("barracksIcon", Icon("icon_barracks_128")), ("armyIcon", Icon("army")), ("goldIconSmall", Icon("icon_gold_64")),
+                ("woodIconSmall", Icon("icon_wood_64")), ("barracksIconSmall", Icon("icon_barracks_64")));
             return view;
         }
 

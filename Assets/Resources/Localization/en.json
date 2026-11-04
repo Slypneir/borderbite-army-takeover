@@ -5,8 +5,6 @@
     { "key": "results.victory", "text": "Victory" },
     { "key": "results.defeat", "text": "Defeat" },
     { "key": "results.retry", "text": "Again" },
-    { "key": "hud.build", "text": "{0} wood" },
-    { "key": "hud.hire", "text": "{0} gold — {1}/{2}" },
     { "key": "results.reason.share", "text": "{0}% of the land" },
     { "key": "results.reason.base", "text": "Base destroyed" },
     { "key": "results.share", "text": "Blue {0}%" },

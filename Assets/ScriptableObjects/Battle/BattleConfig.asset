@@ -72,6 +72,10 @@ MonoBehaviour:
   soldierEvery: 0.8
   soldierReach: 1
   soldierSight: 8
+  enemyArmyFollows: 1
+  followerSight: 4
+  soldierLeash: 8
+  slotSpacing: 1
   soldierSpacing: 0.5
   soldierBody: 0.25
   baseHealth: 200

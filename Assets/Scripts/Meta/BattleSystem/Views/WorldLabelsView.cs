@@ -1,9 +1,7 @@
 using System.Collections.Generic;
 using Core.BattleSystem.Enums;
-using Core.BattleSystem.Structs;
 using Meta.BattleSystem.Configuration;
 using Meta.BattleSystem.Interfaces;
-using Meta.LocalizationSystem.Services;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,12 +10,13 @@ using VContainer;
 namespace Meta.BattleSystem.Views
 {
     /// <summary>
-    /// Labels over the places of the player (stage 1 spec 3.3): over an empty one the price «10 wood» and a ring of the progress
-    /// of building, dull while wood is short; over a barracks the price of a soldier and the army «N/30». Copies of
-    /// <see cref="template"/> (a label with a ring), one per place. Lives right under the canvas, anchored to its lower left corner.
-    /// Short wood is dull, never red: red is the enemy. A label never leaves the safe area: it is pushed inside it by
-    /// <see cref="EdgeInset"/> and kept <see cref="HudGap"/> under the bottom of the HUD, and hidden while the place itself is out of
-    /// the frame, under the HUD or no room is left for it (UI reviews of f1d3ccb and 3752fe1: the HUD is always on top and always reads).
+    /// Labels over the places of the player (stage 1 spec 3.3), icons and numbers, no words (battle-marks card of the UI,
+    /// «Значки над картой»): over an empty one «[barracks][wood] 10» and a ring of the progress of building, dull while wood is
+    /// short; over a barracks «[gold] 5 · [soldier] N/30». Copies of <see cref="template"/> (a row of icons and numbers with a
+    /// ring), one per place. Lives right under the canvas, anchored to its lower left corner. Short wood is dull, never red: red is
+    /// the enemy. A label never leaves the safe area: it is pushed inside it by <see cref="EdgeInset"/> and kept
+    /// <see cref="HudGap"/> under the bottom of the HUD, and hidden while the place itself is out of the frame, under the HUD or no
+    /// room is left for it (UI reviews of f1d3ccb and 3752fe1: the HUD is always on top and always reads).
     /// </summary>
     public sealed class WorldLabelsView : MonoBehaviour
     {
@@ -29,10 +28,21 @@ namespace Meta.BattleSystem.Views
         // the gap between a label and the bottom of the HUD, canvas units
         private const float HudGap = 8f;
 
+        [Tooltip("A label: a CanvasGroup with a ring (Image) and a row (HorizontalLayoutGroup) of Icon1, Icon2, Text1, Dot, Icon3, Text2.")]
         [SerializeField] private RectTransform template;
 
         [Tooltip("The lowest block of the HUD at the top of the screen (the row of counters): labels stay under it.")]
         [SerializeField] private RectTransform hudBottom;
+
+        [SerializeField] private Sprite goldIcon;
+        [SerializeField] private Sprite woodIcon;
+        [SerializeField] private Sprite barracksIcon;
+        [SerializeField] private Sprite armyIcon;
+
+        [Tooltip("The 64 px renders, for a window with less than a pixel per unit of the canvas.")]
+        [SerializeField] private Sprite goldIconSmall;
+        [SerializeField] private Sprite woodIconSmall;
+        [SerializeField] private Sprite barracksIconSmall;
 
         private readonly Vector3[] _corners = new Vector3[4];
 
@@ -71,6 +81,10 @@ namespace Meta.BattleSystem.Views
                 hudBottom.GetWorldCorners(_corners);
                 ceiling = Mathf.Min(ceiling, _corners[0].y / scale - HudGap);
             }
+            var small = scale < 1f;
+            var gold = small && goldIconSmall != null ? goldIconSmall : goldIcon;
+            var wood = small && woodIconSmall != null ? woodIconSmall : woodIcon;
+            var barracks = small && barracksIconSmall != null ? barracksIconSmall : barracksIcon;
             var purse = simulation.SideOf(Side.Player);
             var army = simulation.ArmyOf(Side.Player);
             var buildTicks = Mathf.Max(1, simulation.Settings.BuildTicks);
@@ -91,14 +105,14 @@ namespace Meta.BattleSystem.Views
 
                 if (site.Built)
                 {
-                    mark.Label.text = string.Format(Loc.Get("hud.hire"), _rules.SoldierGold, army, _rules.ArmyMax);
-                    mark.Label.alpha = purse.Gold >= _rules.SoldierGold && army < _rules.ArmyMax ? 1f : DullAlpha;
+                    Fill(mark, gold, null, _rules.SoldierGold.ToString(), true, armyIcon, $"{army}/{_rules.ArmyMax}");
+                    mark.Group.alpha = purse.Gold >= _rules.SoldierGold && army < _rules.ArmyMax ? 1f : DullAlpha;
                     mark.Ring.enabled = false;
                 }
                 else
                 {
-                    mark.Label.text = string.Format(Loc.Get("hud.build"), _rules.BarracksWood);
-                    mark.Label.alpha = purse.Wood >= _rules.BarracksWood ? 1f : DullAlpha;
+                    Fill(mark, barracks, wood, _rules.BarracksWood.ToString(), false, null, null);
+                    mark.Group.alpha = purse.Wood >= _rules.BarracksWood ? 1f : DullAlpha;
                     mark.Ring.enabled = site.BuildProgress > 0;
                     mark.Ring.fillAmount = (float)site.BuildProgress / buildTicks;
                 }
@@ -112,12 +126,53 @@ namespace Meta.BattleSystem.Views
         }
 
         /// <summary>
-        /// The bottom middle of a label, moved so the text and the ring stay in the safe area with the inset and under the
+        /// Sets the icons and numbers of a label; a null leaves its slot out of the row. The dot between the price and the army is
+        /// a small disc, not a glyph: the static atlas of the font has no «·».
+        /// </summary>
+        private static void Fill(Mark mark, Sprite first, Sprite second, string firstText, bool dot, Sprite third, string secondText)
+        {
+            var changed = Set(mark.Icon1, first) | Set(mark.Icon2, second) | Set(mark.Icon3, third) |
+                          Set(mark.Text1, firstText) | Set(mark.Text2, secondText);
+            if (mark.Dot.activeSelf != dot)
+            {
+                mark.Dot.SetActive(dot);
+                changed = true;
+            }
+
+            if (changed)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(mark.Row);
+        }
+
+        private static bool Set(Image icon, Sprite sprite)
+        {
+            var shown = sprite != null;
+            if (icon.gameObject.activeSelf == shown && icon.sprite == sprite)
+                return false;
+
+            icon.gameObject.SetActive(shown);
+            icon.sprite = sprite;
+            return true;
+        }
+
+        private static bool Set(TMP_Text label, string text)
+        {
+            var shown = !string.IsNullOrEmpty(text);
+            if (label.gameObject.activeSelf == shown && (!shown || label.text == text))
+                return false;
+
+            label.gameObject.SetActive(shown);
+            if (shown)
+                label.text = text;
+            return true;
+        }
+
+        /// <summary>
+        /// The bottom middle of a label, moved so the row and the ring stay in the safe area with the inset and under the
         /// <paramref name="ceiling"/>; false when no room is left for the label.
         /// </summary>
         private static bool Inside(Vector2 point, Mark mark, Rect bounds, float ceiling, out Vector2 place)
         {
-            var half = Mathf.Max(mark.Label.preferredWidth, mark.Ring.rectTransform.rect.width) / 2f;
+            var half = Mathf.Max(mark.Row.rect.width, mark.Ring.rectTransform.rect.width) / 2f;
             var left = bounds.xMin + EdgeInset + half;
             var right = bounds.xMax - EdgeInset - half;
             var bottom = bounds.yMin + EdgeInset;
@@ -130,14 +185,34 @@ namespace Meta.BattleSystem.Views
         {
             var root = Instantiate(template, transform);
             root.gameObject.SetActive(true);
-            return new Mark { Root = root, Label = root.GetComponentInChildren<TMP_Text>(true), Ring = root.GetComponentInChildren<Image>(true) };
+            var row = (RectTransform)root.Find("Row");
+            return new Mark
+            {
+                Root = root,
+                Group = root.GetComponent<CanvasGroup>(),
+                Ring = root.Find("Ring").GetComponent<Image>(),
+                Row = row,
+                Icon1 = row.Find("Icon1").GetComponent<Image>(),
+                Icon2 = row.Find("Icon2").GetComponent<Image>(),
+                Text1 = row.Find("Text1").GetComponent<TMP_Text>(),
+                Dot = row.Find("Dot").gameObject,
+                Icon3 = row.Find("Icon3").GetComponent<Image>(),
+                Text2 = row.Find("Text2").GetComponent<TMP_Text>(),
+            };
         }
 
         private sealed class Mark
         {
             public RectTransform Root;
-            public TMP_Text Label;
+            public CanvasGroup Group;
             public Image Ring;
+            public RectTransform Row;
+            public Image Icon1;
+            public Image Icon2;
+            public TMP_Text Text1;
+            public GameObject Dot;
+            public Image Icon3;
+            public TMP_Text Text2;
         }
     }
 }

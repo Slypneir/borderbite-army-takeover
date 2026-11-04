@@ -386,8 +386,9 @@ namespace Core.EditorTools
         }
 
         /// <summary>
-        /// The icons of the 3D artist for the HUD (gold, wood, army): sprites, bilinear filter, no compression. Bilinear, not point:
-        /// 64 px icons land on the screen at a scale that is not whole (72–110 px), and point sampling gives uneven pixels.
+        /// The icons of the 3D artist for the HUD (army, crown, upgrades): sprites, bilinear filter, no compression. Bilinear, not
+        /// point: 64 px icons land on the screen at a scale that is not whole (72–110 px), and point sampling gives uneven pixels.
+        /// The icons of gold, wood and the barracks (128 px) are over the map, in the labels and in the HUD: with mipmaps.
         /// </summary>
         private static void Icons()
         {
@@ -403,6 +404,24 @@ namespace Core.EditorTools
                 importer.filterMode = FilterMode.Bilinear;
                 importer.textureCompression = TextureImporterCompression.Uncompressed;
                 importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+            }
+
+            // the icons over the map and in the labels shrink more than twice in a small window (800 × 450): mipmaps and a
+            // trilinear filter keep them from shimmering (the UI designer, 4 November)
+            foreach (var name in new[] { "icon_gold_128", "icon_wood_128", "icon_barracks_128", "icon_gold_64", "icon_wood_64", "icon_barracks_64" })
+            {
+                var path = IconFolder + name + ".png";
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite
+                    && importer.mipmapEnabled && importer.filterMode == FilterMode.Trilinear)
+                    continue;
+
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.filterMode = FilterMode.Trilinear;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.mipmapEnabled = true;
                 importer.alphaIsTransparency = true;
                 importer.SaveAndReimport();
             }
