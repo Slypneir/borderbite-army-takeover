@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Core.BattleSystem.Data;
 using Core.BattleSystem.Enums;
 using Core.BattleSystem.Structs;
@@ -7,28 +6,27 @@ using Core.BattleSystem.Utils;
 namespace Core.BattleSystem.Services
 {
     /// <summary>
-    /// How soldiers walk (stage 1 spec 3.4): to an enemy in sight while not too far from their hero, else to their slot in the
-    /// crowd around the hero; they part from each other and from the hero. The slots are a square spiral one meter apart, nearest
-    /// first: integers only, the same crowd on every device.
+    /// How soldiers walk (stage 1 spec 3.4, owner's decision of 4 November): they do not follow the hero; once hired a soldier
+    /// goes to attack on its own: the nearest enemy hero or soldier within sight (8 m), else the nearest enemy barracks, else
+    /// the enemy base. It keeps its target until the target falls or leaves its sight, or an enemy comes within sight (T15); the
+    /// enemy's soldiers do the same. Soldiers part from each other and give way to their hero; the death of the hero changes
+    /// nothing. Integers only, in a fixed order: the same army on every device.
     /// </summary>
     public sealed class ArmyRules
     {
         private readonly BattleState _state;
         private readonly BattleSettings _settings;
-        private readonly List<(int X, int Y)> _slots = new List<(int X, int Y)>();
 
         public ArmyRules(BattleState state)
         {
             _state = state;
             _settings = state.Settings;
-            BuildSlots(settings: _settings);
         }
 
-        /// <summary>A new soldier of a side with the health and damage of its side; returns its id.</summary>
+        /// <summary>A new soldier of a side with the full health of its side; returns its id.</summary>
         public static int Spawn(BattleState state, Side side, int x, int y)
         {
             var settings = state.Settings;
-            var permille = side == Side.Player ? settings.PlayerSoldierPermille : settings.EnemySoldierPermille;
             var id = state.NextId();
             state.Soldiers.Add(new SoldierState
             {
@@ -36,40 +34,27 @@ namespace Core.BattleSystem.Services
                 Side = side,
                 X = IntMath.Clamp(x, 0, settings.MapUnits),
                 Y = IntMath.Clamp(y, 0, settings.MapUnits),
-                Health = settings.SoldierHealth * permille / 1000,
-                Damage = settings.SoldierDamage * permille / 1000,
-                AnchorX = x,
-                AnchorY = y,
-                FacingY = 1,
+                Health = settings.SoldierHealthOf(side),
+                FightTick = state.Tick,
+                FacingY = side == Side.Player ? 1 : -1,
             });
             return id;
         }
 
         public void Step()
         {
-            var slot = new int[3];
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
-                var heroIndex = _state.HeroOf(soldier.Side);
-                var hasHero = heroIndex >= 0 && _state.Heroes[heroIndex].Alive;
-                var anchorX = hasHero ? _state.Heroes[heroIndex].X : soldier.AnchorX;
-                var anchorY = hasHero ? _state.Heroes[heroIndex].Y : soldier.AnchorY;
-                var leash2 = (long)_settings.SoldierLeashUnits * _settings.SoldierLeashUnits;
-
-                if (BattleState.Distance2(soldier.X, soldier.Y, anchorX, anchorY) <= leash2 &&
-                    CombatRules.NearestTarget(_state, soldier.Side, soldier.X, soldier.Y, _settings.SoldierSightUnits, _settings.SoldierBodyUnits, out var target))
+                Choose(ref soldier);
+                if (Locate(soldier, out var x, out var y, out var radius))
                 {
-                    // to the enemy, stopping at the reach of a blow
-                    if (BattleState.Distance2(soldier.X, soldier.Y, target.X, target.Y) > (long)_settings.SoldierReachUnits * _settings.SoldierReachUnits)
-                        Walk(ref soldier, target.X, target.Y, _settings.SoldierReachUnits * 3 / 4);
+                    // to the target, stopping well within the reach of a blow from the edge of its body
+                    var stop = _settings.SoldierBodyUnits + radius + _settings.SoldierReachUnits * 3 / 4;
+                    if (BattleState.Distance2(soldier.X, soldier.Y, x, y) > (long)stop * stop)
+                        Walk(ref soldier, x, y, stop);
                     else
-                        Face(ref soldier, target.X, target.Y);
-                }
-                else
-                {
-                    var (dx, dy) = _slots[slot[(int)soldier.Side]++ % _slots.Count];
-                    Walk(ref soldier, anchorX + dx + Jitter(soldier.Id, 0), anchorY + dy + Jitter(soldier.Id, 16), 0);
+                        Face(ref soldier, x, y);
                 }
 
                 _state.Soldiers[i] = soldier;
@@ -88,12 +73,103 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        /// <summary>A lasting offset of a soldier from its slot, up to 30 % of the spacing: a crowd, not a parade.</summary>
-        private int Jitter(int id, int shift)
+        /// <summary>Keeps the target while it stands and no enemy comes close, else takes the next one by the order of T15.</summary>
+        private void Choose(ref SoldierState soldier)
         {
-            var hash = (uint)id * 2654435761u;
-            var range = _settings.SlotSpacingUnits * 3 / 10;
-            return (int)((hash >> shift) % (uint)(range * 2 + 1)) - range;
+            var sight = _settings.SoldierSightUnits;
+            var body = _settings.SoldierBodyUnits;
+            var enemy = BattleState.Enemy(soldier.Side);
+            if (soldier.Goal == SoldierGoal.Hero || soldier.Goal == SoldierGoal.Soldier)
+            {
+                if (Locate(soldier, out var ux, out var uy, out var radius) &&
+                    IntMath.Sqrt(BattleState.Distance2(soldier.X, soldier.Y, ux, uy)) - radius - body <= sight)
+                    return;
+            }
+            else if (!CombatRules.NearestUnit(_state, soldier.Side, soldier.X, soldier.Y, sight, body, out _) &&
+                     ((soldier.Goal == SoldierGoal.Barracks && _state.Sites[soldier.GoalId].Barracks == enemy) ||
+                      (soldier.Goal == SoldierGoal.Base && _state.Bases[(int)enemy].Standing)))
+            {
+                return;
+            }
+
+            if (CombatRules.NearestUnit(_state, soldier.Side, soldier.X, soldier.Y, sight, body, out var target))
+            {
+                var isHero = target.Kind == CombatRules.TargetKind.Hero;
+                soldier.Goal = isHero ? SoldierGoal.Hero : SoldierGoal.Soldier;
+                soldier.GoalId = isHero ? target.Index : _state.Soldiers[target.Index].Id;
+                return;
+            }
+
+            var best = long.MaxValue;
+            soldier.Goal = SoldierGoal.None;
+            for (var i = 0; i < _state.Sites.Length; i++)
+            {
+                var site = _state.Sites[i];
+                if (site.Barracks != enemy)
+                    continue;
+
+                var distance = BattleState.Distance2(soldier.X, soldier.Y, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY));
+                if (distance >= best)
+                    continue;
+
+                best = distance;
+                soldier.Goal = SoldierGoal.Barracks;
+                soldier.GoalId = i;
+            }
+
+            if (soldier.Goal == SoldierGoal.None && _state.Bases[(int)enemy].Standing)
+                soldier.Goal = SoldierGoal.Base;
+        }
+
+        /// <summary>Where the target of a soldier is and the radius of its body, or false when it is gone.</summary>
+        private bool Locate(SoldierState soldier, out int x, out int y, out int radius)
+        {
+            x = 0;
+            y = 0;
+            radius = 0;
+            var enemy = BattleState.Enemy(soldier.Side);
+            switch (soldier.Goal)
+            {
+                case SoldierGoal.Hero:
+                {
+                    var hero = _state.Heroes[soldier.GoalId];
+                    x = hero.X;
+                    y = hero.Y;
+                    radius = _settings.HeroRadiusUnits;
+                    return hero.Alive;
+                }
+                case SoldierGoal.Soldier:
+                    foreach (var other in _state.Soldiers)
+                    {
+                        if (other.Id != soldier.GoalId)
+                            continue;
+
+                        x = other.X;
+                        y = other.Y;
+                        radius = _settings.SoldierBodyUnits;
+                        return true;
+                    }
+
+                    return false;
+                case SoldierGoal.Barracks:
+                {
+                    var site = _state.Sites[soldier.GoalId];
+                    x = BattleState.Middle(site.CenterX);
+                    y = BattleState.Middle(site.CenterY);
+                    radius = _settings.BarracksHalfUnits;
+                    return site.Barracks == enemy;
+                }
+                case SoldierGoal.Base:
+                {
+                    var place = _state.Bases[(int)enemy];
+                    x = place.X;
+                    y = place.Y;
+                    radius = _settings.BaseHalfUnits;
+                    return place.Standing;
+                }
+                default:
+                    return false;
+            }
         }
 
         private void Walk(ref SoldierState soldier, int x, int y, int stopAt)
@@ -181,28 +257,6 @@ namespace Core.BattleSystem.Services
 
             soldier.X = hero.X + (int)(dx * room / distance);
             soldier.Y = hero.Y + (int)(dy * room / distance);
-        }
-
-        private void BuildSlots(BattleSettings settings)
-        {
-            var spacing = settings.SlotSpacingUnits;
-            const int rings = 4;
-            for (var y = -rings; y <= rings; y++)
-            for (var x = -rings; x <= rings; x++)
-            {
-                if (x != 0 || y != 0)
-                    _slots.Add((x * spacing, y * spacing));
-            }
-
-            // nearest first; behind the hero (negative y) before in front at the same distance, then left before right
-            _slots.Sort((a, b) =>
-            {
-                var da = (long)a.X * a.X + (long)a.Y * a.Y;
-                var db = (long)b.X * b.X + (long)b.Y * b.Y;
-                if (da != db)
-                    return da.CompareTo(db);
-                return a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X.CompareTo(b.X);
-            });
         }
     }
 }

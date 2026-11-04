@@ -209,33 +209,37 @@ namespace Core.BattleSystem.Services
         }
 
         /// <summary>
-        /// A hero on the land of its side heals by the rate per second, counted exactly in ticks, but only out of a fight: when
-        /// nothing hurt it for <see cref="BattleSettings.HealAfterTicks"/> (task 4.7).
+        /// Heroes and soldiers heal a point at a time on any land, but only out of a fight: not hurt and not striking for
+        /// <see cref="BattleSettings.HealAfterTicks"/> (T16). The first point comes then, the next ones every so many ticks:
+        /// the player's hero every 0.5 s, the enemy hero and every soldier every 1 s (owner, 4 November).
         /// </summary>
         private void Heal()
         {
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
-                var full = _settings.HeroHealthOf(hero.Side);
-                if (!hero.Alive || hero.Health >= full || _state.Tick - hero.HurtTick < _settings.HealAfterTicks)
+                if (!hero.Alive || hero.Health >= _settings.HeroHealthOf(hero.Side) || !HealsNow(hero.FightTick, _settings.HeroHealEveryOf(hero.Side)))
                     continue;
 
-                var cell = _state.Grid.At(hero.X / BattleSettings.UnitsPerCell, hero.Y / BattleSettings.UnitsPerCell);
-                if (cell != hero.Side)
-                    continue;
-
-                hero.RegenAccumulator += _settings.HeroRegenPerSecond;
-                while (hero.RegenAccumulator >= _settings.TicksPerSecond)
-                {
-                    hero.RegenAccumulator -= _settings.TicksPerSecond;
-                    hero.Health++;
-                }
-
-                if (hero.Health > full)
-                    hero.Health = full;
+                hero.Health++;
                 _state.Heroes[i] = hero;
             }
+
+            for (var i = 0; i < _state.Soldiers.Count; i++)
+            {
+                var soldier = _state.Soldiers[i];
+                if (soldier.Health >= _settings.SoldierHealthOf(soldier.Side) || !HealsNow(soldier.FightTick, _settings.HealEveryTicks))
+                    continue;
+
+                soldier.Health++;
+                _state.Soldiers[i] = soldier;
+            }
+        }
+
+        private bool HealsNow(int fightTick, int every)
+        {
+            var calm = _state.Tick - fightTick - _settings.HealAfterTicks;
+            return calm >= 0 && calm % System.Math.Max(1, every) == 0;
         }
 
         private int NearestBarracks(HeroState hero, long reach2)

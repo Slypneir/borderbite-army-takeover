@@ -41,20 +41,26 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Radius of the brush of the hero: cells whose middle is this close become its colour, cells. Starting value: 2.")]
         [Min(0.5f)] [SerializeField] private float heroBrush = 2f;
 
-        [Tooltip("Health of the hero. Starting value: 100.")]
-        [Min(1f)] [SerializeField] private float heroHealth = 100f;
+        [Tooltip("Health of the player's hero, points: a blow takes one (owner, 4 November). Starting value: 10.")]
+        [Min(1)] [SerializeField] private int heroHealth = 10;
 
-        [Tooltip("Healing of the hero on the land of its side, health per second. Starting value: 5.")]
-        [Min(0f)] [SerializeField] private float heroRegen = 5f;
+        [Tooltip("Health of the enemy hero, points. Starting value: 7.")]
+        [Min(1)] [SerializeField] private int enemyHeroHealth = 7;
 
-        [Tooltip("The hero heals only when nothing hurt it this long, seconds: out of a fight (task 4.7). Starting value: 3.")]
+        [Tooltip("Heroes and soldiers heal only out of a fight, on any land: not hurt and not striking this long, seconds (T16). Starting value: 3.")]
         [Min(0f)] [SerializeField] private float healAfter = 3f;
+
+        [Tooltip("Out of a fight the player's hero heals a point every this many seconds. Starting value: 0.5.")]
+        [Min(0.05f)] [SerializeField] private float heroHealEvery = 0.5f;
+
+        [Tooltip("Out of a fight the enemy hero and the soldiers of both sides heal a point every this many seconds. Starting value: 1.")]
+        [Min(0.05f)] [SerializeField] private float healEvery = 1f;
 
         [Tooltip("Sword: reach in meters, from the edge of the hero to the edge of the target (a body, the walls of a building). Starting value: 1.2.")]
         [Min(0.1f)] [SerializeField] private float meleeReach = 1.2f;
 
-        [Tooltip("Sword: damage of a blow. Starting value: 10.")]
-        [Min(0f)] [SerializeField] private float meleeDamage = 10f;
+        [Tooltip("Sword: points a blow takes. Starting value: 1.")]
+        [Min(0)] [SerializeField] private int meleeDamage = 1;
 
         [Tooltip("Sword: seconds between blows. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float meleeEvery = 0.5f;
@@ -66,8 +72,8 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Gun: reach in meters. Starting value: 6.")]
         [Min(0.1f)] [SerializeField] private float gunReach = 6f;
 
-        [Tooltip("Gun: damage of a shot. Starting value: 8.")]
-        [Min(0f)] [SerializeField] private float gunDamage = 8f;
+        [Tooltip("Gun: points a shot takes. Starting value: 1.")]
+        [Min(0)] [SerializeField] private int gunDamage = 1;
 
         [Tooltip("Gun: seconds between shots. Starting value: 1.5.")]
         [Min(0.05f)] [SerializeField] private float gunEvery = 1.5f;
@@ -131,8 +137,8 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Wood a barracks costs. Starting value: 10.")]
         [Min(0)] [SerializeField] private int barracksWood = 10;
 
-        [Tooltip("Health of a barracks. Starting value: 300.")]
-        [Min(1f)] [SerializeField] private float barracksHealth = 300f;
+        [Tooltip("Health of a barracks, points (T13). Starting value: 50.")]
+        [Min(1)] [SerializeField] private int barracksHealth = 50;
 
         [Tooltip("Half the side of a barracks, meters: blows and hiring reach its walls. Starting value: 1.125 (the model is 2.25 m).")]
         [Min(0f)] [SerializeField] private float barracksHalfSize = 1.125f;
@@ -163,11 +169,11 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Radius of the brush of a soldier, cells. Starting value: 1.")]
         [Min(0.5f)] [SerializeField] private float soldierBrush = 1f;
 
-        [Tooltip("Health of a soldier before the factor of its side. Starting value: 30.")]
-        [Min(1f)] [SerializeField] private float soldierHealth = 30f;
+        [Tooltip("Health of a soldier of either side, points. Starting value: 5.")]
+        [Min(1)] [SerializeField] private int soldierHealth = 5;
 
-        [Tooltip("Damage of a blow before the factor of its side. Starting value: 5.")]
-        [Min(0f)] [SerializeField] private float soldierDamage = 5f;
+        [Tooltip("Points a blow of a soldier takes. Starting value: 1.")]
+        [Min(0)] [SerializeField] private int soldierDamage = 1;
 
         [Tooltip("Seconds between the blows of a soldier. Starting value: 0.8.")]
         [Min(0.05f)] [SerializeField] private float soldierEvery = 0.8f;
@@ -175,11 +181,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Reach of a blow of a soldier, meters, from the edge of its body to the edge of the target. Starting value: 1.")]
         [Min(0.1f)] [SerializeField] private float soldierReach = 1f;
 
-        [Tooltip("A soldier sees enemies this far, meters. Starting value: 4.")]
-        [Min(0.1f)] [SerializeField] private float soldierSight = 4f;
-
-        [Tooltip("Further than this from its hero a soldier drops the enemy and comes back, meters. Starting value: 8.")]
-        [Min(0.1f)] [SerializeField] private float soldierLeash = 8f;
+        [Tooltip("A soldier turns on an enemy hero or soldier this close, meters; else it walks to the nearest enemy barracks, else " +
+                 "the enemy base (T15). Starting value: 8.")]
+        [Min(0.1f)] [SerializeField] private float soldierSight = 8f;
 
         [Tooltip("Soldiers keep this far from each other and from their hero, meters. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float soldierSpacing = 0.5f;
@@ -187,14 +191,6 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Radius of the body of a soldier, meters: every reach goes from the edge of a body to the edge of another. Starting value: 0.25.")]
         [Min(0f)] [SerializeField] private float soldierBody = 0.25f;
 
-        [Tooltip("Places in the crowd around the hero are this far apart, meters; the crowd keeps within 1–4 m. Starting value: 1.")]
-        [Min(0.1f)] [SerializeField] private float slotSpacing = 1f;
-
-        [Tooltip("Factor of health and damage of the soldiers of the player. Starting value: 1.1.")]
-        [Min(0.1f)] [SerializeField] private float playerSoldierFactor = 1.1f;
-
-        [Tooltip("Factor of health and damage of the soldiers of the enemy; by level later (GDD 5.9). Starting value: 1.")]
-        [Min(0.1f)] [SerializeField] private float enemySoldierFactor = 1f;
 
         public int MaxStepsPerFrame => maxStepsPerFrame;
         public int TicksPerSecond => ticksPerSecond;
@@ -205,16 +201,16 @@ namespace Meta.BattleSystem.Configuration
         public int BarracksWood => barracksWood;
         public int SoldierGold => soldierGold;
         public int ArmyMax => armyMax;
-        public float HeroHealth => heroHealth;
-        public float BarracksHealth => barracksHealth;
-        public float BaseHealth => baseHealth;
+        public int HeroHealth => heroHealth;
+        public int BarracksHealth => barracksHealth;
+        public int BaseHealth => baseHealth;
 
         /// <summary>Meters of the world for units of the simulation.</summary>
         public float MetersPerUnit => cellSize / BattleSettings.UnitsPerCell;
 
         [Header("Bases")]
-        [Tooltip("Health of a base (spec 4.1). Starting value: 600.")]
-        [Min(1f)] [SerializeField] private float baseHealth = 600f;
+        [Tooltip("Health of a base, points (spec 4.1, T13). Starting value: 100.")]
+        [Min(1)] [SerializeField] private int baseHealth = 100;
 
         [Tooltip("The aura of a base, cells: its colour around it, protected while it stands. Starting value: 4.")]
         [Min(0)] [SerializeField] private int baseAura = 4;
@@ -289,8 +285,7 @@ namespace Meta.BattleSystem.Configuration
         public void ApplyEnemy(BattleSimulation simulation, int level)
         {
             var enemy = EnemyOf(level);
-            simulation.SetEnemyStrength(Mathf.RoundToInt(enemy.speed * 1000f), Ticks(enemy.reaction),
-                Mathf.RoundToInt(enemySoldierFactor * enemy.soldiers * 1000f), Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond));
+            simulation.SetEnemyStrength(Mathf.RoundToInt(enemy.speed * 1000f), Ticks(enemy.reaction), Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond));
         }
 
         [System.Serializable]
@@ -300,7 +295,7 @@ namespace Meta.BattleSystem.Configuration
             public float speed;
             [Tooltip("The commander chooses once in this many seconds.")]
             public float reaction;
-            [Tooltip("Health and damage of enemy soldiers, a factor.")]
+            [Tooltip("Health and damage of enemy soldiers, a factor; not used while health is whole points (owner, 4 November).")]
             public float soldiers;
             [Tooltip("The enemy may build from this second.")]
             public float buildFrom;
@@ -343,7 +338,7 @@ namespace Meta.BattleSystem.Configuration
                 SiteCells = siteCells,
                 BuildTicks = Ticks(buildSeconds),
                 BarracksWood = barracksWood,
-                BarracksHealth = Tenths(barracksHealth),
+                BarracksHealth = barracksHealth,
                 AuraCells = auraCells,
                 HireUnits = Units(hireReach),
                 HireEveryTicks = Ticks(hireEvery),
@@ -352,34 +347,32 @@ namespace Meta.BattleSystem.Configuration
 
                 SoldierStepUnits = Units(soldierSpeed / ticksPerSecond),
                 SoldierBrushUnits = Mathf.RoundToInt(soldierBrush * BattleSettings.UnitsPerCell),
-                SoldierHealth = Tenths(soldierHealth),
-                SoldierDamage = Tenths(soldierDamage),
+                SoldierHealth = soldierHealth,
+                SoldierDamage = soldierDamage,
                 SoldierCooldownTicks = Ticks(soldierEvery),
                 SoldierReachUnits = Units(soldierReach),
                 SoldierSightUnits = Units(soldierSight),
-                SoldierLeashUnits = Units(soldierLeash),
                 SoldierSpacingUnits = Units(soldierSpacing),
                 SoldierBodyUnits = Units(soldierBody),
                 BarracksHalfUnits = Units(barracksHalfSize),
                 BuildReachUnits = Units(buildReach),
-                SlotSpacingUnits = Units(slotSpacing),
-                PlayerSoldierPermille = Mathf.RoundToInt(playerSoldierFactor * 1000f),
-                EnemySoldierPermille = Mathf.RoundToInt(enemySoldierFactor * enemy.soldiers * 1000f),
 
-                HeroHealth = Tenths(heroHealth),
-                HeroRegenPerSecond = Tenths(heroRegen),
+                HeroHealth = heroHealth,
+                EnemyHeroHealth = enemyHeroHealth,
                 HealAfterTicks = Mathf.RoundToInt(healAfter * ticksPerSecond),
+                PlayerHeroHealEveryTicks = Ticks(heroHealEvery),
+                HealEveryTicks = Ticks(healEvery),
                 MeleeReachUnits = Units(meleeReach),
-                MeleeDamage = Tenths(meleeDamage),
+                MeleeDamage = meleeDamage,
                 MeleeCooldownTicks = Ticks(meleeEvery),
                 HeroGun = heroGun,
                 GunReachUnits = Units(gunReach),
-                GunDamage = Tenths(gunDamage),
+                GunDamage = gunDamage,
                 GunCooldownTicks = Ticks(gunEvery),
                 RespawnTicks = Ticks(respawnSeconds),
                 InvulnerableTicks = Ticks(invulnerableSeconds),
 
-                BaseHealth = Tenths(baseHealth),
+                BaseHealth = baseHealth,
                 BaseAuraCells = baseAura,
                 BaseHalfUnits = Units(baseHalfSize),
                 BaseGateUnits = Units(baseGate),
@@ -399,7 +392,5 @@ namespace Meta.BattleSystem.Configuration
         private int Units(float meters) => Mathf.RoundToInt(meters * BattleSettings.UnitsPerCell / cellSize);
 
         private int Ticks(float seconds) => Mathf.Max(1, Mathf.RoundToInt(seconds * ticksPerSecond));
-
-        private static int Tenths(float points) => Mathf.RoundToInt(points * 10f);
     }
 }

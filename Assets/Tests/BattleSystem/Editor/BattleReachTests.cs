@@ -27,7 +27,7 @@ namespace Tests.BattleSystem.Editor
             // both heroes stand still 1.6 m apart (beyond 1.2 m between their middles), facing the camera
             var settings = BattleDeterminismTests.Settings(layer3: true);
             var simulation = new BattleSimulation(settings);
-            simulation.SetEnemyStrength(800, 100000, 900, 100000);
+            simulation.SetEnemyStrength(800, 100000, 100000);
             Run(simulation, 1);
             simulation.TeleportHero(Side.Player, 20 * Unit, 20 * Unit);
             simulation.TeleportHero(Side.Enemy, 20 * Unit + 3200, 20 * Unit);

@@ -2,7 +2,7 @@ namespace Core.BattleSystem.Structs
 {
     /// <summary>
     /// Numbers of one battle in the units of the simulation: a cell is <see cref="UnitsPerCell"/> units (0.5 m, so a meter is
-    /// 2000 units), time is ticks, health is tenths of a point. The defaults are the starting values of the stage 1 spec at 30
+    /// 2000 units), time is ticks, health is whole points: a blow takes one (owner, 4 November). The defaults are the starting values of the stage 1 spec at 30
     /// ticks a second; the owner tunes them in meters and seconds in Meta/BattleSystem/Configuration/BattleConfig. This
     /// assembly sees no Unity.
     /// </summary>
@@ -43,7 +43,7 @@ namespace Core.BattleSystem.Structs
         public int[] SiteCells = { 15, 15, 48, 48, 12, 36, 51, 27, 36, 12, 27, 51 };
         public int BuildTicks = 30;
         public int BarracksWood = 10;
-        public int BarracksHealth = 3000;
+        public int BarracksHealth = 50;
         /// <summary>Half the side of a barracks (2.25 m): blows, hiring and the reach of everything go to its walls.</summary>
         public int BarracksHalfUnits = 2250;
         /// <summary>A hero builds when the edge of its body is this close to the edge of the place (or on it).</summary>
@@ -58,37 +58,41 @@ namespace Core.BattleSystem.Structs
         // layer 2: soldiers
         public int SoldierStepUnits = 367;
         public int SoldierBrushUnits = 1000;
-        public int SoldierHealth = 300;
-        public int SoldierDamage = 50;
+        /// <summary>Health of a soldier of either side, points (owner, 4 November: no factors of the sides).</summary>
+        public int SoldierHealth = 5;
+        public int SoldierDamage = 1;
         public int SoldierCooldownTicks = 24;
         public int SoldierReachUnits = 2000;
-        public int SoldierSightUnits = 8000;
-        public int SoldierLeashUnits = 16000;
+        /// <summary>A soldier turns on an enemy hero or soldier this close, else walks to the nearest enemy barracks, else the base (T15).</summary>
+        public int SoldierSightUnits = 16000;
         public int SoldierSpacingUnits = 1000;
         /// <summary>Radius of the body of a soldier: reaches are measured from the edge of a body to the edge of another.</summary>
         public int SoldierBodyUnits = 500;
-        public int SlotSpacingUnits = 2000;
-        public int PlayerSoldierPermille = 1100;
-        public int EnemySoldierPermille = 900;
 
         // layer 2: the hero fights
-        public int HeroHealth = 1000;
-        public int HeroRegenPerSecond = 50;
-        /// <summary>A hero heals only when nothing hurt it this long (task 4.7: out of a fight, or it cannot be killed at home).</summary>
+        /// <summary>Health of the player's hero, points.</summary>
+        public int HeroHealth = 10;
+        /// <summary>Health of the enemy hero, points.</summary>
+        public int EnemyHeroHealth = 7;
+        /// <summary>A unit heals only out of a fight: it was not hurt and did not strike this long (T16), on any land.</summary>
         public int HealAfterTicks = 90;
+        /// <summary>Out of a fight the player's hero heals a point every this many ticks.</summary>
+        public int PlayerHeroHealEveryTicks = 15;
+        /// <summary>Out of a fight the enemy hero and the soldiers of both sides heal a point every this many ticks.</summary>
+        public int HealEveryTicks = 30;
         public int MeleeReachUnits = 2400;
-        public int MeleeDamage = 100;
+        public int MeleeDamage = 1;
         public int MeleeCooldownTicks = 15;
         /// <summary>Heroes shoot the gun (task 4.8: off for now, both heroes fight only with the sword).</summary>
         public bool HeroGun;
         public int GunReachUnits = 12000;
-        public int GunDamage = 80;
+        public int GunDamage = 1;
         public int GunCooldownTicks = 45;
         public int RespawnTicks = 90;
         public int InvulnerableTicks = 30;
 
         // layer 3: bases
-        public int BaseHealth = 6000;
+        public int BaseHealth = 100;
         public int BaseAuraCells = 4;
         /// <summary>Half the side of a base (3 m): blows and shots reach its walls, not only its middle.</summary>
         public int BaseHalfUnits = 3000;
@@ -108,8 +112,10 @@ namespace Core.BattleSystem.Structs
         public int CommanderAttackArmy = 8;
         public int CommanderAttackPermille = 800;
         // layer 4: the lasting upgrades of the player (GDD 6), given by the meta at the start of a level
-        /// <summary>Health and damage of the player's hero, permille.</summary>
-        public int PlayerHeroPermille = 1000;
+        /// <summary>Points of health added to the player's hero (T14: a blow stays 1).</summary>
+        public int PlayerHeroBonusHealth;
+        /// <summary>Points of health added to each soldier of the player.</summary>
+        public int PlayerSoldierBonusHealth;
         /// <summary>Added to the brush of the player's hero, units.</summary>
         public int PlayerBrushBonusUnits;
         /// <summary>Gold the player starts a level with.</summary>
@@ -121,10 +127,13 @@ namespace Core.BattleSystem.Structs
         public int MapUnits => MapCells * UnitsPerCell;
 
         /// <summary>The full health of the hero of a side: the player's grows with its upgrade.</summary>
-        public int HeroHealthOf(Enums.Side side) => side == Enums.Side.Player ? HeroHealth * PlayerHeroPermille / 1000 : HeroHealth;
+        public int HeroHealthOf(Enums.Side side) => side == Enums.Side.Player ? HeroHealth + PlayerHeroBonusHealth : EnemyHeroHealth;
 
-        /// <summary>A blow or shot of the hero of a side: the player's grows with its upgrade.</summary>
-        public int HeroDamageOf(Enums.Side side, int damage) => side == Enums.Side.Player ? damage * PlayerHeroPermille / 1000 : damage;
+        /// <summary>The full health of a soldier of a side: the player's grows with its upgrade.</summary>
+        public int SoldierHealthOf(Enums.Side side) => side == Enums.Side.Player ? SoldierHealth + PlayerSoldierBonusHealth : SoldierHealth;
+
+        /// <summary>Out of a fight a hero of a side heals a point every this many ticks.</summary>
+        public int HeroHealEveryOf(Enums.Side side) => side == Enums.Side.Player ? PlayerHeroHealEveryTicks : HealEveryTicks;
 
         /// <summary>A copy to change for another battle; the arrays of places and piles are shared, nobody writes them.</summary>
         public BattleSettings Clone() => (BattleSettings)MemberwiseClone();

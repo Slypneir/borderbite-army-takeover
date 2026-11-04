@@ -27,22 +27,22 @@ namespace Meta.ProgressSystem.Configuration
         [Tooltip("Each next step costs this many times more, rounded. Starting value: 1.5.")]
         [Min(1f)] [SerializeField] private float priceGrowth = 1.5f;
 
-        [Tooltip("Strength of the hero (health and damage) per step, a share. Starting value: 0.1.")]
-        [Min(0f)] [SerializeField] private float heroPowerStep = 0.1f;
+        [Tooltip("Health of the hero per step, points; a blow stays 1 (T14). Starting value: 1.")]
+        [Min(0)] [SerializeField] private int heroPowerStep = 1;
 
         [Tooltip("Brush of the hero per step, cells of radius. Starting value: 0.25.")]
         [Min(0f)] [SerializeField] private float heroBrushStep = 0.25f;
 
-        [Tooltip("Strength of the soldiers (health and damage) per step, a share. Starting value: 0.08.")]
-        [Min(0f)] [SerializeField] private float armyPowerStep = 0.08f;
+        [Tooltip("Health of each soldier per step, points; a blow stays 1 (T14). Starting value: 1.")]
+        [Min(0)] [SerializeField] private int armyPowerStep = 1;
 
         [Tooltip("Start gold per step. Starting value: 5.")]
         [Min(0)] [SerializeField] private int startGoldStep = 5;
 
         public int Steps => steps;
-        public float HeroPowerStep => heroPowerStep;
+        public int HeroPowerStep => heroPowerStep;
         public float HeroBrushStep => heroBrushStep;
-        public float ArmyPowerStep => armyPowerStep;
+        public int ArmyPowerStep => armyPowerStep;
         public int StartGoldStep => startGoldStep;
 
         public int CrownsFor(bool victory, int level) => victory ? victoryCrowns + crownsPerLevel * level : defeatCrowns;
@@ -50,7 +50,7 @@ namespace Meta.ProgressSystem.Configuration
         /// <summary>The price of a step 1..<see cref="Steps"/>: 20 × 1.5^(step − 1), rounded.</summary>
         public int PriceOf(int step) => Mathf.RoundToInt(firstPrice * Mathf.Pow(priceGrowth, step - 1));
 
-        /// <summary>What one step gives, for the card: a share, cells or gold.</summary>
+        /// <summary>What one step gives, for the card: points of health, cells or gold.</summary>
         public float StepOf(Upgrade upgrade) => upgrade switch
         {
             Upgrade.HeroPower => heroPowerStep,

@@ -67,8 +67,8 @@ namespace Tests.BattleSystem.Editor
             simulation.BuildBarracks(1, Side.Enemy);
             var site = simulation.Sites[1];
             simulation.TeleportHero(Side.Player, Middle(site.CenterX) - 4000, Middle(site.CenterY));
-            // the sword brings 300 health down in 15 s
-            for (var i = 0; i < 16 * 30 && simulation.Sites[1].Built; i++)
+            // the sword brings 50 points down in 25 s
+            for (var i = 0; i < 26 * 30 && simulation.Sites[1].Built; i++)
                 simulation.Step();
             simulation.Sites[1].Built.Should().BeFalse();
 

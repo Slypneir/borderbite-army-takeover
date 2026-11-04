@@ -141,7 +141,7 @@ namespace Meta.BattleSystem.Views
             bar.Y = battleEvent.Y;
             // spec T12: a bar after a blow and 5 s more
             bar.Until = now + _view.BarHoldSeconds;
-            bar.Max = isBase ? _rules.BaseHealth * 10f : _rules.BarracksHealth * 10f;
+            bar.Max = isBase ? _rules.BaseHealth : _rules.BarracksHealth;
             if (battleEvent.Side == Side.Player)
                 Threaten(key, battleEvent.X, battleEvent.Y, isBase, false, now);
         }

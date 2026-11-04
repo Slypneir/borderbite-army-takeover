@@ -18,7 +18,7 @@ MonoBehaviour:
   steps: 10
   firstPrice: 20
   priceGrowth: 1.5
-  heroPowerStep: 0.1
+  heroPowerStep: 1
   heroBrushStep: 0.25
-  armyPowerStep: 0.08
+  armyPowerStep: 1
   startGoldStep: 5

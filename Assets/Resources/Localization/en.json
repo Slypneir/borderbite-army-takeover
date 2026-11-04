@@ -15,7 +15,7 @@
     { "key": "upgrades.hero_brush", "text": "Hero brush" },
     { "key": "upgrades.army_power", "text": "Army power" },
     { "key": "upgrades.start_gold", "text": "Start gold" },
-    { "key": "upgrades.effect.percent", "text": "+{0}%" },
+    { "key": "upgrades.effect.health", "text": "+{0} health" },
     { "key": "upgrades.effect.cells", "text": "+{0} cells" },
     { "key": "upgrades.effect.gold", "text": "+{0} gold" },
     { "key": "upgrades.need", "text": "{0} more" },

@@ -84,15 +84,16 @@ namespace Tests.ProgressSystem.Editor
         {
             _progress.Data.Upgrades = new[] { 3, 0, 5, 2 };
             var settings = new BattleSettings();
-            var enemySoldiers = settings.EnemySoldierPermille;
 
             _progress.Apply(settings);
             var simulation = new BattleSimulation(settings);
 
-            settings.HeroHealthOf(Side.Player).Should().Be(1300);
-            settings.HeroHealthOf(Side.Enemy).Should().Be(1000);
-            settings.PlayerSoldierPermille.Should().Be(1100 * 1400 / 1000);
-            settings.EnemySoldierPermille.Should().Be(enemySoldiers);
+            // T14: +1 point of health a step, a blow stays 1
+            settings.HeroHealthOf(Side.Player).Should().Be(13);
+            settings.HeroHealthOf(Side.Enemy).Should().Be(7);
+            settings.SoldierHealthOf(Side.Player).Should().Be(10);
+            settings.SoldierHealthOf(Side.Enemy).Should().Be(5);
+            settings.MeleeDamage.Should().Be(1);
             simulation.SideOf(Side.Player).Gold.Should().Be(10);
             simulation.SideOf(Side.Enemy).Gold.Should().Be(0);
         }

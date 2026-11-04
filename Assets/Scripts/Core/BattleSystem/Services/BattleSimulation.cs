@@ -159,7 +159,7 @@ namespace Core.BattleSystem.Services
             _state.Sides[(int)side].Wood += wood;
         }
 
-        /// <summary>The developer puts soldiers of a side around a point in units; without a hero they keep to it.</summary>
+        /// <summary>The developer puts soldiers of a side around a point in units; they go to attack at once.</summary>
         public void AddSoldiers(Side side, int count, int x, int y)
         {
             for (var i = 0; i < count; i++)
@@ -168,17 +168,17 @@ namespace Core.BattleSystem.Services
 
         /// <summary>
         /// The strength of the enemy of a level (GDD 5.9), at once and in the middle of a battle: the speed of its hero, its
-        /// reaction, the health and damage of its new soldiers, from which tick it may build. The developer's switch (spec 2.7).
+        /// reaction, from which tick it may build. The developer's switch (spec 2.7). The factor of its soldiers is off while
+        /// health is whole points (owner, 4 November).
         /// </summary>
-        public void SetEnemyStrength(int speedPermille, int reactionTicks, int soldierPermille, int buildFromTicks)
+        public void SetEnemyStrength(int speedPermille, int reactionTicks, int buildFromTicks)
         {
             _state.Settings.EnemySpeedPermille = speedPermille;
             _state.Settings.EnemyReactionTicks = reactionTicks;
-            _state.Settings.EnemySoldierPermille = soldierPermille;
             _state.Settings.EnemyBuildFromTicks = buildFromTicks;
         }
 
-        /// <summary>The developer sets the health of a base, tenths; 0 brings it down, and the battle ends on the next tick.</summary>
+        /// <summary>The developer sets the health of a base, points; 0 brings it down, and the battle ends on the next tick.</summary>
         public void SetBaseHealth(Side side, int health)
         {
             _combat.HitBase(side, _state.Bases[(int)side].Health - health);
@@ -230,6 +230,7 @@ namespace Core.BattleSystem.Services
                 hash = Mix(hash, soldier.X);
                 hash = Mix(hash, soldier.Y);
                 hash = Mix(hash, soldier.Health);
+                hash = Mix(hash, (int)soldier.Goal * 1000 + soldier.GoalId);
             }
 
             foreach (var resource in _state.Resources)

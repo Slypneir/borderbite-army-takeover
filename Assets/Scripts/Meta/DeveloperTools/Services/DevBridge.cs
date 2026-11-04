@@ -75,9 +75,9 @@ namespace Meta.DeveloperTools.Services
 
             return $"tick {simulation.Tick}, result {simulation.Result}, player {simulation.Grid.Permille(Side.Player)} permille, " +
                    $"enemy {simulation.Grid.Permille(Side.Enemy)} permille, hero {(hero.X / unit).ToString("0.00", Inv)};{(hero.Y / unit).ToString("0.00", Inv)} cells, " +
-                   $"health {hero.Health / 10}{(hero.Alive ? "" : " dead")}, captures {simulation.Captures.Count}, gold {purse.Gold}, wood {purse.Wood}, " +
+                   $"health {hero.Health}{(hero.Alive ? "" : " dead")}, captures {simulation.Captures.Count}, gold {purse.Gold}, wood {purse.Wood}, " +
                    $"army {simulation.ArmyOf(Side.Player)} vs {simulation.ArmyOf(Side.Enemy)}, barracks {barracks}, " +
-                   $"piles {simulation.Resources.Count}, bases {simulation.Bases[(int)Side.Player].Health / 10} vs {simulation.Bases[(int)Side.Enemy].Health / 10}" +
+                   $"piles {simulation.Resources.Count}, bases {simulation.Bases[(int)Side.Player].Health} vs {simulation.Bases[(int)Side.Enemy].Health}" +
                    Enemy(simulation);
         }
 
@@ -127,7 +127,7 @@ namespace Meta.DeveloperTools.Services
                 }
 
                 lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
-                          $"bases {simulation.Bases[(int)Side.Player].Health / 10}/{simulation.Bases[(int)Side.Enemy].Health / 10}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]}");
+                          $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]}");
             }
 
             return string.Join(" | ", lines);
@@ -195,7 +195,7 @@ namespace Meta.DeveloperTools.Services
         /// <summary>The health of a base in points; 0 brings it down (spec 3.1 self-check).</summary>
         public static string BaseHealth(string side, int health)
         {
-            _battle.Current.Simulation.SetBaseHealth(SideOf(side), health * 10);
+            _battle.Current.Simulation.SetBaseHealth(SideOf(side), health);
             return Battle();
         }
 
@@ -253,7 +253,7 @@ namespace Meta.DeveloperTools.Services
             return Battle();
         }
 
-        /// <summary>Puts soldiers of a side around a cell; without a hero they keep to it.</summary>
+        /// <summary>Puts soldiers of a side around a cell; they go to attack at once.</summary>
         public static string Soldiers(string side, int count, int x, int y)
         {
             const int unit = BattleSettings.UnitsPerCell;
@@ -277,7 +277,7 @@ namespace Meta.DeveloperTools.Services
             {
                 var site = simulation.Sites[i];
                 lines.Append($"{i}: {site.CenterX};{site.CenterY} owner {simulation.Grid.At(site.CenterX, site.CenterY)}, " +
-                             $"barracks {site.Barracks} {site.Health / 10}, progress {site.BuildProgress}; ");
+                             $"barracks {site.Barracks} {site.Health}, progress {site.BuildProgress}; ");
             }
 
             return lines.ToString();

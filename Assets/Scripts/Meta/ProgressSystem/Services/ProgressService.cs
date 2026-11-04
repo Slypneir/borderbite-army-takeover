@@ -101,9 +101,9 @@ namespace Meta.ProgressSystem.Services
         /// <summary>The upgrades act from the start of a level: the player's hero, its brush, its soldiers, its start gold.</summary>
         public void Apply(BattleSettings settings)
         {
-            settings.PlayerHeroPermille = settings.PlayerHeroPermille * (1000 + Mathf.RoundToInt(_config.HeroPowerStep * 1000f) * StepOf(Upgrade.HeroPower)) / 1000;
+            settings.PlayerHeroBonusHealth += _config.HeroPowerStep * StepOf(Upgrade.HeroPower);
             settings.PlayerBrushBonusUnits += Mathf.RoundToInt(_config.HeroBrushStep * BattleSettings.UnitsPerCell) * StepOf(Upgrade.HeroBrush);
-            settings.PlayerSoldierPermille = settings.PlayerSoldierPermille * (1000 + Mathf.RoundToInt(_config.ArmyPowerStep * 1000f) * StepOf(Upgrade.ArmyPower)) / 1000;
+            settings.PlayerSoldierBonusHealth += _config.ArmyPowerStep * StepOf(Upgrade.ArmyPower);
             settings.PlayerStartGold += _config.StartGoldStep * StepOf(Upgrade.StartGold);
         }
 

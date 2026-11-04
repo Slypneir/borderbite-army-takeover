@@ -15,7 +15,7 @@
     { "key": "upgrades.hero_brush", "text": "Кисть героя" },
     { "key": "upgrades.army_power", "text": "Сила бойцов" },
     { "key": "upgrades.start_gold", "text": "Стартовое золото" },
-    { "key": "upgrades.effect.percent", "text": "+{0}%" },
+    { "key": "upgrades.effect.health", "text": "+{0} здоровья" },
     { "key": "upgrades.effect.cells", "text": "+{0} клетки" },
     { "key": "upgrades.effect.gold", "text": "+{0} золота" },
     { "key": "upgrades.need", "text": "нужно ещё {0}" },

@@ -121,11 +121,12 @@ namespace Core.BattleSystem.Services
                     continue;
 
                 hero.Cooldown = melee ? _settings.MeleeCooldownTicks : _settings.GunCooldownTicks;
+                hero.FightTick = _state.Tick;
                 hero.FacingX = target.X - hero.X;
                 hero.FacingY = target.Y - hero.Y;
                 _state.Heroes[i] = hero;
                 _state.Emit(melee ? EventKind.Strike : EventKind.Shot, hero.Side, -1, 0, hero.X, hero.Y, target.X, target.Y);
-                Hurt(target, _settings.HeroDamageOf(hero.Side, melee ? _settings.MeleeDamage : _settings.GunDamage));
+                Hurt(target, melee ? _settings.MeleeDamage : _settings.GunDamage);
             }
         }
 
@@ -139,9 +140,10 @@ namespace Core.BattleSystem.Services
                     continue;
 
                 soldier.Cooldown = _settings.SoldierCooldownTicks;
+                soldier.FightTick = _state.Tick;
                 _state.Soldiers[i] = soldier;
                 _state.Emit(EventKind.Strike, soldier.Side, soldier.Id, 0, soldier.X, soldier.Y, target.X, target.Y);
-                var removedBefore = Hurt(target, soldier.Damage) && target.Kind == TargetKind.Soldier && target.Index < i;
+                var removedBefore = Hurt(target, _settings.SoldierDamage) && target.Kind == TargetKind.Soldier && target.Index < i;
                 if (removedBefore)
                     i--;
             }
@@ -159,8 +161,7 @@ namespace Core.BattleSystem.Services
                         return false;
 
                     hero.Health -= damage;
-                    hero.HurtTick = _state.Tick;
-                    hero.RegenAccumulator = 0;
+                    hero.FightTick = _state.Tick;
                     if (hero.Health <= 0)
                     {
                         hero.Health = 0;
@@ -177,6 +178,7 @@ namespace Core.BattleSystem.Services
                 {
                     var soldier = _state.Soldiers[target.Index];
                     soldier.Health -= damage;
+                    soldier.FightTick = _state.Tick;
                     if (soldier.Health > 0)
                     {
                         _state.Soldiers[target.Index] = soldier;
@@ -223,7 +225,8 @@ namespace Core.BattleSystem.Services
         private static long Gap(int x, int y, int toX, int toY, int radii) =>
             IntMath.Sqrt(BattleState.Distance2(x, y, toX, toY)) - radii;
 
-        private static bool NearestUnit(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
+        /// <summary>The nearest living enemy hero or soldier within reach of the edge of a body.</summary>
+        public static bool NearestUnit(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
         {
             target = default;
             var best = (long)reach;

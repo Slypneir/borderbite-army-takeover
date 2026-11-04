@@ -28,7 +28,7 @@ namespace Meta.FlowSystem.Views
         private const float ShakeSeconds = 0.3f;
 
         private static readonly string[] NameKeys = { "upgrades.hero_power", "upgrades.hero_brush", "upgrades.army_power", "upgrades.start_gold" };
-        private static readonly string[] EffectKeys = { "upgrades.effect.percent", "upgrades.effect.cells", "upgrades.effect.percent", "upgrades.effect.gold" };
+        private static readonly string[] EffectKeys = { "upgrades.effect.health", "upgrades.effect.cells", "upgrades.effect.health", "upgrades.effect.gold" };
 
         [SerializeField] private CanvasGroup group;
         [SerializeField] private RectTransform cards;
@@ -194,8 +194,7 @@ namespace Meta.FlowSystem.Views
                 var step = _progress.StepOf(upgrade);
                 card.Name.text = Loc.Get(NameKeys[i]);
                 var amount = config.StepOf(upgrade);
-                card.Effect.text = string.Format(Loc.Get(EffectKeys[i]),
-                    upgrade == Upgrade.HeroPower || upgrade == Upgrade.ArmyPower ? Mathf.RoundToInt(amount * 100f).ToString() : amount.ToString("0.##"));
+                card.Effect.text = string.Format(Loc.Get(EffectKeys[i]), amount.ToString("0.##"));
                 card.Step.text = $"{step}/{config.Steps}";
                 for (var t = 0; t < card.Ticks.Length; t++)
                     card.Ticks[t].color = t < step ? new Color(0.96f, 0.95f, 0.88f) : new Color(1f, 1f, 1f, 0.2f);

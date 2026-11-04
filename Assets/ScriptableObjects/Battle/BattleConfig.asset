@@ -21,15 +21,17 @@ MonoBehaviour:
   heroSpeed: 5
   heroRadius: 0.3
   heroBrush: 2
-  heroHealth: 100
-  heroRegen: 5
+  heroHealth: 10
+  enemyHeroHealth: 7
   healAfter: 3
+  heroHealEvery: 0.5
+  healEvery: 1
   meleeReach: 1.2
-  meleeDamage: 10
+  meleeDamage: 1
   meleeEvery: 0.5
   heroGun: 0
   gunReach: 6
-  gunDamage: 8
+  gunDamage: 1
   gunEvery: 1.5
   respawnSeconds: 3
   invulnerableSeconds: 1
@@ -54,7 +56,7 @@ MonoBehaviour:
   - {x: 27, y: 51}
   buildSeconds: 1
   barracksWood: 10
-  barracksHealth: 300
+  barracksHealth: 50
   auraCells: 3
   hireReach: 1
   hireEvery: 0.5
@@ -62,17 +64,13 @@ MonoBehaviour:
   armyMax: 30
   soldierSpeed: 5.5
   soldierBrush: 1
-  soldierHealth: 30
-  soldierDamage: 5
+  soldierHealth: 5
+  soldierDamage: 1
   soldierEvery: 0.8
   soldierReach: 1
-  soldierSight: 4
-  soldierLeash: 8
+  soldierSight: 8
   soldierSpacing: 0.5
-  slotSpacing: 1
-  playerSoldierFactor: 1.1
-  enemySoldierFactor: 1
-  baseHealth: 600
+  baseHealth: 100
   baseAura: 4
   baseHalfSize: 1.5
   baseGate: 2

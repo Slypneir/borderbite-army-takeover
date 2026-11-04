@@ -28,7 +28,7 @@ namespace Tests.BattleSystem.Editor
             var player = simulation.Bases[(int)Side.Player];
             var enemy = simulation.Bases[(int)Side.Enemy];
             player.X.Should().Be(8 * Unit);
-            player.Health.Should().Be(6000);
+            player.Health.Should().Be(100);
             enemy.X.Should().Be(56 * Unit);
             simulation.Heroes.Should().HaveCount(2);
             simulation.Heroes[0].X.Should().Be(player.GateX).And.BeGreaterThan(player.X);
@@ -72,7 +72,7 @@ namespace Tests.BattleSystem.Editor
         [Test]
         public void Base_SoldiersAtItsWalls_HitAndReported()
         {
-            // no enemy hero: its soldiers keep to where they stand; the player's hero walks away first, so no unit is in sight
+            // no enemy hero and no barracks: its soldiers go for the base; the player's hero walks away first, so no unit is in sight
             var settings = BattleDeterminismTests.Settings(layer3: true);
             settings.EnemyHero = false;
             var simulation = new BattleSimulation(settings);
@@ -82,7 +82,7 @@ namespace Tests.BattleSystem.Editor
 
             Run(simulation, 120);
 
-            simulation.Bases[(int)Side.Player].Health.Should().BeLessThan(6000);
+            simulation.Bases[(int)Side.Player].Health.Should().BeLessThan(100);
             simulation.Events.Should().Contain(e => e.Kind == EventKind.BuildingHit && e.Side == Side.Player && e.Id == -1);
         }
 
@@ -106,7 +106,7 @@ namespace Tests.BattleSystem.Editor
         {
             var fast = New();
             var slow = New();
-            slow.SetEnemyStrength(500, 33, 900, 0);
+            slow.SetEnemyStrength(500, 33, 0);
 
             // a few ticks, while both still walk to their first goal
             Run(fast, 6);
@@ -122,7 +122,7 @@ namespace Tests.BattleSystem.Editor
         public void Commander_CannotBuildBeforeItsSecond()
         {
             var simulation = New();
-            simulation.SetEnemyStrength(800, 33, 900, 60 * 30);
+            simulation.SetEnemyStrength(800, 33, 60 * 30);
             simulation.Give(Side.Enemy, 0, 40);
 
             Run(simulation, 50 * 30);

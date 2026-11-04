@@ -141,7 +141,10 @@ namespace Tests.BattleSystem.Editor
         [Test]
         public void Hire_ArmyAtTheLimit_NoMore()
         {
-            var simulation = New();
+            // the soldiers go for the enemy base on their own: a base that cannot fall keeps the battle going
+            var settings = BattleDeterminismTests.Settings();
+            settings.BaseHealth = 100000;
+            var simulation = new BattleSimulation(settings);
             simulation.Give(Side.Player, 1000, 10);
             WalkOntoFirstPlace(simulation);
 
@@ -151,49 +154,103 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Soldiers_OfThePlayer_TenPercentStronger()
+        public void Soldiers_BothSides_FivePointsNoFactors()
         {
-            var simulation = New();
+            var settings = BattleDeterminismTests.Settings();
+            settings.PlayerSoldierBonusHealth = 2;
+            var simulation = new BattleSimulation(settings);
 
             simulation.AddSoldiers(Side.Player, 1, 30000, 30000);
             simulation.AddSoldiers(Side.Enemy, 1, 40000, 40000);
 
-            simulation.Soldiers[0].Health.Should().Be(330);
-            simulation.Soldiers[0].Damage.Should().Be(55);
-            simulation.Soldiers[1].Health.Should().Be(300);
+            new BattleSettings().SoldierHealth.Should().Be(5);
+            simulation.Soldiers[0].Health.Should().Be(7);
+            simulation.Soldiers[1].Health.Should().Be(5);
         }
 
         [Test]
-        public void Army_FollowsTheHero_WithinOneToFourMetersAndApart()
+        public void Army_NoEnemyNear_WalksToTheNearestEnemyBarracksAndLeavesAStripe()
         {
+            // owner, 4 November: the soldier does not follow the hero; place 2 at (12, 36) is nearer than place 1 at (48, 48)
             var simulation = New();
-            simulation.AddSoldiers(Side.Player, 20, 8000, 8000);
-
-            Walk(simulation, 1000, 300, 60);
-            Run(simulation, 60);
-
-            var hero = simulation.Heroes[0];
-            foreach (var soldier in simulation.Soldiers)
-                Meters(soldier.X, soldier.Y, hero.X, hero.Y).Should().BeInRange(0.45, 4.3);
-
-            var soldiers = simulation.Soldiers.ToList();
-            for (var i = 0; i < soldiers.Count; i++)
-            for (var j = i + 1; j < soldiers.Count; j++)
-                Meters(soldiers[i].X, soldiers[i].Y, soldiers[j].X, soldiers[j].Y).Should().BeGreaterThan(0.3);
-        }
-
-        [Test]
-        public void Army_PaintsWithBrushesOfOneCell()
-        {
-            var simulation = New();
-            simulation.AddSoldiers(Side.Player, 10, 8000, 8000);
-            var before = simulation.Grid.Count(Side.Player);
-            var alone = New();
+            simulation.BuildBarracks(1, Side.Enemy);
+            simulation.BuildBarracks(2, Side.Enemy);
+            simulation.AddSoldiers(Side.Player, 1, 11 * Unit, 12 * Unit);
 
             Walk(simulation, 1000, 0, 90);
-            Walk(alone, 1000, 0, 90);
 
-            (simulation.Grid.Count(Side.Player) - before).Should().BeGreaterThan(alone.Grid.Count(Side.Player) - before);
+            var soldier = simulation.Soldiers[0];
+            soldier.Goal.Should().Be(SoldierGoal.Barracks);
+            soldier.GoalId.Should().Be(2);
+            Meters(soldier.X, soldier.Y, 12 * Unit + Unit / 2, 36 * Unit + Unit / 2).Should().BeLessThan(3.5);
+            for (var y = 16; y <= 26; y += 2)
+                simulation.Grid.At(11, y).Should().Be(Side.Player);
+        }
+
+        [Test]
+        public void Army_NoBarracks_WalksToTheEnemyBase()
+        {
+            var simulation = New();
+            simulation.AddSoldiers(Side.Player, 1, 20 * Unit, 20 * Unit);
+            var target = simulation.Bases[(int)Side.Enemy];
+            var before = Meters(20 * Unit, 20 * Unit, target.X, target.Y);
+
+            Run(simulation, 60);
+
+            simulation.Soldiers[0].Goal.Should().Be(SoldierGoal.Base);
+            Meters(simulation.Soldiers[0].X, simulation.Soldiers[0].Y, target.X, target.Y).Should().BeLessThan(before - 4.5);
+        }
+
+        [Test]
+        public void Army_EnemyWithinEightMeters_TurnsOnIt()
+        {
+            var simulation = New();
+            simulation.BuildBarracks(1, Side.Enemy);
+            simulation.AddSoldiers(Side.Player, 1, 30 * Unit, 20 * Unit);
+            // 7 m to the left, off the way to the barracks; another 10 m below: out of sight
+            simulation.AddSoldiers(Side.Enemy, 1, 16 * Unit, 20 * Unit);
+            simulation.AddSoldiers(Side.Enemy, 1, 30 * Unit, 0);
+
+            Run(simulation, 1);
+
+            var soldier = simulation.Soldiers[0];
+            soldier.Goal.Should().Be(SoldierGoal.Soldier);
+            soldier.GoalId.Should().Be(simulation.Soldiers[1].Id);
+            soldier.X.Should().BeLessThan(30 * Unit);
+        }
+
+        [Test]
+        public void Army_TargetFalls_TakesTheNext()
+        {
+            var simulation = New();
+            simulation.BuildBarracks(1, Side.Enemy);
+            simulation.AddSoldiers(Side.Player, 3, 30 * Unit, 20 * Unit);
+            simulation.AddSoldiers(Side.Enemy, 1, 33 * Unit, 20 * Unit);
+
+            Run(simulation, 150);
+
+            simulation.Soldiers.Should().OnlyContain(s => s.Side == Side.Player);
+            simulation.Soldiers.Should().OnlyContain(s => s.Goal == SoldierGoal.Barracks && s.GoalId == 1);
+        }
+
+        [Test]
+        public void Army_HeroWalksAway_SoldiersKeepTheirWayApart()
+        {
+            var simulation = New();
+            simulation.BuildBarracks(1, Side.Enemy);
+            simulation.AddSoldiers(Side.Player, 20, 10 * Unit, 10 * Unit);
+
+            Walk(simulation, -1000, 1000, 60);
+
+            var hero = simulation.Heroes[0];
+            var soldiers = simulation.Soldiers.ToList();
+            soldiers.Should().OnlyContain(s => s.Goal == SoldierGoal.Barracks);
+            for (var i = 0; i < soldiers.Count; i++)
+            {
+                Meters(soldiers[i].X, soldiers[i].Y, hero.X, hero.Y).Should().BeGreaterThan(0.45);
+                for (var j = i + 1; j < soldiers.Count; j++)
+                    Meters(soldiers[i].X, soldiers[i].Y, soldiers[j].X, soldiers[j].Y).Should().BeGreaterThan(0.3);
+            }
         }
 
         [Test]
@@ -243,7 +300,7 @@ namespace Tests.BattleSystem.Editor
         public void Fight_EnemyBarracksWithoutDefenders_FallsToSoldiers()
         {
             var simulation = New();
-            // place 0 is 5 m from the hero: within the leash of 8 m of its soldiers
+            // place 0 is the nearest enemy barracks: the soldiers go for it on their own
             simulation.BuildBarracks(0, Side.Enemy);
             var site = simulation.Sites[0];
             simulation.AddSoldiers(Side.Player, 10, site.CenterX * Unit, (site.CenterY - 3) * Unit);
@@ -256,29 +313,49 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Heal_HeroOnItsLand_FivePointsASecondThreeSecondsAfterTheLastBlow()
+        public void Heal_PlayerHero_APointEveryHalfSecondThreeSecondsAfterTheFight()
         {
             var simulation = New();
             simulation.AddSoldiers(Side.Enemy, 1, 8000 + 1500, 8000);
-            // three blows of the sword in a second kill it; it strikes back meanwhile
-            Run(simulation, 40);
+            // five blows of the sword kill it; it strikes back meanwhile
+            Run(simulation, 90);
             var hero = simulation.Heroes[0];
             var hurt = hero.Health;
-            hurt.Should().BeLessThan(1000);
+            hurt.Should().BeLessThan(10);
             simulation.Soldiers.Should().BeEmpty();
 
-            // no healing for 3 s after the last blow (task 4.7)
-            Run(simulation, hero.HurtTick + 89 - simulation.Tick);
+            // T16: not hurt and not striking for 3 s, then a point at once and a point every 0.5 s
+            Run(simulation, hero.FightTick + 89 - simulation.Tick);
             simulation.Heroes[0].Health.Should().Be(hurt);
-
-            Run(simulation, 30);
-            simulation.Heroes[0].Health.Should().Be(System.Math.Min(1000, hurt + 50));
+            Run(simulation, 1);
+            simulation.Heroes[0].Health.Should().Be(hurt + 1);
+            Run(simulation, 15);
+            simulation.Heroes[0].Health.Should().Be(System.Math.Min(10, hurt + 2));
         }
 
         [Test]
-        public void Heal_HeroOnItsLandUnderBlows_LosesHealth()
+        public void Heal_EnemySoldier_APointASecondAfterTheFight()
         {
-            // the hero cannot strike back, the blows go on: at home it must still lose health (task 4.7)
+            var settings = BattleDeterminismTests.Settings();
+            settings.SoldierStepUnits = 0;
+            var simulation = new BattleSimulation(settings);
+            simulation.AddSoldiers(Side.Enemy, 1, 40 * Unit, 40 * Unit);
+            simulation.TeleportHero(Side.Player, 40 * Unit + 1500, 40 * Unit);
+            Run(simulation, 1);
+            simulation.Soldiers[0].Health.Should().Be(4);
+            var fight = simulation.Soldiers[0].FightTick;
+            simulation.TeleportHero(Side.Player, 60 * Unit, 10 * Unit);
+
+            Run(simulation, fight + 89 - simulation.Tick);
+            simulation.Soldiers[0].Health.Should().Be(4);
+            Run(simulation, 1);
+            simulation.Soldiers[0].Health.Should().Be(5);
+        }
+
+        [Test]
+        public void Heal_HeroUnderBlows_LosesHealth()
+        {
+            // the hero cannot hurt the soldier, the blows go on: it must lose health on its own land (T16)
             var settings = BattleDeterminismTests.Settings();
             settings.MeleeDamage = 0;
             settings.GunDamage = 0;
@@ -290,7 +367,7 @@ namespace Tests.BattleSystem.Editor
             Run(simulation, 150);
 
             simulation.Grid.At(8, 8).Should().Be(Side.Player);
-            simulation.Heroes[0].Health.Should().BeLessThan(after1 - 200);
+            simulation.Heroes[0].Health.Should().BeLessThan(after1 - 4);
         }
     }
 }

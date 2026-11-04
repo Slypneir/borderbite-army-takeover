@@ -14,8 +14,8 @@ namespace Tests.BattleSystem.Editor
 
         /// <summary>The numbers of the stage 1 spec in units: 64 cells, 5 m/s at 30 ticks and 0.5 m cells is 333 units a tick.</summary>
         /// <summary>
-        /// Without layer 3 by default — no enemy hero, the hero starts in the middle of its base, no aura of the bases, enemy
-        /// soldiers at ×1.0 — so the rules of layers 1 and 2 are checked alone; <paramref name="layer3"/> gives the whole battle.
+        /// Without layer 3 by default — no enemy hero, the hero starts in the middle of its base, no aura of the bases, buildings
+        /// that let units through — so the rules of layers 1 and 2 are checked alone; <paramref name="layer3"/> gives the whole battle.
         /// </summary>
         public static BattleSettings Settings(uint seed = 777, int enclosureEveryTicks = 1, int maxEnclosureCells = 250, bool layer3 = false)
         {
@@ -26,7 +26,6 @@ namespace Tests.BattleSystem.Editor
             settings.EnemyHero = false;
             settings.BaseGateUnits = 0;
             settings.BaseAuraCells = 0;
-            settings.EnemySoldierPermille = 1000;
             settings.SolidBuildings = false;
             return settings;
         }
