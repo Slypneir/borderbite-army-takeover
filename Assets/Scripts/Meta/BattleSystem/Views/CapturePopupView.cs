@@ -55,7 +55,11 @@ namespace Meta.BattleSystem.Views
                 return;
 
             for (; _seen < simulation.Captures.Count; _seen++)
-                Show(simulation.Captures[_seen]);
+            {
+                // cut off land going back to grass adds nothing to anyone: no «+N%»
+                if (simulation.Captures[_seen].Side != Side.Neutral)
+                    Show(simulation.Captures[_seen]);
+            }
 
             Animate();
         }

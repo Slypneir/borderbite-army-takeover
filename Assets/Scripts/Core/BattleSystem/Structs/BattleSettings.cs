@@ -20,6 +20,8 @@ namespace Core.BattleSystem.Structs
         public int HeroBrushUnits = 2000;
         public int EnclosureEveryTicks = 1;
         public int MaxEnclosureCells = 250;
+        /// <summary>Land of a side cut off from its base and barracks goes back to grass, a piece up to the enclosure limit (owner, 4 November).</summary>
+        public bool DropCutOffLand = true;
         public int VictoryPermille = 700;
         public uint Seed = 1;
 

@@ -24,6 +24,8 @@ namespace Core.BattleSystem.Services
         private readonly Commander _enemyCommander;
         private readonly Commander _playerCommander;
         private readonly EnclosureFinder _enclosure;
+        private readonly OrphanFinder _orphans;
+        private readonly List<int[]> _dropped = new List<int[]>();
         private readonly EconomyRules _economy;
         private readonly ArmyRules _army;
         private readonly CombatRules _combat;
@@ -33,6 +35,7 @@ namespace Core.BattleSystem.Services
         {
             _state = new BattleState(settings);
             _enclosure = new EnclosureFinder(Grid.Total);
+            _orphans = new OrphanFinder(Grid.Total);
             _economy = new EconomyRules(_state);
             _army = new ArmyRules(_state);
             _combat = new CombatRules(_state, _economy);
@@ -133,6 +136,8 @@ namespace Core.BattleSystem.Services
             {
                 Enclose(Side.Player);
                 Enclose(Side.Enemy);
+                DropCutOff(Side.Enemy);
+                DropCutOff(Side.Player);
             }
 
             Decide();
@@ -405,6 +410,21 @@ namespace Core.BattleSystem.Services
             _enclosure.Enclose(Grid, side, _state.Settings.MaxEnclosureCells, _taken, _lost);
             for (var i = 0; i < _taken.Count; i++)
                 _state.Captures.Add(CaptureOf(side, _taken[i], _lost[i]));
+        }
+
+        /// <summary>
+        /// Land of a side cut off from its base and barracks goes back to grass (owner, 4 November), within the limit of the
+        /// enclosures; told as a capture of the neutral side, for the wave of the drawing.
+        /// </summary>
+        private void DropCutOff(Side side)
+        {
+            if (!_state.Settings.DropCutOffLand)
+                return;
+
+            _dropped.Clear();
+            _orphans.Drop(Grid, side, _state.Settings.MaxEnclosureCells, _dropped);
+            foreach (var cells in _dropped)
+                _state.Captures.Add(CaptureOf(Side.Neutral, cells, 0));
         }
 
         private Capture CaptureOf(Side side, int[] cells, int fromEnemy)

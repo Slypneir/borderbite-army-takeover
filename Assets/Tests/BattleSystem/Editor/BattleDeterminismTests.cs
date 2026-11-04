@@ -27,6 +27,7 @@ namespace Tests.BattleSystem.Editor
             settings.BaseGateUnits = 0;
             settings.BaseAuraCells = 0;
             settings.SolidBuildings = false;
+            settings.DropCutOffLand = false;
             return settings;
         }
 
