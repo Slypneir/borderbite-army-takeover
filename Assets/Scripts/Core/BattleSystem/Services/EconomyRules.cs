@@ -209,16 +209,16 @@ namespace Core.BattleSystem.Services
         }
 
         /// <summary>
-        /// Heroes and soldiers heal a point at a time on any land, but only out of a fight: not hurt and not striking for
-        /// <see cref="BattleSettings.HealAfterTicks"/> (T16). The first point comes then, the next ones every so many ticks:
-        /// the player's hero every 0.5 s, the enemy hero and every soldier every 1 s (owner, 4 November).
+        /// Heroes and soldiers heal a point at a time on any land, but only out of a fight: not hurt and not striking for a
+        /// while (T16) — the player's hero 1 s, the enemy hero and every soldier 2 s (task 4.14). The first point comes then, the
+        /// next ones every so many ticks: the player's hero every 0.5 s, the others every 1 s (owner, 4 November).
         /// </summary>
         private void Heal()
         {
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
-                if (!hero.Alive || hero.Health >= _settings.HeroHealthOf(hero.Side) || !HealsNow(hero.FightTick, _settings.HeroHealEveryOf(hero.Side)))
+                if (!hero.Alive || hero.Health >= _settings.HeroHealthOf(hero.Side) || !HealsNow(hero.FightTick, _settings.HeroHealAfterOf(hero.Side), _settings.HeroHealEveryOf(hero.Side)))
                     continue;
 
                 hero.Health++;
@@ -228,7 +228,7 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
-                if (soldier.Health >= _settings.SoldierHealthOf(soldier.Side) || !HealsNow(soldier.FightTick, _settings.HealEveryTicks))
+                if (soldier.Health >= _settings.SoldierHealthOf(soldier.Side) || !HealsNow(soldier.FightTick, _settings.HealAfterTicks, _settings.HealEveryTicks))
                     continue;
 
                 soldier.Health++;
@@ -236,9 +236,9 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private bool HealsNow(int fightTick, int every)
+        private bool HealsNow(int fightTick, int after, int every)
         {
-            var calm = _state.Tick - fightTick - _settings.HealAfterTicks;
+            var calm = _state.Tick - fightTick - after;
             return calm >= 0 && calm % System.Math.Max(1, every) == 0;
         }
 

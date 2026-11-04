@@ -23,7 +23,8 @@ MonoBehaviour:
   heroBrush: 2
   heroHealth: 10
   enemyHeroHealth: 7
-  healAfter: 3
+  heroHealAfter: 1
+  healAfter: 2
   heroHealEvery: 0.5
   healEvery: 1
   meleeReach: 1.2

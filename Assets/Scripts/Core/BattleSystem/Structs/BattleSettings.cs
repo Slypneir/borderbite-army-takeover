@@ -74,8 +74,10 @@ namespace Core.BattleSystem.Structs
         public int HeroHealth = 10;
         /// <summary>Health of the enemy hero, points.</summary>
         public int EnemyHeroHealth = 7;
-        /// <summary>A unit heals only out of a fight: it was not hurt and did not strike this long (T16), on any land.</summary>
-        public int HealAfterTicks = 90;
+        /// <summary>The player's hero heals only out of a fight: it was not hurt and did not strike this long (T16), on any land.</summary>
+        public int PlayerHeroHealAfterTicks = 30;
+        /// <summary>The enemy hero and the soldiers of both sides heal only after this long out of a fight (task 4.14).</summary>
+        public int HealAfterTicks = 60;
         /// <summary>Out of a fight the player's hero heals a point every this many ticks.</summary>
         public int PlayerHeroHealEveryTicks = 15;
         /// <summary>Out of a fight the enemy hero and the soldiers of both sides heal a point every this many ticks.</summary>
@@ -131,6 +133,9 @@ namespace Core.BattleSystem.Structs
 
         /// <summary>The full health of a soldier of a side: the player's grows with its upgrade.</summary>
         public int SoldierHealthOf(Enums.Side side) => side == Enums.Side.Player ? SoldierHealth + PlayerSoldierBonusHealth : SoldierHealth;
+
+        /// <summary>A hero of a side heals only after this long out of a fight.</summary>
+        public int HeroHealAfterOf(Enums.Side side) => side == Enums.Side.Player ? PlayerHeroHealAfterTicks : HealAfterTicks;
 
         /// <summary>Out of a fight a hero of a side heals a point every this many ticks.</summary>
         public int HeroHealEveryOf(Enums.Side side) => side == Enums.Side.Player ? PlayerHeroHealEveryTicks : HealEveryTicks;

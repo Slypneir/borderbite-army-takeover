@@ -313,7 +313,7 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Heal_PlayerHero_APointEveryHalfSecondThreeSecondsAfterTheFight()
+        public void Heal_PlayerHero_APointEveryHalfSecondOneSecondAfterTheFight()
         {
             var simulation = New();
             simulation.AddSoldiers(Side.Enemy, 1, 8000 + 1500, 8000);
@@ -324,8 +324,8 @@ namespace Tests.BattleSystem.Editor
             hurt.Should().BeLessThan(10);
             simulation.Soldiers.Should().BeEmpty();
 
-            // T16: not hurt and not striking for 3 s, then a point at once and a point every 0.5 s
-            Run(simulation, hero.FightTick + 89 - simulation.Tick);
+            // T16, task 4.14: not hurt and not striking for 1 s, then a point at once and a point every 0.5 s
+            Run(simulation, hero.FightTick + 29 - simulation.Tick);
             simulation.Heroes[0].Health.Should().Be(hurt);
             Run(simulation, 1);
             simulation.Heroes[0].Health.Should().Be(hurt + 1);
@@ -334,7 +334,7 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Heal_EnemySoldier_APointASecondAfterTheFight()
+        public void Heal_EnemySoldier_TwoSecondsAfterTheFight()
         {
             var settings = BattleDeterminismTests.Settings();
             settings.SoldierStepUnits = 0;
@@ -346,7 +346,7 @@ namespace Tests.BattleSystem.Editor
             var fight = simulation.Soldiers[0].FightTick;
             simulation.TeleportHero(Side.Player, 60 * Unit, 10 * Unit);
 
-            Run(simulation, fight + 89 - simulation.Tick);
+            Run(simulation, fight + 59 - simulation.Tick);
             simulation.Soldiers[0].Health.Should().Be(4);
             Run(simulation, 1);
             simulation.Soldiers[0].Health.Should().Be(5);

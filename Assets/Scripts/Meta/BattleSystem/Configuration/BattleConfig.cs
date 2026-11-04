@@ -47,8 +47,11 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Health of the enemy hero, points. Starting value: 7.")]
         [Min(1)] [SerializeField] private int enemyHeroHealth = 7;
 
-        [Tooltip("Heroes and soldiers heal only out of a fight, on any land: not hurt and not striking this long, seconds (T16). Starting value: 3.")]
-        [Min(0f)] [SerializeField] private float healAfter = 3f;
+        [Tooltip("The player's hero heals only out of a fight, on any land: not hurt and not striking this long, seconds (T16, task 4.14). Starting value: 1.")]
+        [Min(0f)] [SerializeField] private float heroHealAfter = 1f;
+
+        [Tooltip("The enemy hero and the soldiers of both sides heal only after this long out of a fight, seconds (task 4.14). Starting value: 2.")]
+        [Min(0f)] [SerializeField] private float healAfter = 2f;
 
         [Tooltip("Out of a fight the player's hero heals a point every this many seconds. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float heroHealEvery = 0.5f;
@@ -359,6 +362,7 @@ namespace Meta.BattleSystem.Configuration
 
                 HeroHealth = heroHealth,
                 EnemyHeroHealth = enemyHeroHealth,
+                PlayerHeroHealAfterTicks = Mathf.RoundToInt(heroHealAfter * ticksPerSecond),
                 HealAfterTicks = Mathf.RoundToInt(healAfter * ticksPerSecond),
                 PlayerHeroHealEveryTicks = Ticks(heroHealEvery),
                 HealEveryTicks = Ticks(healEvery),
