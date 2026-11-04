@@ -191,6 +191,13 @@ namespace Core.BattleSystem.Services
             _state.Settings.EnemyBuildFromTicks = buildFromTicks;
         }
 
+        /// <summary>The pace of the enemy of a level (task 4.23): a blow of mining and a hire every so many ticks.</summary>
+        public void SetEnemyPace(int mineCooldownTicks, int hireEveryTicks)
+        {
+            _state.Settings.EnemyMineCooldownTicks = System.Math.Max(1, mineCooldownTicks);
+            _state.Settings.EnemyHireEveryTicks = System.Math.Max(1, hireEveryTicks);
+        }
+
         /// <summary>The developer sets the health of a base, points; 0 brings it down, and the battle ends on the next tick.</summary>
         public void SetBaseHealth(Side side, int health)
         {

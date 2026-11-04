@@ -89,6 +89,23 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
+        public void Mine_EnemyHero_SlowerThanThePlayer()
+        {
+            // task 4.23: the enemy hero mines a blow every 0.4 s (12 ticks), the player every 0.25 s (8)
+            var settings = BattleDeterminismTests.Settings(layer3: true);
+            var simulation = new BattleSimulation(settings);
+            var pile = simulation.Resources.First(r => r.X > 32 * Unit);
+            simulation.TeleportHero(Side.Enemy, pile.X + 2000, pile.Y);
+            var before = simulation.SideOf(Side.Enemy).Gold + simulation.SideOf(Side.Enemy).Wood;
+
+            Run(simulation, 25);
+
+            var mined = simulation.Events.Count(e => e.Kind == EventKind.Pickup && e.Side == Side.Enemy);
+            mined.Should().Be(3);
+            (simulation.SideOf(Side.Enemy).Gold + simulation.SideOf(Side.Enemy).Wood - before).Should().Be(3);
+        }
+
+        [Test]
         public void Mine_EnemyNear_FightFirst()
         {
             var simulation = New();

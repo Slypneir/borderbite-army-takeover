@@ -122,7 +122,7 @@ namespace Core.BattleSystem.Services
                     // nothing to fight: a blow at a pile in reach mines one unit (task 4.19); it is no fight, healing goes on
                     if (_economy.Mine(hero, out var pileX, out var pileY))
                     {
-                        hero.Cooldown = _settings.MineCooldownTicks;
+                        hero.Cooldown = _settings.MineCooldownOf(hero.Side);
                         hero.FacingX = pileX - hero.X;
                         hero.FacingY = pileY - hero.Y;
                         _state.Heroes[i] = hero;
@@ -280,7 +280,8 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < state.Heroes.Count; i++)
             {
                 var hero = state.Heroes[i];
-                if (hero.Side != enemy || !hero.Alive)
+                // a hero back at home and still unhurtable is no target: the enemy strikes others (task 4.23)
+                if (hero.Side != enemy || !hero.Alive || hero.InvulnerableUntil > state.Tick)
                     continue;
 
                 var gap = Gap(x, y, hero.X, hero.Y, body + settings.HeroRadiusUnits);

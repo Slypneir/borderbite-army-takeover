@@ -207,7 +207,7 @@ namespace Core.BattleSystem.Services
                 }
 
                 purse.HireTimer++;
-                if (purse.HireTimer < _settings.HireEveryTicks)
+                if (purse.HireTimer < _settings.HireEveryOf(hero.Side))
                     continue;
 
                 purse.HireTimer = 0;

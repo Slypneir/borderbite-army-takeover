@@ -160,5 +160,37 @@ namespace Tests.BattleSystem.Editor
 
         private static double Path(HeroState hero, int x, int y) =>
             System.Math.Sqrt((double)(hero.X - x) * (hero.X - x) + (double)(hero.Y - y) * (hero.Y - y));
+
+        [Test]
+        public void Respawn_ThreeSecondsUnhurtable_NoEnemyPicksTheHero()
+        {
+            // task 4.23: back at home the hero takes no damage for 3 s, and enemy soldiers strike others meanwhile
+            var settings = BattleDeterminismTests.Settings(layer3: true);
+            settings.EnemyHero = false;
+            var simulation = new BattleSimulation(settings);
+            new BattleSettings().InvulnerableTicks.Should().Be(90);
+            var hero = simulation.Heroes[0];
+            simulation.AddSoldiers(Side.Enemy, 5, hero.X - 1500, hero.Y);
+            for (var i = 0; i < 600 && !simulation.Events.Any(e => e.Kind == EventKind.HeroRespawned); i++)
+                simulation.Step();
+            var back = simulation.Events.First(e => e.Kind == EventKind.HeroRespawned).Tick;
+            simulation.AddSoldiers(Side.Player, 1, simulation.Heroes[0].X + 1500, simulation.Heroes[0].Y);
+
+            Run(simulation, 85);
+
+            simulation.Heroes[0].Health.Should().Be(settings.HeroHealthOf(Side.Player));
+            simulation.Events.Where(e => e.Kind == EventKind.Strike && e.Side == Side.Enemy && e.Tick > back && e.Tick < back + 85)
+                .Should().OnlyContain(e => e.ToX != simulation.Heroes[0].X || e.ToY != simulation.Heroes[0].Y);
+        }
+
+        [Test]
+        public void Hire_EnemyBarracks_SlowerThanThePlayer()
+        {
+            // task 4.23: the enemy hires every 0.8 s (24 ticks), the player every 0.5 s (15)
+            var settings = BattleDeterminismTests.Settings(layer3: true);
+            new BattleSettings().HireEveryOf(Side.Enemy).Should().Be(24);
+            new BattleSettings().HireEveryOf(Side.Player).Should().Be(15);
+            new BattleSettings().MineCooldownOf(Side.Enemy).Should().Be(12);
+        }
     }
 }

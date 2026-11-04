@@ -84,8 +84,8 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("A dead hero comes back at home after this many seconds. Starting value: 3.")]
         [Min(0f)] [SerializeField] private float respawnSeconds = 3f;
 
-        [Tooltip("A hero that came back takes no damage for this many seconds. Starting value: 1.")]
-        [Min(0f)] [SerializeField] private float invulnerableSeconds = 1f;
+        [Tooltip("A hero that came back takes no damage for this many seconds. Meanwhile no enemy picks it as a target (task 4.23). Starting value: 3.")]
+        [Min(0f)] [SerializeField] private float invulnerableSeconds = 3f;
 
         [Header("Land")]
         [Tooltip("The enclosure is looked for every this many ticks; 3 is the fallback for a slow device. Starting value: 1.")]
@@ -252,10 +252,10 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The enemy of levels 1, 2, 3, … (GDD 5.9); past the last row the steps below go on.")]
         [SerializeField] private EnemyLevel[] enemyLevels =
         {
-            new EnemyLevel { speed = 0.7f, reaction = 1.5f, soldiers = 0.8f, buildFrom = 60f },
-            new EnemyLevel { speed = 0.75f, reaction = 1.3f, soldiers = 0.85f, buildFrom = 40f },
-            new EnemyLevel { speed = 0.8f, reaction = 1.1f, soldiers = 0.9f, buildFrom = 0f },
-            new EnemyLevel { speed = 0.85f, reaction = 1f, soldiers = 0.95f, buildFrom = 0f },
+            new EnemyLevel { speed = 0.7f, reaction = 1.5f, soldiers = 0.8f, buildFrom = 60f, mineEvery = 0.4f, hireEvery = 0.8f },
+            new EnemyLevel { speed = 0.75f, reaction = 1.3f, soldiers = 0.85f, buildFrom = 40f, mineEvery = 0.4f, hireEvery = 0.8f },
+            new EnemyLevel { speed = 0.8f, reaction = 1.1f, soldiers = 0.9f, buildFrom = 0f, mineEvery = 0.4f, hireEvery = 0.8f },
+            new EnemyLevel { speed = 0.85f, reaction = 1f, soldiers = 0.95f, buildFrom = 0f, mineEvery = 0.4f, hireEvery = 0.8f },
         };
 
         [Tooltip("Past the table, each level: speed +, up to the most. Starting values: +0.03, up to ×1.0.")]
@@ -290,7 +290,7 @@ namespace Meta.BattleSystem.Configuration
         {
             level = Mathf.Max(1, level);
             if (enemyLevels.Length == 0)
-                return new EnemyLevel { speed = 1f, reaction = 1f, soldiers = 1f };
+                return new EnemyLevel { speed = 1f, reaction = 1f, soldiers = 1f, mineEvery = 0.25f, hireEvery = 0.5f };
             if (level <= enemyLevels.Length)
                 return enemyLevels[level - 1];
 
@@ -302,6 +302,8 @@ namespace Meta.BattleSystem.Configuration
                 reaction = Mathf.Max(reactionStep.y, last.reaction - reactionStep.x * past),
                 soldiers = Mathf.Min(soldierStep.y, last.soldiers + soldierStep.x * past),
                 buildFrom = 0f,
+                mineEvery = last.mineEvery,
+                hireEvery = last.hireEvery,
             };
         }
 
@@ -310,6 +312,7 @@ namespace Meta.BattleSystem.Configuration
         {
             var enemy = EnemyOf(level);
             simulation.SetEnemyStrength(Mathf.RoundToInt(enemy.speed * 1000f), Ticks(enemy.reaction), Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond));
+            simulation.SetEnemyPace(PaceTicks(enemy.mineEvery, mineEvery), PaceTicks(enemy.hireEvery, hireEvery));
         }
 
         [System.Serializable]
@@ -323,6 +326,10 @@ namespace Meta.BattleSystem.Configuration
             public float soldiers;
             [Tooltip("The enemy may build from this second.")]
             public float buildFrom;
+            [Tooltip("The enemy hero mines a blow every this many seconds (task 4.23; the player's is mineEvery). 0 — as the player.")]
+            public float mineEvery;
+            [Tooltip("The enemy barracks hire a soldier every this many seconds (task 4.23; the player's is hireEvery). 0 — as the player.")]
+            public float hireEvery;
         }
 
         public BattleSettings ToSettings(uint seed)
@@ -413,6 +420,8 @@ namespace Meta.BattleSystem.Configuration
                 EnemySpeedPermille = Mathf.RoundToInt(enemy.speed * 1000f),
                 EnemyReactionTicks = Ticks(enemy.reaction),
                 EnemyBuildFromTicks = Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond),
+                EnemyMineCooldownTicks = PaceTicks(enemy.mineEvery, mineEvery),
+                EnemyHireEveryTicks = PaceTicks(enemy.hireEvery, hireEvery),
                 CommanderSightUnits = Units(commanderSight),
                 CommanderStuckTicks = Ticks(commanderStuck),
                 CommanderRetreatPermille = Mathf.RoundToInt(commanderRetreat * 10f),
@@ -424,5 +433,8 @@ namespace Meta.BattleSystem.Configuration
         private int Units(float meters) => Mathf.RoundToInt(meters * BattleSettings.UnitsPerCell / cellSize);
 
         private int Ticks(float seconds) => Mathf.Max(1, Mathf.RoundToInt(seconds * ticksPerSecond));
+
+        /// <summary>The pace of the enemy in ticks; a level without its own (0) takes the player's.</summary>
+        private int PaceTicks(float enemySeconds, float playerSeconds) => Ticks(enemySeconds > 0f ? enemySeconds : playerSeconds);
     }
 }

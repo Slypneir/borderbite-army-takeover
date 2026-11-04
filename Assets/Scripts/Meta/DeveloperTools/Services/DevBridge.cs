@@ -128,15 +128,20 @@ namespace Meta.DeveloperTools.Services
                 var built = new int[3];
                 var hired = new int[3];
                 var died = new int[3];
+                var early = new int[3];
+                var back = new[] { -1, -1, -1 };
                 foreach (var e in simulation.Events)
                 {
                     if (e.Kind == EventKind.Built) built[(int)e.Side]++;
                     if (e.Kind == EventKind.Hired) hired[(int)e.Side]++;
                     if (e.Kind == EventKind.HeroDied) died[(int)e.Side]++;
+                    if (e.Kind == EventKind.HeroRespawned) back[(int)e.Side] = e.Tick;
+                    // a death within 5 s of coming back (task 4.23: the respawn must be safe)
+                    if (e.Kind == EventKind.HeroDied && back[(int)e.Side] >= 0 && e.Tick - back[(int)e.Side] <= 5 * settings.TicksPerSecond) early[(int)e.Side]++;
                 }
 
                 lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
-                          $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]}, army {settings.ArmyMax} at {Seconds(full[1])}/{Seconds(full[2])}");
+                          $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]} (within 5 s of coming back {early[1]}/{early[2]}), army {settings.ArmyMax} at {Seconds(full[1])}/{Seconds(full[2])}");
             }
 
             return string.Join(" | ", lines);

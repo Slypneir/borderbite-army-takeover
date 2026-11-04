@@ -108,7 +108,8 @@ namespace Core.BattleSystem.Structs
         public int GunDamage = 1;
         public int GunCooldownTicks = 45;
         public int RespawnTicks = 90;
-        public int InvulnerableTicks = 30;
+        /// <summary>A hero back at home takes no damage this long, and no enemy picks it as a target meanwhile (task 4.23).</summary>
+        public int InvulnerableTicks = 90;
 
         // layer 3: bases
         public int BaseHealth = 200;
@@ -125,6 +126,10 @@ namespace Core.BattleSystem.Structs
         public int EnemySpeedPermille = 800;
         public int EnemyReactionTicks = 33;
         public int EnemyBuildFromTicks = 0;
+        /// <summary>The enemy hero mines a blow every this many ticks (task 4.23: 0.4 s on the test level; the player 0.25 s).</summary>
+        public int EnemyMineCooldownTicks = 12;
+        /// <summary>The enemy hires a soldier every this many ticks (task 4.23: 0.8 s on the test level; the player 0.5 s).</summary>
+        public int EnemyHireEveryTicks = 24;
         public int CommanderSightUnits = 24000;
         public int CommanderStuckTicks = 90;
         public int CommanderRetreatPermille = 300;
@@ -152,6 +157,12 @@ namespace Core.BattleSystem.Structs
 
         /// <summary>The full health of a soldier of a side: the player's grows with its upgrade.</summary>
         public int SoldierHealthOf(Enums.Side side) => side == Enums.Side.Player ? SoldierHealth + PlayerSoldierBonusHealth : SoldierHealth;
+
+        /// <summary>A blow of mining of the hero of a side every this many ticks: the enemy develops slower (task 4.23).</summary>
+        public int MineCooldownOf(Enums.Side side) => side == Enums.Side.Enemy ? EnemyMineCooldownTicks : MineCooldownTicks;
+
+        /// <summary>A soldier hired by a side every this many ticks: the enemy develops slower (task 4.23).</summary>
+        public int HireEveryOf(Enums.Side side) => side == Enums.Side.Enemy ? EnemyHireEveryTicks : HireEveryTicks;
 
         /// <summary>A hero of a side heals only after this long out of a fight.</summary>
         public int HeroHealAfterOf(Enums.Side side) => side == Enums.Side.Player ? PlayerHeroHealAfterTicks : HealAfterTicks;
