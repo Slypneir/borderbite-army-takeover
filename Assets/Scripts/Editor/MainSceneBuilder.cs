@@ -463,9 +463,10 @@ namespace Core.EditorTools
                 frameImage.raycastTarget = true;
                 var active = Rect(body, "Active", Vector2.zero, Vector2.one);
                 Picture(active, Icon($"btn_order_{group}_active_256"), new Color(1f, 1f, 1f, 0f));
+                // the icon is 1.15 of the button, over the frame, it may go onto the rim (owner, 4 November)
                 var icon = Rect(body, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-                icon.sizeDelta = Vector2.one * 64f;
-                var iconSprite = Icon($"icon_order_{orders[i]}_128");
+                icon.sizeDelta = Vector2.one * (button * 1.15f);
+                var iconSprite = Icon($"icon_order_{orders[i]}_256");
                 var iconImage = Picture(icon, iconSprite, Color.white);
                 iconImage.preserveAspect = true;
                 if (iconSprite == null)
@@ -493,7 +494,7 @@ namespace Core.EditorTools
                     ("strip", strip.GetComponent<Image>()), ("key", key),
                     ("frameNormal", Icon($"btn_order_{group}_normal_256")), ("frameActive", Icon($"btn_order_{group}_active_256")),
                     ("frameNormalSmall", Icon($"btn_order_{group}_normal_128")), ("frameActiveSmall", Icon($"btn_order_{group}_active_128")),
-                    ("iconLarge", iconSprite), ("iconSmall", Icon($"icon_order_{orders[i]}_64")));
+                    ("iconLarge", iconSprite), ("iconSmall", Icon($"icon_order_{orders[i]}_128")));
                 views[i] = view;
             }
 
@@ -509,6 +510,7 @@ namespace Core.EditorTools
 
             var ordersView = go.GetComponent<OrdersView>();
             var serialized = new SerializedObject(ordersView);
+            serialized.FindProperty("greyMaterial").objectReferenceValue = GreyMaterial();
             serialized.FindProperty("row").objectReferenceValue = row;
             serialized.FindProperty("toast").objectReferenceValue = toast;
             var list = serialized.FindProperty("buttons");
@@ -517,6 +519,25 @@ namespace Core.EditorTools
                 list.GetArrayElementAtIndex(i).objectReferenceValue = views[i];
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return ordersView;
+        }
+
+        /// <summary>The material of a grey UI image (shader Borderbite/UI/Grayscale), made once.</summary>
+        private static Material GreyMaterial()
+        {
+            const string path = "Assets/Materials/UI/Grayscale.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null)
+                return material;
+
+            var shader = Shader.Find("Borderbite/UI/Grayscale");
+            if (shader == null)
+                return null;
+
+            if (!AssetDatabase.IsValidFolder("Assets/Materials/UI"))
+                AssetDatabase.CreateFolder("Assets/Materials", "UI");
+            material = new Material(shader);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         /// <summary>An icon over each pile of gold and bundle of wood (battle-marks card, «Значки над картой»).</summary>

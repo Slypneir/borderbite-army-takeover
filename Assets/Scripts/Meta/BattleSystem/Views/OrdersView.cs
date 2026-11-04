@@ -16,7 +16,8 @@ namespace Meta.BattleSystem.Views
     /// buttons at the bottom of the safe area, inset 24 — in the middle on a tall screen, in the lower right corner on a wide or
     /// square one. Rally · Capture · Units · Barracks · Base, also by the keys Z X C V B (physical places); the letters show in
     /// the corners after the first key. A touch gives the order at once; the active order again frees the army (T17). The active
-    /// button: its active frame, a strip under it, ×1.08; an order without targets is grey with a dull icon, a touch shakes it
+    /// button: its active frame, a strip under it, ×1.08; an order without targets has a grey frame (a grey material) and a dull
+    /// icon, a touch shakes it
     /// and says «Нет целей». When the order turns to «Ко мне» by itself (T18) the light moves over in 0.3 s and «Ко мне» pulses
     /// once. The name of a chosen order shows over the row for 1.2 s. The stick does not start on the row and 16 around it (a
     /// transparent catcher). Under a window the row hides with the marks (<see cref="BattleLayersView"/>).
@@ -43,6 +44,9 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private RectTransform row;
         [SerializeField] private OrderButtonView[] buttons;
         [SerializeField] private TMP_Text toast;
+
+        [Tooltip("Shader Borderbite/UI/Grayscale: the frame of an order without targets, grey (UI review of 4.18).")]
+        [SerializeField] private Material greyMaterial;
 
         private readonly float[] _light = new float[5];
         private readonly float[] _pressed = new float[5];
@@ -202,7 +206,9 @@ namespace Meta.BattleSystem.Views
                 button.Body.localScale = Vector3.one * (Mathf.Lerp(1f, ActiveScale, light) * press * pulse);
                 button.Body.anchoredPosition = new Vector2(_shake[i] > 0f ? Mathf.Sin(_shake[i] * 80f) * 6f * (_shake[i] / ShakeSeconds) : 0f, 0f);
 
-                button.Frame.color = targets ? Color.white : Grey;
+                // no targets: the frame and its ground grey by luminance, the icon dull
+                button.Frame.material = targets || greyMaterial == null ? null : greyMaterial;
+                button.Frame.color = targets || greyMaterial != null ? Color.white : Grey;
                 button.ActiveFrame.color = new Color(1f, 1f, 1f, light);
                 button.Icon.color = new Color(1f, 1f, 1f, targets ? 1f : DullIcon);
                 button.Strip.color = new Color(button.Strip.color.r, button.Strip.color.g, button.Strip.color.b, light);
