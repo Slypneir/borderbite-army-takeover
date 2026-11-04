@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: ScreenLayoutConfig
   m_EditorClassIdentifier: Assembly-CSharp::Core.ScreenSystem.Configuration.ScreenLayoutConfig
   visibleShortSide: 16
-  tilt: 60
+  tilt: 50
