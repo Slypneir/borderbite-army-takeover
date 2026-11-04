@@ -8,6 +8,7 @@
 | --- | --- |
 | Компиляция | `{"commands":[{"op":"refresh","compile":true}]}`, затем опрос `consoleCounts` до `isCompiling: false` |
 | Разрешить пакеты после правки `manifest.json` | `call` на `UnityEditor.PackageManager.Client, UnityEditor.CoreModule`, метод `Resolve` |
+| Модели художника | `call` на `Core.EditorTools.ModelLibrary, Assembly-CSharp-Editor`: `Build` (префабы из `.glb`, входит в `BuildEverything`), `Describe(id)` (узлы, позиции, размеры) |
 | Собрать всё с чистой копии | `call` на `Core.EditorTools.ProjectSetup, Assembly-CSharp-Editor`, метод `BuildEverything`; первый запуск импортирует TMP Essentials, запустить второй раз |
 | EditMode-тесты | `call` на `Core.EditorTools.AgentTestRunner, Assembly-CSharp-Editor`, метод `Run`, `args:[null]` → `EditorBridge/test_results.json` |
 | Скрипты под все площадки | `call` на `Core.EditorTools.PlatformBuild, Assembly-CSharp-Editor`, метод `CheckScripts` |
@@ -26,7 +27,8 @@
 - Операции `exists` в мосте нет (только `assert` с `kind:"exists"`); `find` не видит объекты в `DontDestroyOnLoad` — для них `eval` с `GameObject.Find`.
 - В Play Mode один пакет отвечает за 1–3,5 с: путь героя задавать `WalkTicks`/`WalkPath`, а короткие моменты (волна окружения) ловить `FreezeAfterCapture`, а не `sleep`.
 - `click`/`mouseDrag` моста идут в EventSystem мимо Input System: стик ими не проверить, только `InputScript`.
-- Встроенный меш `Capsule.fbx` — 2 × 4 × 2 единицы (а `Cube.fbx` — 1 × 1 × 1): масштаб капсулы делить пополам.
+- Встроенный меш `Capsule.fbx` — 2 × 4 × 2 единицы (а `Cube.fbx` — 1 × 1 × 1): масштаб капсулы делить пополам (заглушки без моделей).
+- glTFast отражает ось x модели: «левое» и «правое» у частей сохраняются, но угол берега после импорта закрывает −x, +z.
 - Без символа площадки сборка плеера не компилируется намеренно: собирать только через `Tools/Build`.
 
 ## Проверка сборки в браузере
