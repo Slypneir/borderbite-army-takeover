@@ -7,8 +7,9 @@ using VContainer.Unity;
 namespace Meta.BattleSystem.Services
 {
     /// <summary>
-    /// Short effects of the battle, copies of templates kept for reuse: the trace of a shot from the muzzle to the target and the
-    /// cubes a fallen soldier, hero or barracks breaks into (a cartoon war without blood).
+    /// Short effects of the battle, copies of templates kept for reuse: the trace of a shot from the muzzle to the target, the
+    /// cubes a fallen barracks breaks into, and the death of a unit (task 4.13): the pieces of the 3D artist fly apart, the
+    /// cloth in the colour of the side, with a burst of dust, both clips once, 1 s (a cartoon war without blood).
     /// </summary>
     public sealed class EffectsView : ILateTickable
     {
@@ -19,6 +20,7 @@ namespace Meta.BattleSystem.Services
         private readonly ViewMaterials _materials;
         private readonly List<Piece> _pieces = new List<Piece>();
         private readonly List<Piece> _shots = new List<Piece>();
+        private readonly Dictionary<Transform, List<Piece>> _clips = new Dictionary<Transform, List<Piece>>();
         private uint _random = 0x9E3779B9u;
 
         public EffectsView(BattleViewConfig view, BattleWorld world, ViewMaterials materials)
@@ -40,6 +42,48 @@ namespace Meta.BattleSystem.Services
                 piece.Age = 0f;
                 piece.Life = _view.DebrisSeconds;
                 _materials.Paint(piece.Transform, color);
+            }
+        }
+
+        /// <summary>
+        /// A unit falls at <paramref name="position"/>, turned as it stood: its pieces (<paramref name="pieces"/>, the cloth
+        /// tinted) and the dust play their clips once and go. Without the models of the artist it breaks into cubes.
+        /// </summary>
+        public void Death(Transform pieces, Vector3 position, Quaternion rotation, Color color, int cubes, float size)
+        {
+            if (pieces == null)
+            {
+                Debris(position, color, cubes, size);
+                return;
+            }
+
+            Play(pieces, position, rotation, color);
+            if (_world.DustTemplate != null)
+                Play(_world.DustTemplate, position, Quaternion.Euler(0f, Next() * 360f, 0f), null);
+        }
+
+        private void Play(Transform template, Vector3 position, Quaternion rotation, Color? color)
+        {
+            if (!_clips.TryGetValue(template, out var pool))
+            {
+                pool = new List<Piece>();
+                _clips[template] = pool;
+            }
+
+            var piece = Free(pool, template);
+            piece.Transform.localPosition = position;
+            piece.Transform.localRotation = rotation;
+            if (color.HasValue)
+                _materials.Tint(piece.Transform, color.Value);
+
+            piece.Age = 0f;
+            piece.Life = 1f;
+            piece.Animation ??= piece.Transform.GetComponentInChildren<Animation>(true);
+            if (piece.Animation != null && piece.Animation.clip != null)
+            {
+                piece.Life = piece.Animation.clip.length;
+                piece.Animation.Stop();
+                piece.Animation.Play(piece.Animation.clip.name);
             }
         }
 
@@ -78,6 +122,19 @@ namespace Meta.BattleSystem.Services
                     piece.Transform.localScale *= 1f - Mathf.Clamp01(dt / (piece.Life * 0.4f));
                 if (piece.Age >= piece.Life)
                     piece.Transform.gameObject.SetActive(false);
+            }
+
+            foreach (var pool in _clips.Values)
+            {
+                foreach (var played in pool)
+                {
+                    if (!played.Transform.gameObject.activeSelf)
+                        continue;
+
+                    played.Age += dt;
+                    if (played.Age >= played.Life)
+                        played.Transform.gameObject.SetActive(false);
+                }
             }
 
             foreach (var shot in _shots)
@@ -125,6 +182,7 @@ namespace Meta.BattleSystem.Services
             public Vector3 Velocity;
             public float Age;
             public float Life;
+            public Animation Animation;
         }
     }
 }

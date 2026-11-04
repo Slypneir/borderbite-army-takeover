@@ -6,7 +6,8 @@ namespace Meta.BattleSystem.Views
     /// The objects of the battle in the scene, placed by Editor/MainSceneBuilder; the services of the battle size and colour
     /// them from the configs. The map lies on the ground plane: x of the map is world x, y of the map is world z. The templates
     /// are inactive copies of the models of the 3D artist (Editor/ModelLibrary), or placeholders of boxes where a model is
-    /// missing; the views copy them: soldiers, piles, places, barracks, the shore and rocks, debris, shots.
+    /// missing; the views copy them: soldiers, piles, places, barracks, the shore and rocks, debris, shots, and the deaths of
+    /// units — the pieces of a soldier or a hero and a burst of dust — where the artist made them.
     /// </summary>
     public sealed class BattleWorld : MonoBehaviour
     {
@@ -26,6 +27,9 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private Transform[] rockTemplates;
         [SerializeField] private Transform debrisTemplate;
         [SerializeField] private Transform shotTemplate;
+        [SerializeField] private Transform soldierDeathTemplate;
+        [SerializeField] private Transform heroDeathTemplate;
+        [SerializeField] private Transform dustTemplate;
 
         public MeshRenderer Surface => surface;
         public MeshRenderer Island => island;
@@ -44,6 +48,11 @@ namespace Meta.BattleSystem.Views
         public Transform[] RockTemplates => rockTemplates;
         public Transform DebrisTemplate => debrisTemplate;
         public Transform ShotTemplate => shotTemplate;
+        /// <summary>The pieces a soldier breaks into (clip `shatter`), or null: then cubes.</summary>
+        public Transform SoldierDeathTemplate => soldierDeathTemplate;
+        public Transform HeroDeathTemplate => heroDeathTemplate;
+        /// <summary>The dust that bursts where a unit falls (clip `burst`), or null.</summary>
+        public Transform DustTemplate => dustTemplate;
 
         /// <summary>A live copy of a template under the world.</summary>
         public Transform Copy(Transform template)

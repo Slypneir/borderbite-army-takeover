@@ -38,6 +38,9 @@ namespace Core.EditorTools
             { "base", "Assets/Models/Buildings/base.glb" },
             { "gold_pile", "Assets/Models/Pickups/gold_pile.glb" },
             { "wood_bundle", "Assets/Models/Pickups/wood_bundle.glb" },
+            { "soldier_debris", "Assets/Models/Effects/soldier_debris.glb" },
+            { "hero_debris", "Assets/Models/Effects/hero_debris.glb" },
+            { "fx_dust_burst", "Assets/Models/Effects/fx_dust_burst.glb" },
         };
 
         /// <summary>The prefab of a model, or null when it was not built (then the scene keeps its placeholder).</summary>
@@ -73,6 +76,27 @@ namespace Core.EditorTools
                     triangles += mesh == null ? 0 : (int)(mesh.GetIndexCount(0) / 3);
                 }
 
+                // the effects are one skinned mesh of several materials, a bone a piece, played by a legacy clip
+                foreach (var skinned in copy.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    var materials = skinned.sharedMaterials;
+                    for (var i = 0; i < materials.Length; i++)
+                        materials[i] = SlotMaterialOf(materials[i], shader);
+                    skinned.sharedMaterials = materials;
+                    skinned.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    skinned.receiveShadows = false;
+                    skinned.updateWhenOffscreen = true;
+                    var mesh = skinned.sharedMesh;
+                    for (var i = 0; mesh != null && i < mesh.subMeshCount; i++)
+                        triangles += (int)(mesh.GetIndexCount(i) / 3);
+                }
+
+                foreach (var animation in copy.GetComponentsInChildren<Animation>(true))
+                {
+                    animation.playAutomatically = false;
+                    animation.wrapMode = WrapMode.Once;
+                }
+
                 PrefabUtility.SaveAsPrefabAsset(copy, PrefabFolder + pair.Key + ".prefab");
                 Object.DestroyImmediate(copy);
                 report.Append($"{pair.Key}: {triangles} tris; ");
@@ -98,6 +122,21 @@ namespace Core.EditorTools
                 text.Append($"{node.name}<{(node.parent == null ? "-" : node.parent.name)}> {node.localPosition} s{node.lossyScale}{bounds}; ");
             }
 
+            foreach (var skinned in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                text.Append($"skinned {skinned.name}: bones {skinned.bones.Length}, materials ");
+                foreach (var material in skinned.sharedMaterials)
+                    text.Append((material == null ? "null" : material.name) + " ");
+                text.Append("; ");
+            }
+
+            foreach (var animation in prefab.GetComponentsInChildren<Animation>(true))
+            {
+                text.Append($"animation on {animation.name}: ");
+                foreach (AnimationState state in animation)
+                    text.Append($"{state.name} {state.length:0.00}s legacy {state.clip.legacy}; ");
+            }
+
             return text.ToString();
         }
 
@@ -113,6 +152,26 @@ namespace Core.EditorTools
 
             material.shader = shader;
             material.SetTexture(BaseMapId, TextureOf(renderer.sharedMaterial));
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        /// <summary>A material of the game for a slot of a skinned effect, named as the material of the model (`…_paint` is tinted).</summary>
+        private static Material SlotMaterialOf(Material source, Shader shader)
+        {
+            if (source == null)
+                return null;
+
+            var path = MaterialFolder + source.name + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.shader = shader;
+            material.SetTexture(BaseMapId, TextureOf(source));
             EditorUtility.SetDirty(material);
             return material;
         }

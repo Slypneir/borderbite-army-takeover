@@ -14,7 +14,7 @@ namespace Meta.BattleSystem.Services
     /// <summary>
     /// Draws the soldiers between the last two ticks, a copy of the template per soldier with its `paint` parts in the colour
     /// of its side, turned to where it goes or strikes; legs step, the weapon arm swings a blow. A fallen soldier breaks into
-    /// cubes.
+    /// the pieces of the artist with a burst of dust (task 4.13), turned as it stood.
     /// </summary>
     public sealed class SoldiersView : ILateTickable
     {
@@ -28,6 +28,7 @@ namespace Meta.BattleSystem.Services
         private readonly Stack<Transform> _free = new Stack<Transform>();
         private readonly HashSet<int> _alive = new HashSet<int>();
         private readonly List<int> _gone = new List<int>();
+        private readonly Dictionary<int, Quaternion> _fallen = new Dictionary<int, Quaternion>();
         private readonly Dictionary<Transform, UnitPose> _poses = new Dictionary<Transform, UnitPose>();
         private BattleRunner _runner;
         private EventCursor _events;
@@ -80,6 +81,7 @@ namespace Meta.BattleSystem.Services
             foreach (var body in _bodies.Values)
                 Release(body.Transform);
             _bodies.Clear();
+            _fallen.Clear();
             _runner = runner;
             _runner.OnStep += Step;
             Step();
@@ -121,6 +123,8 @@ namespace Meta.BattleSystem.Services
 
             foreach (var id in _gone)
             {
+                // the event of its death is read after this step: keep how it stood
+                _fallen[id] = _bodies[id].Transform.localRotation;
                 Release(_bodies[id].Transform);
                 _bodies.Remove(id);
             }
@@ -129,7 +133,11 @@ namespace Meta.BattleSystem.Services
         private void Handle(BattleEvent battleEvent)
         {
             if (battleEvent.Kind == EventKind.SoldierDied)
-                _effects.Debris(WorldOf(battleEvent.X, battleEvent.Y), _view.SoldierColor(battleEvent.Side), 6, 0.6f);
+            {
+                var rotation = _fallen.TryGetValue(battleEvent.Id, out var stood) ? stood : Quaternion.identity;
+                _fallen.Remove(battleEvent.Id);
+                _effects.Death(_world.SoldierDeathTemplate, WorldOf(battleEvent.X, battleEvent.Y), rotation, _view.SoldierColor(battleEvent.Side), 6, 0.6f);
+            }
             else if (battleEvent.Kind == EventKind.Strike && _bodies.TryGetValue(battleEvent.Id, out var body))
                 body.Pose.Blow();
         }

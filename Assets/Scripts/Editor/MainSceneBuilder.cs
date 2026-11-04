@@ -176,6 +176,9 @@ namespace Core.EditorTools
                 ("Cube", "Cube.fbx", Vector3.zero, Vector3.one));
             serialized.FindProperty("shotTemplate").objectReferenceValue = Template(templates, "Shot",
                 ("Trace", "Cube.fbx", Vector3.zero, Vector3.one));
+            serialized.FindProperty("soldierDeathTemplate").objectReferenceValue = Model(templates, "soldier_debris", false);
+            serialized.FindProperty("heroDeathTemplate").objectReferenceValue = Model(templates, "hero_debris", false);
+            serialized.FindProperty("dustTemplate").objectReferenceValue = Model(templates, "fx_dust_burst", false);
             serialized.FindProperty("surface").objectReferenceValue = surface;
             serialized.FindProperty("island").objectReferenceValue = island;
             serialized.FindProperty("water").objectReferenceValue = water;

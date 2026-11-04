@@ -192,7 +192,8 @@ namespace Meta.BattleSystem.Services
                     Face(body, battleEvent);
                     break;
                 case EventKind.HeroDied when body != null:
-                    _effects.Debris(Meters(battleEvent.X, battleEvent.Y), _view.HeroColor(battleEvent.Side), 10, 1f);
+                    _effects.Death(_world.HeroDeathTemplate, Meters(battleEvent.X, battleEvent.Y), body.Transform.localRotation,
+                        _view.HeroColor(battleEvent.Side), 10, 1f);
                     break;
                 case EventKind.HeroRespawned when body != null:
                     // back at home at once, not a slide from where it fell

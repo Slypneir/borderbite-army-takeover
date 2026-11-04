@@ -413,6 +413,34 @@ namespace Meta.DeveloperTools.Services
             runner.OnStep += Check;
             return "waiting for a capture";
         }
+
+        /// <summary>
+        /// The next death of a unit (HeroDied, or SoldierDied with <paramref name="soldiers"/>) pauses the game this many seconds
+        /// after it: the pieces and the dust (task 4.13) stay on the screen for a screenshot despite the slow bridge.
+        /// </summary>
+        public static string FreezeAfterDeath(float seconds, bool soldiers)
+        {
+            _debug.QuietFreeze = true;
+            var runner = _battle.Current;
+            var seen = runner.Simulation.Events.Count;
+            void Check()
+            {
+                var events = runner.Simulation.Events;
+                var died = false;
+                for (var i = System.Math.Min(seen, events.Count); i < events.Count && !died; i++)
+                    died = events[i].Kind == EventKind.HeroDied || (soldiers && events[i].Kind == EventKind.SoldierDied);
+                seen = events.Count;
+                if (!died)
+                    return;
+
+                runner.OnStep -= Check;
+                UniTask.Delay(System.TimeSpan.FromSeconds(seconds), DelayType.Realtime)
+                    .ContinueWith(() => ((EditorPlatform)_platform).SimulatePause(true)).Forget();
+            }
+
+            runner.OnStep += Check;
+            return "waiting for a death";
+        }
 #endif
     }
 }
