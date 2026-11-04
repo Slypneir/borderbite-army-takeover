@@ -33,6 +33,8 @@ namespace Core.EditorTools
         private const string CellsMaterialPath = "Assets/Materials/Battle/Cells.mat";
         public const string SurfaceConfigPath = "Assets/ScriptableObjects/Battle/SurfaceConfig.asset";
         private const string SurfaceFolder = "Assets/Textures/Surface/";
+        private const string WaterFolder = "Assets/Textures/Water/";
+        private const string WaterMaterialPath = "Assets/Materials/Battle/Water.mat";
         public const string FlatMaterialPath = "Assets/Materials/Placeholder/FlatShaded.mat";
         private const string AudioFolder = "Assets/Audio/";
         public const string FontAsset = "Assets/Fonts/PTSans-Regular SDF.asset";
@@ -79,6 +81,7 @@ namespace Core.EditorTools
             Create<MoveStickConfig>(MoveStickConfigPath);
             BattleView();
             Surface();
+            Water();
             Sounds();
             Circle();
             AssetDatabase.SaveAssets();
@@ -160,6 +163,76 @@ namespace Core.EditorTools
             if (view.Surface != config)
             {
                 view.SetSurfaceForEditor(config);
+                EditorUtility.SetDirty(view);
+            }
+        }
+
+        /// <summary>
+        /// The sea of the 3D artist: water_foam.png as linear data (point, repeat), and the material Water.mat with every number
+        /// of water.json. The json is the source: to tune the sea, change it (or the material, then the json too).
+        /// </summary>
+        private static void Water()
+        {
+            var foamPath = WaterFolder + "water_foam.png";
+            if (AssetImporter.GetAtPath(foamPath) is TextureImporter importer && (importer.sRGBTexture || importer.filterMode != FilterMode.Point
+                || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
+                || importer.wrapMode != TextureWrapMode.Repeat || importer.npotScale != TextureImporterNPOTScale.None))
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = false;
+                importer.alphaIsTransparency = false;
+                importer.filterMode = FilterMode.Point;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.SaveAndReimport();
+            }
+
+            var json = AssetDatabase.LoadAssetAtPath<TextAsset>(WaterFolder + "water.json");
+            var foam = AssetDatabase.LoadAssetAtPath<Texture2D>(foamPath);
+            if (json == null || foam == null)
+                return;
+
+            var material = MaterialAsset(WaterMaterialPath, "Borderbite/World/Water");
+            material.shader = Shader.Find("Borderbite/World/Water");
+            var data = JObject.Parse(json.text);
+            material.SetTexture("_FoamTex", foam);
+            foreach (var (property, key) in new[]
+                     {
+                         ("_Shallow", "shallow"), ("_Deep", "deep"), ("_Abyss", "abyss"), ("_Crest", "crest"), ("_Foam", "foam"),
+                         ("_FoamRim", "foamRim"),
+                     })
+            {
+                if (ColorUtility.TryParseHtmlString((string)data[key], out var color))
+                    material.SetColor(property, color);
+            }
+
+            material.SetFloat("_PixelsPerMeter", (float?)data["pxPerM"] ?? 8f);
+            material.SetFloat("_AbyssFrom", (float)data["abyssFrom"]);
+            material.SetFloat("_AbyssTo", (float)data["abyssTo"]);
+            material.SetFloat("_ShoreLip", (float)data["shoreLip"]);
+            material.SetFloat("_Slope", (float)data["slope"]);
+            material.SetFloat("_RockSlope", (float)data["rockSlope"]);
+            material.SetFloat("_FullDepth", (float)data["fullDepth"]);
+            material.SetFloat("_AlphaEdge", (float)data["alphaEdge"]);
+            var swell = data["swell"];
+            material.SetVector("_Swell", new Vector4((float)swell["length"], (float)swell["period"], (float)swell["warp"], (float)swell["strength"]));
+            material.SetVector("_SwellRange", new Vector4((float)swell["from"], (float)swell["to"], 0f, 0f));
+            var caps = data["caps"];
+            material.SetVector("_Caps", new Vector4((float)caps["tile"], (float)caps["period"], (float)caps["life"], (float)caps["strength"]));
+            material.SetFloat("_CapsFrom", (float)caps["from"]);
+            var shore = data["shoreFoam"];
+            material.SetVector("_ShoreFoam", new Vector4((float)shore["min"], (float)shore["max"], (float)shore["period"], (float)shore["lace"]));
+            material.SetFloat("_ShoreFoamAlpha", (float)shore["alpha"]);
+            var rocks = data["rockRadius"];
+            material.SetVector("_RockRadii", new Vector4((float)rocks["rock_small"], (float)rocks["rock_large"], (float)rocks["rock_tall"], 0f));
+            EditorUtility.SetDirty(material);
+
+            var view = AssetDatabase.LoadAssetAtPath<BattleViewConfig>(BattleViewConfigPath);
+            if (view.WaterMaterial != material)
+            {
+                view.SetWaterForEditor(material);
                 EditorUtility.SetDirty(view);
             }
         }

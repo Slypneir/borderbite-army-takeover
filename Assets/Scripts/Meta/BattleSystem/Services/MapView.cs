@@ -29,6 +29,11 @@ namespace Meta.BattleSystem.Services
         private static readonly int LightenId = Shader.PropertyToID("_Lighten");
         private static readonly int PaintAlphaId = Shader.PropertyToID("_PaintAlpha");
         private static readonly int LumMeanId = Shader.PropertyToID("_LumMean");
+        private static readonly int MapSizeId = Shader.PropertyToID("_MapSize");
+        private static readonly int RocksId = Shader.PropertyToID("_Rocks");
+        private static readonly int RockCountId = Shader.PropertyToID("_RockCount");
+        private static readonly int RockRadiiId = Shader.PropertyToID("_RockRadii");
+        private const int MaxRocks = 16;
 
         private readonly BattleViewConfig _view;
         private readonly BattleConfig _rules;
@@ -146,7 +151,8 @@ namespace Meta.BattleSystem.Services
             _world.Island.transform.localScale = new Vector3(mapSize, depth, mapSize);
 
             // water to the horizon: far wider than any view of the orthographic camera
-            _world.Water.sharedMaterial = Flat(_view.WaterColor);
+            _world.Water.sharedMaterial = _view.WaterMaterial != null ? Copy(_view.WaterMaterial) : Flat(_view.WaterColor);
+            _world.Water.sharedMaterial.SetFloat(MapSizeId, mapSize);
             _world.Water.transform.localPosition = new Vector3(mapSize / 2f, -_view.WaterDepth, mapSize / 2f);
             _world.Water.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             _world.Water.transform.localScale = new Vector3(mapSize * 20f, mapSize * 20f, 1f);
@@ -195,11 +201,32 @@ namespace Meta.BattleSystem.Services
                 new Vector2(8f, mapSize + 2.6f), new Vector2(-3.4f, mapSize + 3.4f), new Vector2(mapSize + 3.4f, -3.4f),
             };
             var bottom = -_view.WaterDepth - 0.5f;
+            var water = _world.Water.sharedMaterial;
+            var radii = water.HasProperty(RockRadiiId) ? water.GetVector(RockRadiiId) : Vector4.zero;
+            var circles = new Vector4[MaxRocks];
+            var count = Mathf.Min(spots.Length, MaxRocks);
             for (var i = 0; i < spots.Length; i++)
             {
-                var rock = Place(rocks[i % rocks.Length], new Vector3(spots[i].x, bottom, spots[i].y), i * 47f);
-                rock.localScale = Vector3.one * (0.8f + 0.1f * (i % 4));
+                var template = rocks[i % rocks.Length];
+                var scale = 0.8f + 0.1f * (i % 4);
+                var rock = Place(template, new Vector3(spots[i].x, bottom, spots[i].y), i * 47f);
+                rock.localScale = Vector3.one * scale;
+                if (i < MaxRocks)
+                    circles[i] = new Vector4(spots[i].x, spots[i].y, RockRadius(template.name, radii) * scale, 0f);
             }
+
+            // the sea foams around the rocks: circles at the water line, radii of the 3D artist (water.json)
+            water.SetVectorArray(RocksId, circles);
+            water.SetFloat(RockCountId, count);
+        }
+
+        private static float RockRadius(string name, Vector4 radii)
+        {
+            if (name.Contains("large"))
+                return radii.y;
+            if (name.Contains("tall"))
+                return radii.z;
+            return radii.x;
         }
 
         private Transform Place(Transform template, Vector3 position, float yaw)

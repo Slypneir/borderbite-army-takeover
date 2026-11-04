@@ -117,6 +117,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The material of placeholders: shader Borderbite/World/Flat Lit; each view takes a copy in its colour.")]
         [SerializeField] private Material flatMaterial;
 
+        [Tooltip("The sea: shader Borderbite/World/Water, its numbers from Assets/Textures/Water/water.json (ProjectSetup).")]
+        [SerializeField] private Material waterMaterial;
+
         [Tooltip("Shader Borderbite/World/Flat Lit Outlined: units take copies of their materials with it and the rim of their side.")]
         [SerializeField] private Shader outlinedShader;
 
@@ -149,6 +152,7 @@ namespace Meta.BattleSystem.Configuration
             side == Core.BattleSystem.Enums.Side.Player ? playerOutline : enemyOutline;
         public float OutlineWidth => outlineWidth;
         public Shader OutlinedShader => outlinedShader;
+        public Material WaterMaterial => waterMaterial;
         public float TurnSpeed => turnSpeed;
         public float AttackFaceSeconds => attackFaceSeconds;
         public float IslandDepth => islandDepth;
@@ -174,6 +178,8 @@ namespace Meta.BattleSystem.Configuration
         public void SetSurfaceForEditor(SurfaceConfig config) => surface = config;
 
         public void SetOutlinedShaderForEditor(Shader shader) => outlinedShader = shader;
+
+        public void SetWaterForEditor(Material material) => waterMaterial = material;
 #endif
     }
 }

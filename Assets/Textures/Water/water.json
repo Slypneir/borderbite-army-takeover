@@ -1,0 +1,50 @@
+{
+  "note": "The sea shader: models/borderbite/_water.js shade() is the reference; README.md has it as pseudo-HLSL. Lengths in metres, times in seconds, colours sRGB.",
+  "pxPerM": 8,
+  "shallow": "#4fa9a0",
+  "deep": "#2f8487",
+  "abyss": "#25696d",
+  "crest": "#5fb3a8",
+  "foam": "#dcebe4",
+  "foamRim": "#a9d6cc",
+  "under": [
+    0.5,
+    0.78,
+    0.76
+  ],
+  "abyssFrom": 2,
+  "abyssTo": 14,
+  "shoreLip": 0.45,
+  "slope": 1,
+  "rockSlope": 2.2,
+  "fullDepth": 1.2,
+  "alphaEdge": 0.35,
+  "swell": {
+    "length": 2.5,
+    "period": 3,
+    "warp": 0.9,
+    "strength": 0.32,
+    "from": 0.8,
+    "to": 2.6
+  },
+  "caps": {
+    "tile": 64,
+    "period": 3,
+    "life": 0.5,
+    "from": 1.6,
+    "strength": 0.85
+  },
+  "shoreFoam": {
+    "min": 0.08,
+    "max": 0.3,
+    "period": 3,
+    "lace": 0.14,
+    "alpha": 0.9
+  },
+  "loop": 6,
+  "rockRadius": {
+    "rock_small": 0.315,
+    "rock_large": 0.773,
+    "rock_tall": 0.635
+  }
+}
