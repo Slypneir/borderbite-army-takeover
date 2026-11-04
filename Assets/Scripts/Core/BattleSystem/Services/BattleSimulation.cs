@@ -90,6 +90,9 @@ namespace Core.BattleSystem.Services
 
         public int ArmyOf(Side side) => _state.ArmyOf(side);
 
+        /// <summary>The order the army of a side follows now (spec 3.8).</summary>
+        public ArmyOrder OrderOf(Side side) => _state.Sides[(int)side].Order;
+
         /// <summary>Queues a command for a future tick; a command for a past tick is refused, or two runs could differ.</summary>
         public bool Enqueue(BattleCommand command)
         {
@@ -249,6 +252,7 @@ namespace Core.BattleSystem.Services
             foreach (var side in _state.Sides)
             {
                 hash = Mix(hash, side.Gold);
+                hash = Mix(hash, (int)side.Order);
                 hash = Mix(hash, side.Wood);
             }
 
@@ -307,6 +311,18 @@ namespace Core.BattleSystem.Services
             {
                 var command = _commands[0];
                 _commands.RemoveAt(0);
+                if (command.IsOrder)
+                {
+                    // the enemy gets no orders (spec 3.8); the same order again is the free attack (T17)
+                    if (command.Side != Side.Enemy)
+                    {
+                        var order = _state.Sides[(int)command.Side].Order == command.Order ? ArmyOrder.Free : command.Order;
+                        _army.SetOrder(command.Side, order, false);
+                    }
+
+                    continue;
+                }
+
                 for (var i = 0; i < _state.Heroes.Count; i++)
                 {
                     if (_state.Heroes[i].Side != command.Side || (command.Side == Side.Player && _state.Settings.PlayerAutopilot))

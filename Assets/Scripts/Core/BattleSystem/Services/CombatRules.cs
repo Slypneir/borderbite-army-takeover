@@ -136,7 +136,7 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
-                if (soldier.Cooldown > 0 || !NearestTarget(_state, soldier.Side, soldier.X, soldier.Y, reach, _settings.SoldierBodyUnits, out var target))
+                if (soldier.Cooldown > 0 || !SoldierTarget(_state, soldier, reach, out var target))
                     continue;
 
                 soldier.Cooldown = _settings.SoldierCooldownTicks;
@@ -218,6 +218,38 @@ namespace Core.BattleSystem.Services
             {
                 _state.Emit(EventKind.Destroyed, side, -1, 0, place.X, place.Y);
                 _economy.ProtectBase(side);
+            }
+        }
+
+        /// <summary>
+        /// What a soldier strikes within reach under the order of its side (spec 3.8): «Казармы» only a barracks, «Штаб» only the
+        /// base, «Бойцы» and «Захват» only units; no order or «Ко мне» — a unit first, else a building.
+        /// </summary>
+        private static bool SoldierTarget(BattleState state, SoldierState soldier, int reach, out Target target)
+        {
+            var body = state.Settings.SoldierBodyUnits;
+            var x = soldier.X;
+            var y = soldier.Y;
+            switch (state.Sides[(int)soldier.Side].Order)
+            {
+                case ArmyOrder.Barracks:
+                    return NearestBarracks(state, soldier.Side, x, y, reach, body, out target);
+                case ArmyOrder.Base:
+                {
+                    target = default;
+                    var enemy = BattleState.Enemy(soldier.Side);
+                    var place = state.Bases[(int)enemy];
+                    if (!place.Standing || Gap(x, y, place.X, place.Y, body + state.Settings.BaseHalfUnits) > reach)
+                        return false;
+
+                    target = new Target { Kind = TargetKind.Base, Index = (int)enemy, X = place.X, Y = place.Y };
+                    return true;
+                }
+                case ArmyOrder.Units:
+                case ArmyOrder.Capture:
+                    return NearestUnit(state, soldier.Side, x, y, reach, body, out target);
+                default:
+                    return NearestTarget(state, soldier.Side, x, y, reach, body, out target);
             }
         }
 

@@ -14,5 +14,8 @@ namespace Core.BattleSystem.Enums
         Hired,
         /// <summary>A barracks (Id: the place) or a base (Id: -1) of the side was hit; Value is the health left.</summary>
         BuildingHit,
+        /// <summary>The order of the army of the side changed; Value is the new <see cref="ArmyOrder"/>, Id 1 when it changed by
+        /// itself (no targets left, T18), 0 by a command.</summary>
+        OrderChanged,
     }
 }

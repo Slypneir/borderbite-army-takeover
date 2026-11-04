@@ -73,6 +73,8 @@ namespace Core.BattleSystem.Structs
         public int SoldierLeashUnits = 16000;
         /// <summary>Places in the crowd around the hero are this far apart: the crowd keeps within 1–4 m.</summary>
         public int SlotSpacingUnits = 2000;
+        /// <summary>Under the order «Захват» two soldiers never aim at cells closer than this, cells: they do not follow each other.</summary>
+        public int CaptureSpacingCells = 3;
         public int SoldierSpacingUnits = 1000;
         /// <summary>Radius of the body of a soldier: reaches are measured from the edge of a body to the edge of another.</summary>
         public int SoldierBodyUnits = 500;

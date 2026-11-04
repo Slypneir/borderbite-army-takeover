@@ -200,6 +200,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Places in the crowd around the hero are this far apart, meters; the crowd keeps within 1–4 m. Starting value: 1.")]
         [Min(0.1f)] [SerializeField] private float slotSpacing = 1f;
 
+        [Tooltip("Under the order «Захват» two soldiers never aim at cells closer than this, cells: they do not follow each other (spec 3.8). Starting value: 3.")]
+        [Min(1)] [SerializeField] private int captureSpacing = 3;
+
         [Tooltip("Soldiers keep this far from each other and from their hero, meters. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float soldierSpacing = 0.5f;
 
@@ -371,6 +374,7 @@ namespace Meta.BattleSystem.Configuration
                 FollowerSightUnits = Units(followerSight),
                 SoldierLeashUnits = Units(soldierLeash),
                 SlotSpacingUnits = Units(slotSpacing),
+                CaptureSpacingCells = captureSpacing,
                 SoldierSpacingUnits = Units(soldierSpacing),
                 SoldierBodyUnits = Units(soldierBody),
                 BarracksHalfUnits = Units(barracksHalfSize),

@@ -246,6 +246,20 @@ namespace Meta.DeveloperTools.Services
             return Battle() + ", path ends at tick " + tick;
         }
 
+        /// <summary>
+        /// Gives the player's army an order from the next tick (spec 3.8): Rally, Capture, Units, Barracks, Base; the same order
+        /// again — the free attack. Free — straight back to the free attack.
+        /// </summary>
+        public static string Order(string order)
+        {
+            var simulation = _battle.Current.Simulation;
+            var wanted = (ArmyOrder)System.Enum.Parse(typeof(ArmyOrder), order);
+            if (wanted == ArmyOrder.Free)
+                wanted = simulation.OrderOf(Side.Player);
+            simulation.Enqueue(new BattleCommand(simulation.Tick + 1, Side.Player, wanted));
+            return "order " + order + " from tick " + (simulation.Tick + 1);
+        }
+
         /// <summary>Adds gold and wood to a side.</summary>
         public static string Give(string side, int gold, int wood)
         {

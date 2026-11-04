@@ -12,7 +12,10 @@ namespace Core.BattleSystem.Services
     /// the death of the hero changes nothing. The enemy's follow their hero as a crowd 1–4 m around it (task 4.15): an enemy
     /// unit within 4 m, else a building of the player within 4 m, is struck while the soldier is no further than 8 m from its
     /// hero; one further drops it and catches up. While their hero is dead they go to their base. All part from each other and
-    /// give way to their hero. Integers only, in a fixed order: the same army on every device.
+    /// give way to their hero. The player's army may follow an order (spec 3.8): «Ко мне» — the crowd of the enemy's; «Казармы»,
+    /// «Штаб» — straight to the nearest enemy barracks, the enemy base; «Бойцы» — the nearest enemy soldier anywhere; «Захват»
+    /// — each to the nearest cell not of its side, neutral first, never two to the same spot. With no target left the order
+    /// turns to «Ко мне» by itself (T18). Integers only, in a fixed order: the same army on every device.
     /// </summary>
     public sealed class ArmyRules
     {
@@ -49,32 +52,239 @@ namespace Core.BattleSystem.Services
 
         public void Step()
         {
+            KeepOrder(Side.Player);
             var slot = new int[3];
+            var noCell = false;
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
-                if (Follows(soldier.Side))
+                var order = _state.Sides[(int)soldier.Side].Order;
+                if (Follows(soldier.Side) || order == ArmyOrder.Rally)
                 {
                     Follow(ref soldier, slot[(int)soldier.Side]++);
                     _state.Soldiers[i] = soldier;
                     continue;
                 }
 
-                Choose(ref soldier);
+                switch (order)
+                {
+                    case ArmyOrder.Barracks:
+                        if (soldier.Goal != SoldierGoal.Barracks || !Locate(soldier, out _, out _, out _))
+                            AimAtBarracks(ref soldier);
+                        break;
+                    case ArmyOrder.Base:
+                        soldier.Goal = SoldierGoal.Base;
+                        break;
+                    case ArmyOrder.Units:
+                        AimAtSoldier(ref soldier);
+                        break;
+                    case ArmyOrder.Capture:
+                        if (!AimAtCell(ref soldier))
+                            noCell = true;
+                        break;
+                    default:
+                        if (soldier.Goal == SoldierGoal.Cell)
+                            soldier.Goal = SoldierGoal.None;
+                        Choose(ref soldier);
+                        break;
+                }
+
                 if (Locate(soldier, out var x, out var y, out var radius))
                 {
-                    // to the target, stopping well within the reach of a blow from the edge of its body
-                    var stop = _settings.SoldierBodyUnits + radius + _settings.SoldierReachUnits * 3 / 4;
+                    // to the target, stopping well within the reach of a blow from the edge of its body; on a cell — onto it
+                    var stop = soldier.Goal == SoldierGoal.Cell ? 0 : _settings.SoldierBodyUnits + radius + _settings.SoldierReachUnits * 3 / 4;
                     if (BattleState.Distance2(soldier.X, soldier.Y, x, y) > (long)stop * stop)
                         Walk(ref soldier, x, y, stop);
-                    else
+                    else if (stop > 0)
                         Face(ref soldier, x, y);
                 }
 
                 _state.Soldiers[i] = soldier;
             }
 
+            // «Захват» with no cell left for anyone: «Ко мне» from the next tick
+            if (noCell && _state.Sides[(int)Side.Player].Order == ArmyOrder.Capture && !AnyCell(Side.Player))
+                SetOrder(Side.Player, ArmyOrder.Rally, true);
+
             Part();
+        }
+
+        /// <summary>Sets the order of the army of a side and tells the drawing; <paramref name="byItself"/> — no targets were left (T18).</summary>
+        public void SetOrder(Side side, ArmyOrder order, bool byItself)
+        {
+            ref var purse = ref _state.Sides[(int)side];
+            if (purse.Order == order)
+                return;
+
+            purse.Order = order;
+            for (var i = 0; i < _state.Soldiers.Count; i++)
+            {
+                var soldier = _state.Soldiers[i];
+                if (soldier.Side != side)
+                    continue;
+
+                soldier.Goal = SoldierGoal.None;
+                _state.Soldiers[i] = soldier;
+            }
+
+            _state.Emit(EventKind.OrderChanged, side, byItself ? 1 : 0, (int)order, 0, 0);
+        }
+
+        /// <summary>An order whose targets are all gone turns to «Ко мне» (T18): no enemy barracks, no enemy soldiers, a fallen base.</summary>
+        private void KeepOrder(Side side)
+        {
+            var enemy = BattleState.Enemy(side);
+            var left = _state.Sides[(int)side].Order switch
+            {
+                ArmyOrder.Barracks => System.Array.Exists(_state.Sites, site => site.Barracks == enemy),
+                ArmyOrder.Units => _state.ArmyOf(enemy) > 0,
+                ArmyOrder.Base => _state.Bases[(int)enemy].Standing,
+                _ => true,
+            };
+            if (!left)
+                SetOrder(side, ArmyOrder.Rally, true);
+        }
+
+        /// <summary>Keeps a standing enemy barracks as its goal, else takes the nearest.</summary>
+        private void AimAtBarracks(ref SoldierState soldier)
+        {
+            var enemy = BattleState.Enemy(soldier.Side);
+            var best = long.MaxValue;
+            soldier.Goal = SoldierGoal.None;
+            for (var i = 0; i < _state.Sites.Length; i++)
+            {
+                var site = _state.Sites[i];
+                if (site.Barracks != enemy)
+                    continue;
+
+                var distance = BattleState.Distance2(soldier.X, soldier.Y, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY));
+                if (distance >= best)
+                    continue;
+
+                best = distance;
+                soldier.Goal = SoldierGoal.Barracks;
+                soldier.GoalId = i;
+            }
+        }
+
+        /// <summary>The nearest enemy soldier anywhere on the map («Бойцы»); the hero is struck on the way, not hunted.</summary>
+        private void AimAtSoldier(ref SoldierState soldier)
+        {
+            var enemy = BattleState.Enemy(soldier.Side);
+            var best = long.MaxValue;
+            soldier.Goal = SoldierGoal.None;
+            foreach (var other in _state.Soldiers)
+            {
+                if (other.Side != enemy)
+                    continue;
+
+                var distance = BattleState.Distance2(soldier.X, soldier.Y, other.X, other.Y);
+                if (distance >= best)
+                    continue;
+
+                best = distance;
+                soldier.Goal = SoldierGoal.Soldier;
+                soldier.GoalId = other.Id;
+            }
+        }
+
+        /// <summary>
+        /// «Захват» (T20): keeps its cell while the cell is not yet of its side, else takes the nearest unprotected neutral cell, else
+        /// the nearest enemy one, no closer than <see cref="BattleSettings.CaptureSpacingCells"/> to the cell of another soldier.
+        /// False when no cell is left for it.
+        /// </summary>
+        private bool AimAtCell(ref SoldierState soldier)
+        {
+            var grid = _state.Grid;
+            if (soldier.Goal == SoldierGoal.Cell && grid[soldier.GoalId] != soldier.Side && !grid.IsProtected(soldier.GoalId))
+                return true;
+
+            var size = grid.Size;
+            var cx = IntMath.Clamp(soldier.X / BattleSettings.UnitsPerCell, 0, size - 1);
+            var cy = IntMath.Clamp(soldier.Y / BattleSettings.UnitsPerCell, 0, size - 1);
+            soldier.Goal = SoldierGoal.None;
+            foreach (var colour in new[] { Side.Neutral, BattleState.Enemy(soldier.Side) })
+            {
+                if (!NearestCell(soldier.Side, soldier.Id, cx, cy, colour, out var cell))
+                    continue;
+
+                soldier.Goal = SoldierGoal.Cell;
+                soldier.GoalId = cell;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>The nearest free cell of a colour by square rings around (cx, cy), the nearest by distance within the first ring with one.</summary>
+        private bool NearestCell(Side side, int id, int cx, int cy, Side colour, out int found)
+        {
+            var grid = _state.Grid;
+            var size = grid.Size;
+            found = -1;
+            for (var ring = 0; ring < size; ring++)
+            {
+                var best = long.MaxValue;
+                for (var y = cy - ring; y <= cy + ring; y++)
+                {
+                    if (y < 0 || y >= size)
+                        continue;
+
+                    var edge = y == cy - ring || y == cy + ring;
+                    var step = edge || ring == 0 ? 1 : 2 * ring;
+                    for (var x = cx - ring; x <= cx + ring; x += step)
+                    {
+                        if (x < 0 || x >= size)
+                            continue;
+
+                        var index = y * size + x;
+                        if (grid[index] != colour || grid.IsProtected(index) || Claimed(side, id, x, y))
+                            continue;
+
+                        var distance = (long)(x - cx) * (x - cx) + (long)(y - cy) * (y - cy);
+                        if (distance >= best)
+                            continue;
+
+                        best = distance;
+                        found = index;
+                    }
+                }
+
+                if (found >= 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Another soldier of the side aims at a cell this close (they do not follow each other).</summary>
+        private bool Claimed(Side side, int id, int x, int y)
+        {
+            var size = _state.Grid.Size;
+            var spacing = _settings.CaptureSpacingCells;
+            foreach (var other in _state.Soldiers)
+            {
+                if (other.Side != side || other.Id == id || other.Goal != SoldierGoal.Cell)
+                    continue;
+
+                if (System.Math.Abs(other.GoalId % size - x) < spacing && System.Math.Abs(other.GoalId / size - y) < spacing)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Is any unprotected cell not of the side left on the map.</summary>
+        private bool AnyCell(Side side)
+        {
+            var grid = _state.Grid;
+            for (var i = 0; i < grid.Size * grid.Size; i++)
+            {
+                if (grid[i] != side && !grid.IsProtected(i))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>Every soldier paints its cells; called by side, so the brushes of the player go last.</summary>
@@ -262,6 +472,13 @@ namespace Core.BattleSystem.Services
                     y = place.Y;
                     radius = _settings.BaseHalfUnits;
                     return place.Standing;
+                }
+                case SoldierGoal.Cell:
+                {
+                    var size = _state.Grid.Size;
+                    x = BattleState.Middle(soldier.GoalId % size);
+                    y = BattleState.Middle(soldier.GoalId / size);
+                    return true;
                 }
                 default:
                     return false;

@@ -8,5 +8,7 @@ namespace Core.BattleSystem.Enums
         Soldier,
         Barracks,
         Base,
+        /// <summary>A cell to paint (the order «Захват»); the goal id is its index.</summary>
+        Cell,
     }
 }
