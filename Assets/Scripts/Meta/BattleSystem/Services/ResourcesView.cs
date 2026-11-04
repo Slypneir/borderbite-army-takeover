@@ -135,8 +135,11 @@ namespace Meta.BattleSystem.Services
             if (battleEvent.Kind != EventKind.Pickup || !_lying.TryGetValue(battleEvent.Id, out var body))
                 return;
 
-            // one unit: the pile pulses, a small copy of it flies to the hero
+            // one unit: the pile pulses; the player's unit flies to its counter (ResourceFlightView, task 4.25), the enemy's to its hero
             _pulses[battleEvent.Id] = 0f;
+            if (battleEvent.Side == Side.Player && _view.ResourceFlights)
+                return;
+
             var unit = Take(battleEvent.Detail == (int)ResourceKind.Gold ? ResourceKind.Gold : ResourceKind.Wood);
             unit.localPosition = body.localPosition + Vector3.up * 0.3f;
             _flying.Add(new Flight { Transform = unit, From = unit.localPosition });

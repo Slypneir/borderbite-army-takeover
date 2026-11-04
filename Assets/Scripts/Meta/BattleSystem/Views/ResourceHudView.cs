@@ -1,9 +1,6 @@
 using Core.BattleSystem.Enums;
-using Core.BattleSystem.Services;
-using Core.BattleSystem.Structs;
 using Meta.BattleSystem.Configuration;
 using Meta.BattleSystem.Interfaces;
-using Meta.BattleSystem.Utils;
 using TMPro;
 using UnityEngine;
 using VContainer;
@@ -11,27 +8,39 @@ using VContainer;
 namespace Meta.BattleSystem.Views
 {
     /// <summary>
-    /// The counters of layer 2 in the HUD (stage 1 spec 3.6): gold, wood and the army «N/30»; a pickup shows «+5» next to its
-    /// counter for a moment.
+    /// The counters of the HUD (stage 1 spec 3.6): gold, wood and the army «N/30». They show the «seen» numbers of
+    /// <see cref="ResourceFlightView"/> (task 4.25): a mined unit counts when it lands, a spent one when it leaves, a hired
+    /// soldier when its coin reaches it; the gap from the battle lasts at most a flight. Each change bumps its icon and number, and
+    /// «+N» or «−N» gathers next to the number while changes come quicker than 0.8 s.
     /// </summary>
     public sealed class ResourceHudView : MonoBehaviour
     {
         private const float GainSeconds = 0.8f;
+        private const float BumpSeconds = 0.24f;
+        private static readonly Color GoldGain = new Color(1f, 0.827f, 0.302f, 1f);
+        private static readonly Color WoodGain = new Color(0.941f, 0.753f, 0.541f, 1f);
+        private static readonly Color Spent = new Color(0.96f, 0.95f, 0.88f, 0.6f);
 
         [SerializeField] private TMP_Text goldLabel;
         [SerializeField] private TMP_Text woodLabel;
         [SerializeField] private TMP_Text armyLabel;
         [SerializeField] private TMP_Text goldGain;
         [SerializeField] private TMP_Text woodGain;
+        [SerializeField] private RectTransform goldIcon;
+        [SerializeField] private RectTransform woodIcon;
+        [SerializeField] private RectTransform armyIcon;
 
+        private readonly Counter[] _counters = new Counter[3];
         private IBattleDriver _battle;
         private BattleConfig _rules;
-        private EventCursor _events;
-        private int _gold = -1;
-        private int _wood = -1;
-        private int _army = -1;
-        private float _goldAge = GainSeconds;
-        private float _woodAge = GainSeconds;
+        private int _gold = int.MinValue;
+        private int _wood = int.MinValue;
+        private int _army = int.MinValue;
+
+        /// <summary>The seen numbers less the battle's: what is still in the air.</summary>
+        public int GoldOffset { get; set; }
+        public int WoodOffset { get; set; }
+        public int ArmyOffset { get; set; }
 
         [Inject]
         public void Construct(IBattleDriver battle, BattleConfig rules)
@@ -40,47 +49,87 @@ namespace Meta.BattleSystem.Views
             _rules = rules;
         }
 
+        private void Awake()
+        {
+            _counters[0] = new Counter { Icon = goldIcon, Label = goldLabel, Gain = goldGain, Color = GoldGain };
+            _counters[1] = new Counter { Icon = woodIcon, Label = woodLabel, Gain = woodGain, Color = WoodGain };
+            _counters[2] = new Counter { Icon = armyIcon, Label = armyLabel };
+            foreach (var counter in _counters)
+                counter.Age = GainSeconds;
+        }
+
+        /// <summary>The icon of a counter (0 gold, 1 wood, 2 the army): where a flight lands or leaves.</summary>
+        public RectTransform IconOf(int counter) => _counters[counter].Icon;
+
+        /// <summary>A change of a counter: its icon and number bump up or sink; «+N» / «−N» gathers (none for the army).</summary>
+        public void Change(int counter, int delta, bool quiet)
+        {
+            var c = _counters[counter];
+            c.Bump = 0f;
+            c.Up = delta > 0;
+            if (quiet || c.Gain == null)
+                return;
+
+            c.Sum = c.Age < GainSeconds && Mathf.Sign(c.Sum) == Mathf.Sign(delta) ? c.Sum + delta : delta;
+            c.Age = 0f;
+            c.Gain.text = (c.Sum > 0 ? "+" : "–") + Mathf.Abs(c.Sum);
+            c.Gain.color = c.Sum > 0 ? c.Color : Spent;
+        }
+
         private void LateUpdate()
         {
             var simulation = _battle?.Current?.Simulation;
             if (simulation == null)
                 return;
 
-            _events.Read(simulation, Handle);
             var purse = simulation.SideOf(Side.Player);
-            var army = simulation.ArmyOf(Side.Player);
-            if (purse.Gold != _gold || purse.Wood != _wood || army != _army)
+            var gold = Mathf.Max(0, purse.Gold + GoldOffset);
+            var wood = Mathf.Max(0, purse.Wood + WoodOffset);
+            var army = Mathf.Max(0, simulation.ArmyOf(Side.Player) + ArmyOffset);
+            if (gold != _gold || wood != _wood || army != _army)
             {
-                _gold = purse.Gold;
-                _wood = purse.Wood;
+                _gold = gold;
+                _wood = wood;
                 _army = army;
-                goldLabel.text = _gold.ToString();
-                woodLabel.text = _wood.ToString();
-                armyLabel.text = _army + "/" + _rules.ArmyMax;
+                goldLabel.text = gold.ToString();
+                woodLabel.text = wood.ToString();
+                armyLabel.text = army + "/" + _rules.ArmyMax;
             }
 
-            Fade(goldGain, ref _goldAge);
-            Fade(woodGain, ref _woodAge);
+            foreach (var counter in _counters)
+                Animate(counter);
         }
 
-        private void Handle(BattleEvent battleEvent)
+        private static void Animate(Counter c)
         {
-            if (battleEvent.Kind != EventKind.Pickup || battleEvent.Side != Side.Player)
+            var dt = Time.unscaledDeltaTime;
+            c.Bump += dt;
+            var t = Mathf.Clamp01(c.Bump / BumpSeconds);
+            var swing = Mathf.Sin(t * Mathf.PI) * (c.Up ? 0.3f : -0.16f);
+            if (c.Icon != null)
+                c.Icon.localScale = Vector3.one * (1f + swing);
+            if (c.Label != null)
+                c.Label.rectTransform.localScale = Vector3.one * (1f + swing * 0.5f);
+
+            if (c.Gain == null)
                 return;
 
-            var gold = battleEvent.Detail == (int)ResourceKind.Gold;
-            var label = gold ? goldGain : woodGain;
-            label.text = "+" + battleEvent.Value;
-            if (gold)
-                _goldAge = 0f;
-            else
-                _woodAge = 0f;
+            c.Age += dt;
+            c.Gain.alpha = c.Age < GainSeconds ? c.Color.a * Mathf.Clamp01(1f - (c.Age - GainSeconds * 0.7f) / (GainSeconds * 0.3f)) : 0f;
+            if (c.Sum < 0)
+                c.Gain.alpha *= Spent.a;
         }
 
-        private static void Fade(TMP_Text label, ref float age)
+        private sealed class Counter
         {
-            age += Time.deltaTime;
-            label.alpha = Mathf.Clamp01(1f - age / GainSeconds);
+            public RectTransform Icon;
+            public TMP_Text Label;
+            public TMP_Text Gain;
+            public Color Color = Color.white;
+            public float Bump = 1f;
+            public bool Up;
+            public int Sum;
+            public float Age;
         }
     }
 }

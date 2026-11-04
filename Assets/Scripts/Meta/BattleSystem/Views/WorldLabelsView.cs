@@ -33,6 +33,9 @@ namespace Meta.BattleSystem.Views
         // short of a resource: the number in text/disabled, the icon half seen — not the whole label (UI review of 4.26)
         private static readonly Color DisabledText = new Color(0.55f, 0.56f, 0.6f, 1f);
         private const float DullIcon = 0.6f;
+        // the hero closer than this to the middle of a place sees through its pin and price (UI review of 4.26)
+        private const float NearHero = 1.5f;
+        private const float NearAlpha = 0.4f;
         private static readonly Color Grey = new Color(0.55f, 0.56f, 0.6f, 1f);
         // over the roof of the barracks model (2.5 m)
         private const float Height = 2.8f;
@@ -114,6 +117,13 @@ namespace Meta.BattleSystem.Views
             var barracks = small && barracksIconSmall != null ? barracksIconSmall : barracksIcon;
             var purse = simulation.SideOf(Side.Player);
             var army = simulation.ArmyOf(Side.Player);
+            var hero = Vector2.positiveInfinity;
+            foreach (var state in simulation.Heroes)
+            {
+                if (state.Side == Side.Player && state.Alive)
+                    hero = new Vector2(state.X, state.Y) * _rules.MetersPerUnit;
+            }
+
             var buildTicks = Mathf.Max(1, simulation.Settings.BuildTicks);
             for (var i = 0; i < sites.Count; i++)
             {
@@ -130,6 +140,11 @@ namespace Meta.BattleSystem.Views
                     continue;
 
                 var own = owner == Side.Player;
+                // over the hero building there: the medallion and the price see-through, the ring stays solid
+                var near = (new Vector2(x, z) - hero).sqrMagnitude < NearHero * NearHero && !site.Built;
+                foreach (var graphic in mark.PinGraphics)
+                    graphic.canvasRenderer.SetAlpha(near ? NearAlpha : 1f);
+                mark.RowGroup.alpha = near ? NearAlpha : 1f;
                 if (site.Built)
                 {
                     // over a barracks of the player: the price of a soldier and the army, as before; no pin
@@ -255,6 +270,7 @@ namespace Meta.BattleSystem.Views
                 Pin = (RectTransform)root.Find("Pin"),
                 Plate = root.Find("Pin/Plate").GetComponent<Image>(),
                 Disc = root.Find("Pin/Plate").GetComponent<Image>().sprite,
+                PinGraphics = System.Array.FindAll(root.Find("Pin").GetComponentsInChildren<Graphic>(true), g => g.name != "Ring"),
                 RowGroup = row.GetComponent<CanvasGroup>(),
                 Ring = root.Find("Pin/Ring").GetComponent<Image>(),
                 Row = row,
@@ -275,6 +291,7 @@ namespace Meta.BattleSystem.Views
             public RectTransform Pin;
             public Image Plate;
             public Sprite Disc;
+            public Graphic[] PinGraphics;
             public CanvasGroup RowGroup;
             public Image Ring;
             public RectTransform Row;

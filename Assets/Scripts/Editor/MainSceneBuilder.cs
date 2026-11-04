@@ -302,6 +302,7 @@ namespace Core.EditorTools
             Wire(icons, ("hudBottom", counters), ("labels", labels));
             Wire(marks, ("hudBottom", counters));
             var orders = BuildOrders(area);
+            BuildResourceFlight(area, hud);
             Wire(labels, ("orderBar", orders.Row));
             Wire(marks, ("orderBar", orders.Row));
             Wire(icons, ("orderBar", orders.Row));
@@ -427,7 +428,8 @@ namespace Core.EditorTools
             armyIcon.sizeDelta = Vector2.one * 64f;
             armyIcon.anchoredPosition = new Vector2(CounterPadding - 8f, 0f);
             Wire(row.gameObject.AddComponent<ResourceHudView>(), ("goldLabel", gold), ("woodLabel", wood), ("armyLabel", army),
-                ("goldGain", goldGain), ("woodGain", woodGain));
+                ("goldGain", goldGain), ("woodGain", woodGain), ("goldIcon", gold.transform.parent.Find("Icon")),
+                ("woodIcon", wood.transform.parent.Find("Icon")), ("armyIcon", armyIcon));
 
             pause = BuildPauseButton(plate);
             Wire(plate.gameObject.AddComponent<HudLayoutView>(), ("plate", plate), ("bar", bar), ("counters", row), ("pause", pause));
@@ -616,6 +618,29 @@ namespace Core.EditorTools
             material = new Material(shader);
             AssetDatabase.CreateAsset(material, path);
             return material;
+        }
+
+        /// <summary>
+        /// The flight of resources (task 4.25, resource-flight card): a layer over the HUD in the safe area with an icon, a spark (a
+        /// square) and a ring (a disc) to copy; the counters it lands in are those of the HUD.
+        /// </summary>
+        private static void BuildResourceFlight(RectTransform area, RectTransform hud)
+        {
+            var go = new GameObject("ResourceFlight", typeof(RectTransform), typeof(ResourceFlightView));
+            go.transform.SetParent(area, false);
+            Stretch((RectTransform)go.transform);
+            var icon = Rect((RectTransform)go.transform, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            icon.sizeDelta = Vector2.one * 48f;
+            var iconImage = Picture(icon, Icon("icon_gold_128"), Color.white);
+            iconImage.preserveAspect = true;
+            var spark = Rect((RectTransform)go.transform, "Spark", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            spark.sizeDelta = Vector2.one * 8f;
+            var sparkImage = Picture(spark, null, Color.white);
+            var ring = Rect((RectTransform)go.transform, "Ring", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            ring.sizeDelta = Vector2.one * 26f;
+            var ringImage = Picture(ring, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), new Color(1f, 1f, 1f, 0.6f));
+            Wire(go.GetComponent<ResourceFlightView>(), ("template", iconImage), ("sparkTemplate", sparkImage), ("ringTemplate", ringImage),
+                ("goldIcon", Icon("icon_gold_128")), ("woodIcon", Icon("icon_wood_128")), ("hud", hud.GetComponentInChildren<ResourceHudView>()));
         }
 
         /// <summary>An icon over each pile of gold and bundle of wood (battle-marks card, «Значки над картой»).</summary>

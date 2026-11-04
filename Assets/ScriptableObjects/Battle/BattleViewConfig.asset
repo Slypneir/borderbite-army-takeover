@@ -35,6 +35,7 @@ MonoBehaviour:
   barHoldSeconds: 5
   hitFlash: 1
   barShake: 1
+  resourceFlights: 1
   resourceIconReach: 5
   resourceIconFade: 0.3
   attackFaceSeconds: 0.35

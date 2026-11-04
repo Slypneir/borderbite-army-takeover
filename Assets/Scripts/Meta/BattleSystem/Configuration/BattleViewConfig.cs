@@ -83,6 +83,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("A hit bar jerks sideways (task 4.22); off for the players who do not want shaking. Starting value: on.")]
         [SerializeField] private bool barShake = true;
 
+        [Tooltip("Resources fly between the world and the counters (task 4.25); off — the counters only bump, for less motion. Starting value: on.")]
+        [SerializeField] private bool resourceFlights = true;
+
         [Tooltip("An icon over a pile of gold or a bundle of wood shows only while the player's hero is this close, meters (owner, " +
                  "4 November, spec 3.1). Starting value: 5 (10 cells).")]
         [Min(0f)] [SerializeField] private float resourceIconReach = 5f;
@@ -182,6 +185,7 @@ namespace Meta.BattleSystem.Configuration
         public float BarHoldSeconds => barHoldSeconds;
         public bool HitFlash => hitFlash;
         public bool BarShake => barShake;
+        public bool ResourceFlights => resourceFlights;
         public float ResourceIconReach => resourceIconReach;
         public float ResourceIconFade => resourceIconFade;
         public Material WaterMaterial => waterMaterial;
