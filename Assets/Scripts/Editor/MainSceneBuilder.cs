@@ -38,6 +38,7 @@ namespace Core.EditorTools
         private const int BarTextSize = 30;
         private const int MarkWidth = 4;
         private const int TitleSize = 96;
+        private const int CountdownSize = 64;
         private const int ButtonHeight = 128;
         private const int ButtonWidth = 360;
         private const int ButtonTextSize = 44;
@@ -137,7 +138,22 @@ namespace Core.EditorTools
             serialized.FindProperty("barracksTemplate").objectReferenceValue = Model(templates, "barracks", false,
                 ("body", "Cube.fbx", new Vector3(0f, 0.45f, 0f), new Vector3(1.3f, 0.9f, 1.3f)),
                 ("paint", "Cube.fbx", new Vector3(0f, 1f, 0f), new Vector3(1.45f, 0.22f, 1.45f)));
+            serialized.FindProperty("baseTemplate").objectReferenceValue = Model(templates, "base", false,
+                ("body", "Cube.fbx", new Vector3(0f, 0.6f, 0f), new Vector3(3f, 1.2f, 3f)),
+                ("paint", "Cube.fbx", new Vector3(0f, 1.6f, 0f), new Vector3(1.3f, 2f, 1.3f)));
             serialized.FindProperty("shoreTemplate").objectReferenceValue = Model(templates, "shore_straight", false);
+            var variants = serialized.FindProperty("shoreVariants");
+            variants.arraySize = 0;
+            foreach (var id in new[] { "shore_straight", "shore_straight_b", "shore_straight_c" })
+            {
+                var piece = id == "shore_straight" ? (Transform)serialized.FindProperty("shoreTemplate").objectReferenceValue : Model(templates, id, false);
+                if (piece == null)
+                    continue;
+
+                variants.arraySize++;
+                variants.GetArrayElementAtIndex(variants.arraySize - 1).objectReferenceValue = piece;
+            }
+
             serialized.FindProperty("shoreCornerTemplate").objectReferenceValue = Model(templates, "shore_corner", false);
             var rocks = serialized.FindProperty("rockTemplates");
             rocks.arraySize = 0;
@@ -256,12 +272,15 @@ namespace Core.EditorTools
 
             var labels = BuildWorldLabels(root);
             BuildHeroBar(root, view);
+            var marks = BuildMarks(root);
             BuildPopups(root);
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
             BuildBar(area, view);
-            Wire(labels, ("hudBottom", BuildCounters(area, view)));
+            var counters = BuildCounters(area, view);
+            Wire(labels, ("hudBottom", counters));
+            Wire(marks, ("hudBottom", counters));
             BuildDebug(area);
             results = BuildResults(area);
             return go;
@@ -382,6 +401,76 @@ namespace Core.EditorTools
             label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             var view = go.GetComponent<WorldLabelsView>();
             Wire(view, ("template", template));
+            return view;
+        }
+
+        /// <summary>
+        /// Marks of layer 3: a health bar of a building (a rim, a dark base, a light fill anchored left), a sign at the edge (a
+        /// red disc with a dark rim, a point turned to the event, a mark of a building or of land inside) and the countdown of the
+        /// hero's return. Placeholders until the kit of the interface designer.
+        /// </summary>
+        private static BattleMarksView BuildMarks(RectTransform root)
+        {
+            var go = new GameObject("BattleMarks", typeof(RectTransform), typeof(BattleMarksView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var marks = (RectTransform)go.transform;
+            var circle = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath);
+
+            var bar = Rect(marks, "BarTemplate", Vector2.zero, Vector2.zero);
+            bar.pivot = new Vector2(0.5f, 0f);
+            bar.sizeDelta = new Vector2(120f, HealthHeight + 4f);
+            Picture(bar, null, TextColor);
+            var back = Rect(bar, "Back", Vector2.zero, Vector2.one);
+            back.offsetMin = new Vector2(2f, 2f);
+            back.offsetMax = new Vector2(-2f, -2f);
+            Picture(back, null, BarBaseColor);
+            var fill = Rect(bar, "Fill", Vector2.zero, Vector2.one);
+            fill.offsetMin = new Vector2(4f, 4f);
+            fill.offsetMax = new Vector2(-4f, -4f);
+            Picture(fill, null, TextColor);
+
+            var sign = Rect(marks, "SignTemplate", Vector2.zero, Vector2.zero);
+            sign.pivot = new Vector2(0.5f, 0.5f);
+            sign.sizeDelta = Vector2.one * 96f;
+            sign.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            // the point: a dark square turned 45° and pushed out to the edge of the disc, under it
+            var point = Rect(sign, "Point", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            point.sizeDelta = Vector2.zero;
+            var tip = Rect(point, "Tip", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            tip.sizeDelta = Vector2.one * 40f;
+            tip.anchoredPosition = new Vector2(0f, 40f);
+            tip.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Picture(tip, null, BarBaseColor);
+            var rim = Rect(sign, "Rim", Vector2.zero, Vector2.one);
+            Picture(rim, circle, BarBaseColor);
+            var disc = Rect(sign, "Disc", Vector2.zero, Vector2.one);
+            disc.offsetMin = new Vector2(4f, 4f);
+            disc.offsetMax = new Vector2(-4f, -4f);
+            Picture(disc, circle, new Color(0.9f, 0.2f, 0.17f));
+            // a building: a house of a square and a roof; land: a diamond
+            var building = Rect(sign, "Building", new Vector2(0.3f, 0.28f), new Vector2(0.7f, 0.62f));
+            Picture(building, null, TextColor);
+            var roof = Rect(building, "Roof", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            roof.sizeDelta = Vector2.one * 22f;
+            roof.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Picture(roof, null, TextColor);
+            var land = Rect(sign, "Land", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            land.sizeDelta = Vector2.one * 40f;
+            land.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Picture(land, null, TextColor);
+
+            var countdown = Text(marks, "Countdown", CountdownSize, TextAlignmentOptions.Bottom);
+            var countdownRect = (RectTransform)countdown.transform;
+            countdownRect.anchorMin = Vector2.zero;
+            countdownRect.anchorMax = Vector2.zero;
+            countdownRect.pivot = new Vector2(0.5f, 0f);
+            countdownRect.sizeDelta = new Vector2(200f, CountdownSize * 1.2f);
+            countdown.fontStyle = FontStyles.Bold;
+            countdown.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+
+            var view = go.GetComponent<BattleMarksView>();
+            Wire(view, ("barTemplate", bar), ("signTemplate", sign), ("countdown", countdown));
             return view;
         }
 

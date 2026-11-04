@@ -1,3 +1,4 @@
+using Core.BattleSystem.Services;
 using Core.BattleSystem.Structs;
 using UnityEngine;
 
@@ -188,12 +189,109 @@ namespace Meta.BattleSystem.Configuration
         public int SoldierGold => soldierGold;
         public int ArmyMax => armyMax;
         public float HeroHealth => heroHealth;
+        public float BarracksHealth => barracksHealth;
+        public float BaseHealth => baseHealth;
 
         /// <summary>Meters of the world for units of the simulation.</summary>
         public float MetersPerUnit => cellSize / BattleSettings.UnitsPerCell;
 
+        [Header("Bases")]
+        [Tooltip("Health of a base (spec 4.1). Starting value: 600.")]
+        [Min(1f)] [SerializeField] private float baseHealth = 600f;
+
+        [Tooltip("The aura of a base, cells: its colour around it, protected while it stands. Starting value: 4.")]
+        [Min(0)] [SerializeField] private int baseAura = 4;
+
+        [Tooltip("Half the side of a base, meters: blows and shots reach its walls. Starting value: 1.5 (the model is 3 m).")]
+        [Min(0f)] [SerializeField] private float baseHalfSize = 1.5f;
+
+        [Tooltip("The hero comes back this far from the middle of its base, at the gate, meters: clear of the walls (1.5 m). Starting value: 2.5.")]
+        [Min(0f)] [SerializeField] private float baseGate = 2.5f;
+
+        [Header("Enemy")]
+        [Tooltip("The level whose enemy the test level takes (owner, 4 November). Starting value: 3.")]
+        [Min(1)] [SerializeField] private int testLevel = 3;
+
+        [Tooltip("The enemy of levels 1, 2, 3, … (GDD 5.9); past the last row the steps below go on.")]
+        [SerializeField] private EnemyLevel[] enemyLevels =
+        {
+            new EnemyLevel { speed = 0.7f, reaction = 1.5f, soldiers = 0.8f, buildFrom = 60f },
+            new EnemyLevel { speed = 0.75f, reaction = 1.3f, soldiers = 0.85f, buildFrom = 40f },
+            new EnemyLevel { speed = 0.8f, reaction = 1.1f, soldiers = 0.9f, buildFrom = 0f },
+            new EnemyLevel { speed = 0.85f, reaction = 1f, soldiers = 0.95f, buildFrom = 0f },
+        };
+
+        [Tooltip("Past the table, each level: speed +, up to the most. Starting values: +0.03, up to ×1.0.")]
+        [SerializeField] private Vector2 speedStep = new Vector2(0.03f, 1f);
+
+        [Tooltip("Past the table, each level: reaction −, down to the least, seconds. Starting values: −0.05, down to 0.5.")]
+        [SerializeField] private Vector2 reactionStep = new Vector2(0.05f, 0.5f);
+
+        [Tooltip("Past the table, each level: soldiers +, up to the most. Starting values: +0.03, up to ×1.1.")]
+        [SerializeField] private Vector2 soldierStep = new Vector2(0.03f, 1.1f);
+
+        [Header("Commander")]
+        [Tooltip("The commander sees piles this far around its hero, meters: as far as a player sees. Starting value: 12.")]
+        [Min(1f)] [SerializeField] private float commanderSight = 12f;
+
+        [Tooltip("A goal that comes no closer this long is left for the next priority, seconds (spec 4.2). Starting value: 3.")]
+        [Min(0.5f)] [SerializeField] private float commanderStuck = 3f;
+
+        [Tooltip("Under this share of health the hero goes back to its land, percent. Starting value: 30.")]
+        [Range(1f, 100f)] [SerializeField] private float commanderRetreat = 30f;
+
+        [Tooltip("The commander attacks with at least this many soldiers. Starting value: 8.")]
+        [Min(1)] [SerializeField] private int commanderAttackArmy = 8;
+
+        [Tooltip("…and at least this share of the other army, percent. Starting value: 80.")]
+        [Range(0f, 200f)] [SerializeField] private float commanderAttackShare = 80f;
+
+        public int TestLevel => testLevel;
+
+        /// <summary>The enemy of a level (GDD 5.9): the table, then the steps, each up to its bound.</summary>
+        public EnemyLevel EnemyOf(int level)
+        {
+            level = Mathf.Max(1, level);
+            if (enemyLevels.Length == 0)
+                return new EnemyLevel { speed = 1f, reaction = 1f, soldiers = 1f };
+            if (level <= enemyLevels.Length)
+                return enemyLevels[level - 1];
+
+            var last = enemyLevels[enemyLevels.Length - 1];
+            var past = level - enemyLevels.Length;
+            return new EnemyLevel
+            {
+                speed = Mathf.Min(speedStep.y, last.speed + speedStep.x * past),
+                reaction = Mathf.Max(reactionStep.y, last.reaction - reactionStep.x * past),
+                soldiers = Mathf.Min(soldierStep.y, last.soldiers + soldierStep.x * past),
+                buildFrom = 0f,
+            };
+        }
+
+        /// <summary>Gives a running battle the enemy of a level at once (the developer's switch, spec 2.7).</summary>
+        public void ApplyEnemy(BattleSimulation simulation, int level)
+        {
+            var enemy = EnemyOf(level);
+            simulation.SetEnemyStrength(Mathf.RoundToInt(enemy.speed * 1000f), Ticks(enemy.reaction),
+                Mathf.RoundToInt(enemySoldierFactor * enemy.soldiers * 1000f), Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond));
+        }
+
+        [System.Serializable]
+        public struct EnemyLevel
+        {
+            [Tooltip("Speed of the enemy hero, a factor of the player's.")]
+            public float speed;
+            [Tooltip("The commander chooses once in this many seconds.")]
+            public float reaction;
+            [Tooltip("Health and damage of enemy soldiers, a factor.")]
+            public float soldiers;
+            [Tooltip("The enemy may build from this second.")]
+            public float buildFrom;
+        }
+
         public BattleSettings ToSettings(uint seed)
         {
+            var enemy = EnemyOf(testLevel);
             var siteCells = new int[sites.Length * 2];
             for (var i = 0; i < sites.Length; i++)
             {
@@ -246,7 +344,7 @@ namespace Meta.BattleSystem.Configuration
                 SoldierSpacingUnits = Units(soldierSpacing),
                 SlotSpacingUnits = Units(slotSpacing),
                 PlayerSoldierPermille = Mathf.RoundToInt(playerSoldierFactor * 1000f),
-                EnemySoldierPermille = Mathf.RoundToInt(enemySoldierFactor * 1000f),
+                EnemySoldierPermille = Mathf.RoundToInt(enemySoldierFactor * enemy.soldiers * 1000f),
 
                 HeroHealth = Tenths(heroHealth),
                 HeroRegenPerSecond = Tenths(heroRegen),
@@ -258,6 +356,21 @@ namespace Meta.BattleSystem.Configuration
                 GunCooldownTicks = Ticks(gunEvery),
                 RespawnTicks = Ticks(respawnSeconds),
                 InvulnerableTicks = Ticks(invulnerableSeconds),
+
+                BaseHealth = Tenths(baseHealth),
+                BaseAuraCells = baseAura,
+                BaseHalfUnits = Units(baseHalfSize),
+                BaseGateUnits = Units(baseGate),
+
+                EnemyHero = true,
+                EnemySpeedPermille = Mathf.RoundToInt(enemy.speed * 1000f),
+                EnemyReactionTicks = Ticks(enemy.reaction),
+                EnemyBuildFromTicks = Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond),
+                CommanderSightUnits = Units(commanderSight),
+                CommanderStuckTicks = Ticks(commanderStuck),
+                CommanderRetreatPermille = Mathf.RoundToInt(commanderRetreat * 10f),
+                CommanderAttackArmy = commanderAttackArmy,
+                CommanderAttackPermille = Mathf.RoundToInt(commanderAttackShare * 10f),
             };
         }
 

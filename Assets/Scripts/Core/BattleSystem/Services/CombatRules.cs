@@ -5,8 +5,8 @@ using Core.BattleSystem.Structs;
 namespace Core.BattleSystem.Services
 {
     /// <summary>
-    /// Blows and shots without buttons (stage 1 spec 3.4, 3.5): the nearest enemy hero or soldier first, a building only when no
-    /// such enemy is in reach. A hero strikes with the sword close by, else shoots the gun; a soldier strikes only close by.
+    /// Blows and shots without buttons (stage 1 spec 3.4, 3.5, 4.1): the nearest enemy hero or soldier first, a building (a
+    /// barracks or the base, whose walls are reached, not only its middle) only when no such enemy is in reach. A hero strikes with the sword close by, else shoots the gun; a soldier strikes only close by.
     /// Deaths, the fall of a barracks and the return of a dead hero after a while, invulnerable for a moment.
     /// </summary>
     public sealed class CombatRules
@@ -27,6 +27,7 @@ namespace Core.BattleSystem.Services
             Hero,
             Soldier,
             Barracks,
+            Base,
         }
 
         public struct Target
@@ -40,7 +41,7 @@ namespace Core.BattleSystem.Services
         /// <summary>The nearest enemy of <paramref name="side"/> within reach: a hero or soldier if any, else a barracks.</summary>
         public static bool NearestTarget(BattleState state, Side side, int x, int y, int reach, out Target target)
         {
-            return NearestUnit(state, side, x, y, reach, out target) || NearestBarracks(state, side, x, y, reach, out target);
+            return NearestUnit(state, side, x, y, reach, out target) || NearestBuilding(state, side, x, y, reach, out target);
         }
 
         public void Step()
@@ -108,9 +109,9 @@ namespace Core.BattleSystem.Services
                     melee = true;
                 else if (NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
                     melee = false;
-                else if (NearestBarracks(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, out target))
+                else if (NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, out target))
                     melee = true;
-                else if (NearestBarracks(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
+                else if (NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
                     melee = false;
                 else
                     continue;
@@ -180,14 +181,35 @@ namespace Core.BattleSystem.Services
                     _state.Emit(EventKind.SoldierDied, soldier.Side, soldier.Id, 0, soldier.X, soldier.Y);
                     return true;
                 }
+                case TargetKind.Base:
+                    HitBase((Side)target.Index, damage);
+                    return false;
                 default:
                 {
                     ref var site = ref _state.Sites[target.Index];
                     site.Health -= damage;
+                    var owner = site.Barracks;
+                    _state.Emit(EventKind.BuildingHit, owner, target.Index, System.Math.Max(0, site.Health), target.X, target.Y);
                     if (site.Health <= 0)
                         _economy.Destroy(target.Index);
                     return false;
                 }
+            }
+        }
+
+        /// <summary>A base of a side takes damage; at zero it falls and the battle ends on this tick's decision.</summary>
+        public void HitBase(Side side, int damage)
+        {
+            ref var place = ref _state.Bases[(int)side];
+            if (!place.Standing || damage <= 0)
+                return;
+
+            place.Health = System.Math.Max(0, place.Health - damage);
+            _state.Emit(EventKind.BuildingHit, side, -1, place.Health, place.X, place.Y);
+            if (!place.Standing)
+            {
+                _state.Emit(EventKind.Destroyed, side, -1, 0, place.X, place.Y);
+                _economy.ProtectBase(side);
             }
         }
 
@@ -222,6 +244,22 @@ namespace Core.BattleSystem.Services
             }
 
             return found;
+        }
+
+        /// <summary>The nearest enemy barracks within reach, else the enemy base when its walls are within reach.</summary>
+        private static bool NearestBuilding(BattleState state, Side side, int x, int y, int reach, out Target target)
+        {
+            if (NearestBarracks(state, side, x, y, reach, out target))
+                return true;
+
+            var enemy = BattleState.Enemy(side);
+            var place = state.Bases[(int)enemy];
+            var walls = (long)reach + state.Settings.BaseHalfUnits;
+            if (!place.Standing || BattleState.Distance2(x, y, place.X, place.Y) > walls * walls)
+                return false;
+
+            target = new Target { Kind = TargetKind.Base, Index = (int)enemy, X = place.X, Y = place.Y };
+            return true;
         }
 
         private static bool NearestBarracks(BattleState state, Side side, int x, int y, int reach, out Target target)

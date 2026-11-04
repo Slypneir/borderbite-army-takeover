@@ -75,7 +75,81 @@ namespace Meta.DeveloperTools.Services
                    $"enemy {simulation.Grid.Permille(Side.Enemy)} permille, hero {(hero.X / unit).ToString("0.00", Inv)};{(hero.Y / unit).ToString("0.00", Inv)} cells, " +
                    $"health {hero.Health / 10}{(hero.Alive ? "" : " dead")}, captures {simulation.Captures.Count}, gold {purse.Gold}, wood {purse.Wood}, " +
                    $"army {simulation.ArmyOf(Side.Player)} vs {simulation.ArmyOf(Side.Enemy)}, barracks {barracks}, " +
-                   $"piles {simulation.Resources.Count}";
+                   $"piles {simulation.Resources.Count}, bases {simulation.Bases[(int)Side.Player].Health / 10} vs {simulation.Bases[(int)Side.Enemy].Health / 10}" +
+                   Enemy(simulation);
+        }
+
+        private static string Enemy(BattleSimulation simulation)
+        {
+            foreach (var hero in simulation.Heroes)
+            {
+                if (hero.Side != Side.Enemy)
+                    continue;
+
+                const float unit = BattleSettings.UnitsPerCell;
+                var purse = simulation.SideOf(Side.Enemy);
+                return $", enemy L{_debug?.EnemyLevel} p{simulation.EnemyPriority} at {(hero.X / unit).ToString("0.0", Inv)};{(hero.Y / unit).ToString("0.0", Inv)}" +
+                       $"{(hero.Alive ? "" : " dead")}, gold {purse.Gold}, wood {purse.Wood}";
+            }
+
+            return ", no enemy hero";
+        }
+
+        /// <summary>
+        /// Whole battles of the test level at once, off screen (spec 3.4 self-check): the enemy commander against the same
+        /// commander on the player's side, seeds 1.., each up to <paramref name="maxSeconds"/>. Gives the time, the result and the
+        /// shares of each, and what was built and hired.
+        /// </summary>
+        public static string SimulateLevels(int count, int maxSeconds)
+        {
+            var template = _battle.Current.Simulation.Settings;
+            var lines = new List<string>();
+            for (var seed = 1; seed <= count; seed++)
+            {
+                var settings = template.Clone();
+                settings.Seed = (uint)seed;
+                settings.PlayerAutopilot = true;
+                var simulation = new BattleSimulation(settings);
+                var limit = maxSeconds * settings.TicksPerSecond;
+                while (simulation.Result == BattleResult.None && simulation.Tick < limit)
+                    simulation.Step();
+
+                var built = new int[3];
+                var hired = new int[3];
+                var died = new int[3];
+                foreach (var e in simulation.Events)
+                {
+                    if (e.Kind == EventKind.Built) built[(int)e.Side]++;
+                    if (e.Kind == EventKind.Hired) hired[(int)e.Side]++;
+                    if (e.Kind == EventKind.HeroDied) died[(int)e.Side]++;
+                }
+
+                lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
+                          $"bases {simulation.Bases[(int)Side.Player].Health / 10}/{simulation.Bases[(int)Side.Enemy].Health / 10}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]}");
+            }
+
+            return string.Join(" | ", lines);
+        }
+
+        /// <summary>The enemy of a level of GDD 5.9 at once, without starting anew (spec 2.7); a new battle keeps it.</summary>
+        public static string EnemyLevel(int level)
+        {
+            _debug.SetEnemyLevel(level);
+            return Battle();
+        }
+
+        /// <summary>The health of a base in points; 0 brings it down (spec 3.1 self-check).</summary>
+        public static string BaseHealth(string side, int health)
+        {
+            _battle.Current.Simulation.SetBaseHealth(SideOf(side), health * 10);
+            return Battle();
+        }
+
+        /// <summary>The same commander as the enemy's walks the player's hero; the keys and the stick are ignored meanwhile.</summary>
+        public static string Autopilot(bool on)
+        {
+            _battle.Current.Simulation.Settings.PlayerAutopilot = on;
+            return Battle();
         }
 
         /// <summary>Starts the level anew, as «Again» does.</summary>

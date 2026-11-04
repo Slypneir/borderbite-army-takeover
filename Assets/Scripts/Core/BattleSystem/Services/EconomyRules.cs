@@ -57,6 +57,28 @@ namespace Core.BattleSystem.Services
             _state.Emit(EventKind.Built, side, site, 0, BattleState.Middle(place.CenterX), BattleState.Middle(place.CenterY));
         }
 
+        /// <summary>The aura of a base: its colour around it, protected while it stands (spec 4.1, by the rules of a barracks).</summary>
+        public void ProtectBase(Side side)
+        {
+            var place = _state.Bases[(int)side];
+            var size = _state.Grid.Size;
+            var radius = _settings.BaseAuraCells;
+            var cx = place.X / BattleSettings.UnitsPerCell;
+            var cy = place.Y / BattleSettings.UnitsPerCell;
+            // the middle of the base is a corner of four cells: a cell is in when its middle is within the radius
+            for (var y = cy - radius - 1; y <= cy + radius; y++)
+            for (var x = cx - radius - 1; x <= cx + radius; x++)
+            {
+                var dx = 2 * x + 1 - 2 * cx;
+                var dy = 2 * y + 1 - 2 * cy;
+                if (x < 0 || y < 0 || x >= size || y >= size || dx * dx + dy * dy > 4 * radius * radius)
+                    continue;
+
+                _state.Grid.Set(y * size + x, side);
+                _state.Grid.SetProtected(y * size + x, place.Standing);
+            }
+        }
+
         /// <summary>The barracks falls: the aura goes, the place is grey again.</summary>
         public void Destroy(int site)
         {
@@ -137,7 +159,8 @@ namespace Core.BattleSystem.Services
                 var owner = _state.Grid.At(site.CenterX, site.CenterY);
                 var hero = owner == Side.Neutral ? -1 : _state.HeroOf(owner);
                 var standing = !site.Built && hero >= 0 && _state.Heroes[hero].Alive && OnSite(_state.Heroes[hero], site) &&
-                               _state.Sides[(int)owner].Wood >= _settings.BarracksWood;
+                               _state.Sides[(int)owner].Wood >= _settings.BarracksWood &&
+                               (owner != Side.Enemy || _state.Tick >= _settings.EnemyBuildFromTicks);
                 if (!standing)
                 {
                     site.BuildProgress = 0;

@@ -62,7 +62,7 @@ namespace Core.BattleSystem.Structs
         public int SoldierSpacingUnits = 1000;
         public int SlotSpacingUnits = 2000;
         public int PlayerSoldierPermille = 1100;
-        public int EnemySoldierPermille = 1000;
+        public int EnemySoldierPermille = 900;
 
         // layer 2: the hero fights
         public int HeroHealth = 1000;
@@ -76,6 +76,30 @@ namespace Core.BattleSystem.Structs
         public int RespawnTicks = 90;
         public int InvulnerableTicks = 30;
 
+        // layer 3: bases
+        public int BaseHealth = 6000;
+        public int BaseAuraCells = 4;
+        /// <summary>Half the side of a base (3 m): blows and shots reach its walls, not only its middle.</summary>
+        public int BaseHalfUnits = 3000;
+        /// <summary>The hero comes back this far before the middle of its base, at the gate (marker `spawn` of the model).</summary>
+        public int BaseGateUnits = 5000;
+
+        // layer 3: the enemy commander, the strength of the level (GDD 5.9; level 3 for the test level)
+        public bool EnemyHero = true;
+        public int EnemySpeedPermille = 800;
+        public int EnemyReactionTicks = 33;
+        public int EnemyBuildFromTicks = 0;
+        public int CommanderSightUnits = 24000;
+        public int CommanderStuckTicks = 90;
+        public int CommanderRetreatPermille = 300;
+        public int CommanderAttackArmy = 8;
+        public int CommanderAttackPermille = 800;
+        /// <summary>The developer's autopilot: the same commander walks the hero of the player; its commands are ignored.</summary>
+        public bool PlayerAutopilot;
+
         public int MapUnits => MapCells * UnitsPerCell;
+
+        /// <summary>A copy to change for another battle; the arrays of places and piles are shared, nobody writes them.</summary>
+        public BattleSettings Clone() => (BattleSettings)MemberwiseClone();
     }
 }

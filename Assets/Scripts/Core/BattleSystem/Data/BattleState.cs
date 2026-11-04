@@ -18,6 +18,8 @@ namespace Core.BattleSystem.Data
         public readonly List<ResourceState> Resources = new List<ResourceState>();
         public readonly SiteState[] Sites;
         public readonly SideState[] Sides = new SideState[3];
+        /// <summary>The bases by side: [Player] and [Enemy]; [Neutral] stays empty.</summary>
+        public readonly BaseState[] Bases = new BaseState[3];
         public readonly List<BattleEvent> Events = new List<BattleEvent>();
         public readonly List<Capture> Captures = new List<Capture>();
         public DeterministicRandom Random;

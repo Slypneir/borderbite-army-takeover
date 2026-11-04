@@ -13,8 +13,22 @@ namespace Tests.BattleSystem.Editor
         private const int Ticks = 3000;
 
         /// <summary>The numbers of the stage 1 spec in units: 64 cells, 5 m/s at 30 ticks and 0.5 m cells is 333 units a tick.</summary>
-        public static BattleSettings Settings(uint seed = 777, int enclosureEveryTicks = 1, int maxEnclosureCells = 250) =>
-            new BattleSettings { Seed = seed, EnclosureEveryTicks = enclosureEveryTicks, MaxEnclosureCells = maxEnclosureCells };
+        /// <summary>
+        /// Without layer 3 by default — no enemy hero, the hero starts in the middle of its base, no aura of the bases, enemy
+        /// soldiers at ×1.0 — so the rules of layers 1 and 2 are checked alone; <paramref name="layer3"/> gives the whole battle.
+        /// </summary>
+        public static BattleSettings Settings(uint seed = 777, int enclosureEveryTicks = 1, int maxEnclosureCells = 250, bool layer3 = false)
+        {
+            var settings = new BattleSettings { Seed = seed, EnclosureEveryTicks = enclosureEveryTicks, MaxEnclosureCells = maxEnclosureCells };
+            if (layer3)
+                return settings;
+
+            settings.EnemyHero = false;
+            settings.BaseGateUnits = 0;
+            settings.BaseAuraCells = 0;
+            settings.EnemySoldierPermille = 1000;
+            return settings;
+        }
 
         /// <summary>
         /// A walk that turns every 13 ticks and crosses the map: paints, encloses, hits the edges, picks resources up; with an army,
@@ -36,7 +50,7 @@ namespace Tests.BattleSystem.Editor
         /// <summary>Runs on frames of the given lengths and returns the hash after every tick.</summary>
         private static List<ulong> Run(IEnumerable<long> frames, int maxSteps = 16)
         {
-            var runner = new BattleRunner(Settings(), maxSteps);
+            var runner = new BattleRunner(Settings(layer3: true), maxSteps);
             EnqueueScript(runner.Simulation);
             var hashes = new List<ulong>();
             runner.OnStep += () => hashes.Add(runner.Simulation.ComputeHash());

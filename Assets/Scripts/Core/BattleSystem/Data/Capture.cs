@@ -8,8 +8,9 @@ namespace Core.BattleSystem.Data
     /// </summary>
     public sealed class Capture
     {
-        public Capture(int tick, Side side, int[] cells, int originX, int originY, int centerX, int centerY, int mapTotal)
+        public Capture(int tick, Side side, int[] cells, int originX, int originY, int centerX, int centerY, int mapTotal, int fromEnemy = 0)
         {
+            FromEnemy = fromEnemy;
             Tick = tick;
             Side = side;
             Cells = cells;
@@ -28,6 +29,9 @@ namespace Core.BattleSystem.Data
         public int CenterX { get; }
         public int CenterY { get; }
         public int MapTotal { get; }
+
+        /// <summary>How many of the cells were the other side's: a loss to it, which a sign at the edge shows (spec 4.3).</summary>
+        public int FromEnemy { get; }
 
         /// <summary>How many percent of the map the area added, rounded, at least 1.</summary>
         public int Percent => System.Math.Max(1, (Cells.Length * 100 + MapTotal / 2) / MapTotal);

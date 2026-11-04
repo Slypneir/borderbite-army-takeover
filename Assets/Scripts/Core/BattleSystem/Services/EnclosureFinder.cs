@@ -25,7 +25,7 @@ namespace Core.BattleSystem.Services
         /// Gives <paramref name="side"/> every area it surrounds; an area of more than <paramref name="maxCells"/> cells that are not
         /// protected stays as it is, whole (stage 1 spec 2.5).
         /// </summary>
-        public void Enclose(CellGrid grid, Side side, int maxCells, List<int[]> taken)
+        public void Enclose(CellGrid grid, Side side, int maxCells, List<int[]> taken, List<int> fromEnemy)
         {
             _generation++;
             var size = grid.Size;
@@ -39,14 +39,24 @@ namespace Core.BattleSystem.Services
                     continue;
 
                 var cells = new List<int>(count);
+                var lost = 0;
+                var other = side == Side.Player ? Side.Enemy : Side.Player;
                 for (var i = 0; i < count; i++)
                 {
-                    if (grid.Paint(_queue[i], side))
-                        cells.Add(_queue[i]);
+                    var was = grid[_queue[i]];
+                    if (!grid.Paint(_queue[i], side))
+                        continue;
+
+                    cells.Add(_queue[i]);
+                    if (was == other)
+                        lost++;
                 }
 
                 if (cells.Count > 0)
+                {
                     taken.Add(cells.ToArray());
+                    fromEnemy.Add(lost);
+                }
             }
         }
 

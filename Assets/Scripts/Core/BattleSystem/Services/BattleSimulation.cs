@@ -9,9 +9,9 @@ namespace Core.BattleSystem.Services
     /// <summary>
     /// The battle: integers only, one call of <see cref="Step"/> is one tick, commands wait for their tick. The same settings
     /// and commands give the same <see cref="ComputeHash"/> at every tick on any device and frame rate.
-    /// A tick: commands → dead heroes come back, blows and shots → heroes walk → soldiers walk → pickups, new piles, building,
-    /// hiring, healing → brushes paint (the enemy first, so a cell under both brushes is the player's) → enclosure for the player → for
-    /// the enemy → the shares decide the result.
+    /// A tick: commands → the commanders choose where their heroes walk → dead heroes come back, blows and shots → heroes walk →
+    /// soldiers walk → pickups, new piles, building, hiring, healing → brushes paint (the enemy first, so a cell under both
+    /// brushes is the player's) → enclosure for the player → for the enemy → a fallen base or the shares decide the result.
     /// </summary>
     public sealed class BattleSimulation
     {
@@ -20,6 +20,9 @@ namespace Core.BattleSystem.Services
         private readonly BattleState _state;
         private readonly List<BattleCommand> _commands = new List<BattleCommand>();
         private readonly List<int[]> _taken = new List<int[]>();
+        private readonly List<int> _lost = new List<int>();
+        private readonly Commander _enemyCommander;
+        private readonly Commander _playerCommander;
         private readonly EnclosureFinder _enclosure;
         private readonly EconomyRules _economy;
         private readonly ArmyRules _army;
@@ -37,17 +40,18 @@ namespace Core.BattleSystem.Services
             var far = settings.MapCells - settings.StartOffsetCells;
             PaintStart(near, near, Side.Player);
             PaintStart(far, far, Side.Enemy);
-            var home = near * BattleSettings.UnitsPerCell;
-            _state.Heroes.Add(new HeroState
+            // the bases face the middle of the map across it: the gate of the player's looks east, the enemy's west, so a hero at
+            // its gate is never behind the walls for the camera from the south
+            PlaceBase(Side.Player, near * BattleSettings.UnitsPerCell, settings.BaseGateUnits);
+            PlaceBase(Side.Enemy, far * BattleSettings.UnitsPerCell, -settings.BaseGateUnits);
+            AddHero(Side.Player);
+            if (settings.EnemyHero)
             {
-                Side = Side.Player,
-                X = home,
-                Y = home,
-                HomeX = home,
-                HomeY = home,
-                FacingY = 1,
-                Health = settings.HeroHealth,
-            });
+                AddHero(Side.Enemy);
+                _enemyCommander = new Commander(_state, Side.Enemy);
+            }
+
+            _playerCommander = new Commander(_state, Side.Player);
             _economy.LayStartPiles();
         }
 
@@ -66,6 +70,11 @@ namespace Core.BattleSystem.Services
 
         public IReadOnlyList<SiteState> Sites => _state.Sites;
 
+        /// <summary>The bases by side: [Side.Player] and [Side.Enemy].</summary>
+        public IReadOnlyList<BaseState> Bases => _state.Bases;
+
+        /// <summary>The priority the enemy commander follows now (GDD 5.8), 0 when none; for the developer.</summary>
+        public int EnemyPriority => _enemyCommander?.Priority ?? 0;
         /// <summary>Every area taken by enclosure since the start, in order.</summary>
         public IReadOnlyList<Capture> Captures => _state.Captures;
 
@@ -99,6 +108,9 @@ namespace Core.BattleSystem.Services
 
             _state.Tick++;
             ApplyCommands();
+            _enemyCommander?.Step(_state.Settings.EnemyReactionTicks);
+            if (_state.Settings.PlayerAutopilot)
+                _playerCommander.Step(_state.Settings.EnemyReactionTicks);
             _combat.Step();
             MoveHeroes();
             _army.Step();
@@ -150,6 +162,24 @@ namespace Core.BattleSystem.Services
                 ArmyRules.Spawn(_state, side, x + i % 5 * 1000, y + i / 5 * 1000);
         }
 
+        /// <summary>
+        /// The strength of the enemy of a level (GDD 5.9), at once and in the middle of a battle: the speed of its hero, its
+        /// reaction, the health and damage of its new soldiers, from which tick it may build. The developer's switch (spec 2.7).
+        /// </summary>
+        public void SetEnemyStrength(int speedPermille, int reactionTicks, int soldierPermille, int buildFromTicks)
+        {
+            _state.Settings.EnemySpeedPermille = speedPermille;
+            _state.Settings.EnemyReactionTicks = reactionTicks;
+            _state.Settings.EnemySoldierPermille = soldierPermille;
+            _state.Settings.EnemyBuildFromTicks = buildFromTicks;
+        }
+
+        /// <summary>The developer sets the health of a base, tenths; 0 brings it down, and the battle ends on the next tick.</summary>
+        public void SetBaseHealth(Side side, int health)
+        {
+            _combat.HitBase(side, _state.Bases[(int)side].Health - health);
+        }
+
         /// <summary>The developer builds a barracks of a side on a place at once, free.</summary>
         public void BuildBarracks(int site, Side side)
         {
@@ -186,6 +216,9 @@ namespace Core.BattleSystem.Services
             foreach (var resource in _state.Resources)
                 hash = Mix(hash, resource.Cell * 2 + (int)resource.Kind);
 
+            foreach (var place in _state.Bases)
+                hash = Mix(hash, place.Health);
+
             foreach (var site in _state.Sites)
             {
                 hash = Mix(hash, (int)site.Barracks);
@@ -203,6 +236,35 @@ namespace Core.BattleSystem.Services
                 hash = (hash ^ (byte)Grid[i]) * Prime;
 
             return hash;
+        }
+
+        private void PlaceBase(Side side, int middle, int gate)
+        {
+            var settings = _state.Settings;
+            _state.Bases[(int)side] = new BaseState
+            {
+                X = middle,
+                Y = middle,
+                Health = settings.BaseHealth,
+                GateX = middle + gate,
+                GateY = middle,
+            };
+            _economy.ProtectBase(side);
+        }
+
+        private void AddHero(Side side)
+        {
+            var place = _state.Bases[(int)side];
+            _state.Heroes.Add(new HeroState
+            {
+                Side = side,
+                X = place.GateX,
+                Y = place.GateY,
+                HomeX = place.GateX,
+                HomeY = place.GateY,
+                FacingX = side == Side.Player ? 1 : -1,
+                Health = _state.Settings.HeroHealth,
+            });
         }
 
         private void PaintStart(int centerX, int centerY, Side side)
@@ -227,7 +289,7 @@ namespace Core.BattleSystem.Services
                 _commands.RemoveAt(0);
                 for (var i = 0; i < _state.Heroes.Count; i++)
                 {
-                    if (_state.Heroes[i].Side != command.Side)
+                    if (_state.Heroes[i].Side != command.Side || (command.Side == Side.Player && _state.Settings.PlayerAutopilot))
                         continue;
 
                     var hero = _state.Heroes[i];
@@ -255,10 +317,12 @@ namespace Core.BattleSystem.Services
                 if (!hero.Alive || !hero.Moving)
                     continue;
 
-                // the same step in every direction: the direction is scaled to the step, its own length does not count
+                // the same step in every direction: the direction is scaled to the step, its own length does not count; the enemy's
+                // hero walks at the speed of the level
+                var step = hero.Side == Side.Enemy ? (int)((long)settings.HeroStepUnits * settings.EnemySpeedPermille / 1000) : settings.HeroStepUnits;
                 var length = IntMath.Sqrt((long)hero.DirectionX * hero.DirectionX + (long)hero.DirectionY * hero.DirectionY);
-                hero.X = IntMath.Clamp(hero.X + (int)(hero.DirectionX * (long)settings.HeroStepUnits / length), min, max);
-                hero.Y = IntMath.Clamp(hero.Y + (int)(hero.DirectionY * (long)settings.HeroStepUnits / length), min, max);
+                hero.X = IntMath.Clamp(hero.X + (int)(hero.DirectionX * (long)step / length), min, max);
+                hero.Y = IntMath.Clamp(hero.Y + (int)(hero.DirectionY * (long)step / length), min, max);
                 _state.Heroes[i] = hero;
             }
         }
@@ -296,12 +360,13 @@ namespace Core.BattleSystem.Services
         private void Enclose(Side side)
         {
             _taken.Clear();
-            _enclosure.Enclose(Grid, side, _state.Settings.MaxEnclosureCells, _taken);
-            foreach (var cells in _taken)
-                _state.Captures.Add(CaptureOf(side, cells));
+            _lost.Clear();
+            _enclosure.Enclose(Grid, side, _state.Settings.MaxEnclosureCells, _taken, _lost);
+            for (var i = 0; i < _taken.Count; i++)
+                _state.Captures.Add(CaptureOf(side, _taken[i], _lost[i]));
         }
 
-        private Capture CaptureOf(Side side, int[] cells)
+        private Capture CaptureOf(Side side, int[] cells, int fromEnemy)
         {
             long sumX = 0;
             long sumY = 0;
@@ -325,13 +390,20 @@ namespace Core.BattleSystem.Services
                 originY = hero.Y;
             }
 
-            return new Capture(Tick, side, cells, originX, originY, centerX, centerY, Grid.Total);
+            return new Capture(Tick, side, cells, originX, originY, centerX, centerY, Grid.Total, fromEnemy);
         }
 
         private void Decide()
         {
+            if (_state.Result != BattleResult.None)
+                return;
+
             var victory = _state.Settings.VictoryPermille;
-            if (Grid.Permille(Side.Player) >= victory)
+            if (!_state.Bases[(int)Side.Enemy].Standing)
+                _state.Result = BattleResult.Victory;
+            else if (!_state.Bases[(int)Side.Player].Standing)
+                _state.Result = BattleResult.Defeat;
+            else if (Grid.Permille(Side.Player) >= victory)
                 _state.Result = BattleResult.Victory;
             else if (Grid.Permille(Side.Enemy) >= victory)
                 _state.Result = BattleResult.Defeat;

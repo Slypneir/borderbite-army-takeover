@@ -173,12 +173,16 @@ namespace Meta.BattleSystem.Services
                 return;
 
             const float length = 2f;
-            for (var along = length / 2f; along < mapSize; along += length)
+            var last = new int[4];
+            for (var k = 0; k < 4; k++)
+                last[k] = -1;
+            var step = 0;
+            for (var along = length / 2f; along < mapSize; along += length, step++)
             {
-                Place(_world.ShoreTemplate, new Vector3(along, 0f, 0f), 180f);
-                Place(_world.ShoreTemplate, new Vector3(along, 0f, mapSize), 0f);
-                Place(_world.ShoreTemplate, new Vector3(0f, 0f, along), -90f);
-                Place(_world.ShoreTemplate, new Vector3(mapSize, 0f, along), 90f);
+                Place(Shore(0, step, last), new Vector3(along, 0f, 0f), 180f);
+                Place(Shore(1, step, last), new Vector3(along, 0f, mapSize), 0f);
+                Place(Shore(2, step, last), new Vector3(0f, 0f, along), -90f);
+                Place(Shore(3, step, last), new Vector3(mapSize, 0f, along), 90f);
             }
 
             if (_world.ShoreCornerTemplate != null)
@@ -227,6 +231,25 @@ namespace Meta.BattleSystem.Services
             if (name.Contains("tall"))
                 return radii.z;
             return radii.x;
+        }
+
+        /// <summary>
+        /// A piece of straight shore for a place along an edge: a variant by a hash of the place (the same island every time),
+        /// never the one just placed on that edge.
+        /// </summary>
+        private Transform Shore(int edge, int step, int[] last)
+        {
+            var variants = _world.ShoreVariants;
+            if (variants == null || variants.Length < 2)
+                return _world.ShoreTemplate;
+
+            var hash = (uint)(edge * 73856093) ^ (uint)(step * 19349663);
+            hash = (hash ^ (hash >> 13)) * 1274126177u;
+            var pick = (int)((hash ^ (hash >> 16)) % (uint)variants.Length);
+            if (pick == last[edge])
+                pick = (pick + 1) % variants.Length;
+            last[edge] = pick;
+            return variants[pick];
         }
 
         private Transform Place(Transform template, Vector3 position, float yaw)

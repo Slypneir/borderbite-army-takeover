@@ -19,6 +19,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The hero of the player, a placeholder. Starting value: dark blue.")]
         [SerializeField] private Color playerHeroColor = new Color(0.1f, 0.25f, 0.7f);
 
+        [Tooltip("The hero of the enemy: dark red, as the player's is dark blue. Starting value: dark red.")]
+        [SerializeField] private Color enemyHeroColor = new Color(0.62f, 0.1f, 0.08f);
+
         [Tooltip("Soldiers of the player, placeholders. Starting value: blue.")]
         [SerializeField] private Color playerSoldierColor = new Color(0.2f, 0.4f, 0.88f);
 
@@ -137,6 +140,9 @@ namespace Meta.BattleSystem.Configuration
             side == Core.BattleSystem.Enums.Side.Player ? playerSoldierColor : enemySoldierColor;
         public Color EnemyColor => enemyColor;
         public Color PlayerHeroColor => playerHeroColor;
+
+        public Color HeroColor(Core.BattleSystem.Enums.Side side) =>
+            side == Core.BattleSystem.Enums.Side.Player ? playerHeroColor : enemyHeroColor;
         public Color PlayerSoldierColor => playerSoldierColor;
         public Color EnemySoldierColor => enemySoldierColor;
         public Color GoldColor => goldColor;

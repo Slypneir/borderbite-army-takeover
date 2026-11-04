@@ -19,7 +19,9 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private Transform woodTemplate;
         [SerializeField] private Transform siteTemplate;
         [SerializeField] private Transform barracksTemplate;
+        [SerializeField] private Transform baseTemplate;
         [SerializeField] private Transform shoreTemplate;
+        [SerializeField] private Transform[] shoreVariants;
         [SerializeField] private Transform shoreCornerTemplate;
         [SerializeField] private Transform[] rockTemplates;
         [SerializeField] private Transform debrisTemplate;
@@ -34,7 +36,10 @@ namespace Meta.BattleSystem.Views
         public Transform WoodTemplate => woodTemplate;
         public Transform SiteTemplate => siteTemplate;
         public Transform BarracksTemplate => barracksTemplate;
+        public Transform BaseTemplate => baseTemplate;
         public Transform ShoreTemplate => shoreTemplate;
+        /// <summary>The straight shore and its variants of the same size and joints, mixed along the edges.</summary>
+        public Transform[] ShoreVariants => shoreVariants;
         public Transform ShoreCornerTemplate => shoreCornerTemplate;
         public Transform[] RockTemplates => rockTemplates;
         public Transform DebrisTemplate => debrisTemplate;

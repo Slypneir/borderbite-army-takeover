@@ -12,5 +12,7 @@ namespace Core.BattleSystem.Enums
         Built,
         Destroyed,
         Hired,
+        /// <summary>A barracks (Id: the place) or a base (Id: -1) of the side was hit; Value is the health left.</summary>
+        BuildingHit,
     }
 }

@@ -39,6 +39,7 @@ namespace Meta.BattleSystem.Installers
             builder.Register<SoldiersView>(Lifetime.Singleton).As<ILateTickable>();
             builder.Register<ResourcesView>(Lifetime.Singleton).As<ILateTickable>();
             builder.Register<SitesView>(Lifetime.Singleton).As<ILateTickable>();
+            builder.Register<BasesView>(Lifetime.Singleton).As<ILateTickable, IDisposable>();
             builder.Register<CameraRig>(Lifetime.Singleton).As<ILateTickable>();
             builder.Register<BattleSounds>(Lifetime.Singleton).As<ILateTickable, IDisposable>();
         }

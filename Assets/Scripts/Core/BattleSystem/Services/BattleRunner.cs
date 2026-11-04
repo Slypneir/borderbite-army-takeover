@@ -24,7 +24,8 @@ namespace Core.BattleSystem.Services
         public void Advance(long elapsedMicroseconds)
         {
             var steps = _clock.Advance(elapsedMicroseconds);
-            for (var i = 0; i < steps; i++)
+            // a finished battle takes no more ticks, even inside the frame it ended in
+            for (var i = 0; i < steps && Simulation.Result == Enums.BattleResult.None; i++)
             {
                 Simulation.Step();
                 OnStep?.Invoke();
