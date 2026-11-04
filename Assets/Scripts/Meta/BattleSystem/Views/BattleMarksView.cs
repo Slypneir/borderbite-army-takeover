@@ -146,6 +146,7 @@ namespace Meta.BattleSystem.Views
             // spec T12: a bar after a blow and 5 s more
             bar.Until = now + _view.BarHoldSeconds;
             bar.Max = isBase ? _rules.BaseHealth : _rules.BarracksHealth;
+            bar.HitAt = now;
             if (battleEvent.Side == Side.Player)
                 Threaten(key, battleEvent.X, battleEvent.Y, isBase, false, now);
         }
@@ -194,6 +195,11 @@ namespace Meta.BattleSystem.Views
                 // a building out of the frame shows no bar: its sign at the edge tells of it, as a label hides (UI review)
                 var ground = (Vector2)_camera.WorldToScreenPoint(new Vector3(bar.X * _rules.MetersPerUnit, 0f, bar.Y * _rules.MetersPerUnit)) / scale;
                 bar.Root.gameObject.SetActive(screen.z > 0f && bounds.Contains(ground) && ground.y < ceiling);
+                // a hit (task 4.22): the end of the fill flashes white, the bar jerks sideways; no «−1» for buildings
+                var since = now - bar.HitAt;
+                if (_view.BarShake && since < 0.15f)
+                    point.x += Mathf.Sin(since * 90f) * 3f * (1f - since / 0.15f);
+                bar.Flash.color = new Color(1f, 0.98f, 0.92f, Mathf.Clamp01(1f - since / 0.12f));
                 bar.Root.anchoredPosition = point;
                 bar.Root.sizeDelta = new Vector2(width, bar.Root.sizeDelta.y);
                 bar.Rim.color = bar.Side == Side.Player ? lightRim : darkRim;
@@ -294,11 +300,24 @@ namespace Meta.BattleSystem.Views
             }
 
             var root = Instantiate(barTemplate, transform);
+            var fill = (RectTransform)root.Find("Fill");
+            // the end of the fill flashes white at a hit (task 4.22): a narrow strip at its right edge
+            var flash = new GameObject("HitFlash", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            flash.SetParent(fill, false);
+            flash.anchorMin = new Vector2(1f, 0f);
+            flash.anchorMax = new Vector2(1f, 1f);
+            flash.pivot = new Vector2(1f, 0.5f);
+            flash.sizeDelta = new Vector2(10f, 0f);
+            var flashImage = flash.GetComponent<Image>();
+            flashImage.raycastTarget = false;
+            flashImage.color = new Color(1f, 0.98f, 0.92f, 0f);
             return new Bar
             {
                 Root = root,
                 Rim = root.GetComponent<Image>(),
-                Fill = (RectTransform)root.Find("Fill"),
+                Fill = fill,
+                Flash = flashImage,
+                HitAt = -1000f,
             };
         }
 
@@ -332,6 +351,8 @@ namespace Meta.BattleSystem.Views
             public int X;
             public int Y;
             public float Until;
+            public float HitAt;
+            public Image Flash;
         }
 
         private sealed class Threat

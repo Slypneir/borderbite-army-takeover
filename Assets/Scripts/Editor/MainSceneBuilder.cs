@@ -288,6 +288,7 @@ namespace Core.EditorTools
             var labels = BuildWorldLabels(root);
             var marks = BuildMarks(root);
             var popups = BuildPopups(root);
+            var numbers = BuildHitNumbers(root);
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
@@ -311,7 +312,7 @@ namespace Core.EditorTools
             var layers = go.AddComponent<BattleLayersView>();
             var serialized = new SerializedObject(layers);
             var over = serialized.FindProperty("overWorld");
-            var overLayers = new Component[] { icons, labels, marks, popups, hint, orders };
+            var overLayers = new Component[] { icons, labels, marks, popups, numbers, hint, orders };
             over.arraySize = overLayers.Length;
             for (var i = 0; i < overLayers.Length; i++)
                 over.GetArrayElementAtIndex(i).objectReferenceValue = Group(overLayers[i].gameObject);
@@ -1024,6 +1025,25 @@ namespace Core.EditorTools
             Wire(go.GetComponent<HintView>(), ("hand", hand), ("finger", finger), ("handWord", word), ("keys", keys), ("arrow", arrow),
                 ("hudBottom", hudBottom));
             return go.GetComponent<HintView>();
+        }
+
+        /// <summary>The «−1» over a hit bar (task 4.22): a bold label with a dark rim, copied per hit.</summary>
+        private static HitNumbersView BuildHitNumbers(RectTransform root)
+        {
+            var go = new GameObject("HitNumbers", typeof(RectTransform), typeof(HitNumbersView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var label = Text((RectTransform)go.transform, "Template", 24, TextAlignmentOptions.Center);
+            var rect = (RectTransform)label.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.sizeDelta = new Vector2(80f, 32f);
+            label.fontStyle = FontStyles.Bold;
+            label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+            var view = go.GetComponent<HitNumbersView>();
+            Wire(view, ("template", label));
+            return view;
         }
 
         private static CapturePopupView BuildPopups(RectTransform root)

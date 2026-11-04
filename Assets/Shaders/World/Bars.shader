@@ -1,5 +1,5 @@
 // Health bars over units: one mesh of flat quads in vertex colours, drawn over the world in one call (task 4.9), never
-// hidden by a roof. No light, no texture.
+// hidden by a roof. No light, no texture; the alpha of a colour fades the shards of a hit (task 4.22).
 Shader "Borderbite/World/Bars"
 {
     SubShader
@@ -12,6 +12,7 @@ Shader "Borderbite/World/Bars"
             Tags { "LightMode" = "UniversalForward" }
             ZTest Always
             ZWrite Off
+            Blend SrcAlpha OneMinusSrcAlpha
             Cull Off
 
             HLSLPROGRAM
