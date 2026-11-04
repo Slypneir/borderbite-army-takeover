@@ -107,11 +107,11 @@ namespace Core.BattleSystem.Services
                 bool melee;
                 if (NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, out target))
                     melee = true;
-                else if (NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
+                else if (_settings.HeroGun && NearestUnit(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
                     melee = false;
                 else if (NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.MeleeReachUnits, out target))
                     melee = true;
-                else if (NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
+                else if (_settings.HeroGun && NearestBuilding(_state, hero.Side, hero.X, hero.Y, _settings.GunReachUnits, out target))
                     melee = false;
                 else
                     continue;
@@ -155,6 +155,8 @@ namespace Core.BattleSystem.Services
                         return false;
 
                     hero.Health -= damage;
+                    hero.HurtTick = _state.Tick;
+                    hero.RegenAccumulator = 0;
                     if (hero.Health <= 0)
                     {
                         hero.Health = 0;

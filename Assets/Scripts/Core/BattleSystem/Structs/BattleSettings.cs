@@ -67,9 +67,13 @@ namespace Core.BattleSystem.Structs
         // layer 2: the hero fights
         public int HeroHealth = 1000;
         public int HeroRegenPerSecond = 50;
+        /// <summary>A hero heals only when nothing hurt it this long (task 4.7: out of a fight, or it cannot be killed at home).</summary>
+        public int HealAfterTicks = 90;
         public int MeleeReachUnits = 2400;
         public int MeleeDamage = 100;
         public int MeleeCooldownTicks = 15;
+        /// <summary>Heroes shoot the gun (task 4.8: off for now, both heroes fight only with the sword).</summary>
+        public bool HeroGun;
         public int GunReachUnits = 12000;
         public int GunDamage = 80;
         public int GunCooldownTicks = 45;

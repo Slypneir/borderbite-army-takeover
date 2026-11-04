@@ -213,15 +213,30 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Fight_GunReachesSixMeters()
+        public void Fight_GunOn_ReachesSixMeters()
         {
-            var simulation = New();
+            var settings = BattleDeterminismTests.Settings();
+            settings.HeroGun = true;
+            var simulation = new BattleSimulation(settings);
             // 5 m to the right of the hero, out of the sword's reach, out of the soldier's sight of 4 m
             simulation.AddSoldiers(Side.Enemy, 1, 8000 + 10000, 8000);
 
             Run(simulation, 2);
 
             simulation.Events.Should().Contain(e => e.Kind == EventKind.Shot && e.Side == Side.Player);
+        }
+
+        [Test]
+        public void Fight_GunOffByDefault_NoShotsOnlyTheSword()
+        {
+            // task 4.8: for now both heroes fight only close by
+            var simulation = New();
+            simulation.AddSoldiers(Side.Enemy, 1, 8000 + 10000, 8000);
+
+            Run(simulation, 60);
+
+            new BattleSettings().HeroGun.Should().BeFalse();
+            simulation.Events.Should().NotContain(e => e.Kind == EventKind.Shot);
         }
 
         [Test]
@@ -241,19 +256,41 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Heal_HeroOnItsLand_FivePointsASecond()
+        public void Heal_HeroOnItsLand_FivePointsASecondThreeSecondsAfterTheLastBlow()
         {
             var simulation = New();
             simulation.AddSoldiers(Side.Enemy, 1, 8000 + 1500, 8000);
             // three blows of the sword in a second kill it; it strikes back meanwhile
             Run(simulation, 40);
-            var hurt = simulation.Heroes[0].Health;
+            var hero = simulation.Heroes[0];
+            var hurt = hero.Health;
             hurt.Should().BeLessThan(1000);
             simulation.Soldiers.Should().BeEmpty();
 
-            Run(simulation, 30);
+            // no healing for 3 s after the last blow (task 4.7)
+            Run(simulation, hero.HurtTick + 89 - simulation.Tick);
+            simulation.Heroes[0].Health.Should().Be(hurt);
 
+            Run(simulation, 30);
             simulation.Heroes[0].Health.Should().Be(System.Math.Min(1000, hurt + 50));
+        }
+
+        [Test]
+        public void Heal_HeroOnItsLandUnderBlows_LosesHealth()
+        {
+            // the hero cannot strike back, the blows go on: at home it must still lose health (task 4.7)
+            var settings = BattleDeterminismTests.Settings();
+            settings.MeleeDamage = 0;
+            settings.GunDamage = 0;
+            var simulation = new BattleSimulation(settings);
+            simulation.AddSoldiers(Side.Enemy, 1, 8000 + 1500, 8000);
+            Run(simulation, 30);
+            var after1 = simulation.Heroes[0].Health;
+
+            Run(simulation, 150);
+
+            simulation.Grid.At(8, 8).Should().Be(Side.Player);
+            simulation.Heroes[0].Health.Should().BeLessThan(after1 - 200);
         }
     }
 }

@@ -205,14 +205,17 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        /// <summary>A hero on the land of its side heals by the rate per second, counted exactly in ticks.</summary>
+        /// <summary>
+        /// A hero on the land of its side heals by the rate per second, counted exactly in ticks, but only out of a fight: when
+        /// nothing hurt it for <see cref="BattleSettings.HealAfterTicks"/> (task 4.7).
+        /// </summary>
         private void Heal()
         {
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
                 var full = _settings.HeroHealthOf(hero.Side);
-                if (!hero.Alive || hero.Health >= full)
+                if (!hero.Alive || hero.Health >= full || _state.Tick - hero.HurtTick < _settings.HealAfterTicks)
                     continue;
 
                 var cell = _state.Grid.At(hero.X / BattleSettings.UnitsPerCell, hero.Y / BattleSettings.UnitsPerCell);

@@ -20,6 +20,8 @@ namespace Core.BattleSystem.Structs
         public int Cooldown;
         public int RespawnTick;
         public int InvulnerableUntil;
+        /// <summary>The tick it was last hurt; it heals only some time after it.</summary>
+        public int HurtTick;
         public int HomeX;
         public int HomeY;
 

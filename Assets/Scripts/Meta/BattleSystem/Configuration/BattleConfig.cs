@@ -47,6 +47,9 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Healing of the hero on the land of its side, health per second. Starting value: 5.")]
         [Min(0f)] [SerializeField] private float heroRegen = 5f;
 
+        [Tooltip("The hero heals only when nothing hurt it this long, seconds: out of a fight (task 4.7). Starting value: 3.")]
+        [Min(0f)] [SerializeField] private float healAfter = 3f;
+
         [Tooltip("Sword: reach in meters. Starting value: 1.2.")]
         [Min(0.1f)] [SerializeField] private float meleeReach = 1.2f;
 
@@ -55,6 +58,10 @@ namespace Meta.BattleSystem.Configuration
 
         [Tooltip("Sword: seconds between blows. Starting value: 0.5.")]
         [Min(0.05f)] [SerializeField] private float meleeEvery = 0.5f;
+
+        [Tooltip("Heroes shoot the gun (task 4.8: off for now — both heroes fight only with the sword; the numbers below stay for " +
+                 "when it is on again). Starting value: off.")]
+        [SerializeField] private bool heroGun;
 
         [Tooltip("Gun: reach in meters. Starting value: 6.")]
         [Min(0.1f)] [SerializeField] private float gunReach = 6f;
@@ -348,9 +355,11 @@ namespace Meta.BattleSystem.Configuration
 
                 HeroHealth = Tenths(heroHealth),
                 HeroRegenPerSecond = Tenths(heroRegen),
+                HealAfterTicks = Mathf.RoundToInt(healAfter * ticksPerSecond),
                 MeleeReachUnits = Units(meleeReach),
                 MeleeDamage = Tenths(meleeDamage),
                 MeleeCooldownTicks = Ticks(meleeEvery),
+                HeroGun = heroGun,
                 GunReachUnits = Units(gunReach),
                 GunDamage = Tenths(gunDamage),
                 GunCooldownTicks = Ticks(gunEvery),
