@@ -87,8 +87,15 @@ namespace Core.BattleSystem.Structs
         public int SquadMax = 5;
         /// <summary>Squads that keep by the base and the barracks of the enemy.</summary>
         public int GuardSquads = 1;
-        /// <summary>A wave leaves every this many ticks, the first one this long after the start.</summary>
+        /// <summary>The first wave leaves this many ticks after the start (task 4.28: at the 20th second)…</summary>
+        public int FirstWaveTicks = 600;
+        /// <summary>…and then one every this many ticks.</summary>
         public int WaveEveryTicks = 900;
+        /// <summary>
+        /// The alarm (task 4.28): while units of the player are on the enemy's land, every squad at home — the guard too — goes for
+        /// them, however far, and drives them to the edge of its land; a wave already out does not come back.
+        /// </summary>
+        public bool EnemyAlarm = true;
         public int WaveSquads = 2;
         /// <summary>The sign of a wave shows this long before it leaves.</summary>
         public int WaveWarnTicks = 150;

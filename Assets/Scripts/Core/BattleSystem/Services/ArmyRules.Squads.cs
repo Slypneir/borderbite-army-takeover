@@ -11,8 +11,9 @@ namespace Core.BattleSystem.Services
     /// - Squads of 3–5: a new soldier joins the squad still forming, else the smallest one at home, else starts a new one. The
     ///   first squads become the guard, which keeps by the base; the others stay home between the waves — on their own land,
     ///   painting its edge and the neutral land by it, never stepping on the player's land.
-    /// - At home a unit of the player on the enemy's land within 4 m is struck.
-    /// - Every 30 s a wave of up to two squads from home (the guard stays): chosen 5 s before it leaves — the sign shows where
+    /// - At home a unit of the player on the enemy's land within 4 m is struck; with the alarm (task 4.28) every squad at home,
+    ///   the guard too, goes for any unit of the player on its land, however far, and drives it to the edge of that land.
+    /// - At the 20th second, then every 30 s, a wave of up to two squads from home (the guard stays): chosen 5 s before it leaves — the sign shows where
     ///   they gather — it goes to the player's barracks nearest to it, else the base, striking units of the player within 4 m on
     ///   the way. With no target left, or fewer than 2 soldiers in a squad, that squad goes home.
     /// - The fall of the player's hero sends every wave home; meanwhile no wave leaves.
@@ -298,7 +299,7 @@ namespace Core.BattleSystem.Services
             switch (squad.Role)
             {
                 case SquadRole.Wave:
-                    if (Chase(ref soldier, false))
+                    if (Chase(ref soldier, false, _settings.DefendUnits))
                         return;
 
                     if (squad.Target >= 0)
@@ -321,7 +322,7 @@ namespace Core.BattleSystem.Services
                     Walk(ref soldier, gate.GateX + Jitter(soldier.Id, 0), gate.GateY + Jitter(soldier.Id, 16), 0);
                     return;
                 case SquadRole.Guard:
-                    if (Chase(ref soldier, true))
+                    if (Chase(ref soldier, true, HomeReach()))
                         return;
 
                     soldier.Goal = SoldierGoal.None;
@@ -330,7 +331,7 @@ namespace Core.BattleSystem.Services
                     return;
                 default:
                     // at home, forming or gathering for a wave: defend the own land, else paint its edge
-                    if (Chase(ref soldier, true))
+                    if (Chase(ref soldier, true, HomeReach()))
                         return;
 
                     if (AimAtEdge(ref soldier))
@@ -350,16 +351,15 @@ namespace Core.BattleSystem.Services
         /// The nearest unit of the player within 4 m — at home only one on the enemy's land — is chased and struck; false when
         /// none.
         /// </summary>
-        private bool Chase(ref SoldierState soldier, bool ownLandOnly)
+        private bool Chase(ref SoldierState soldier, bool ownLandOnly, long reach)
         {
             var body = _settings.SoldierBodyUnits;
-            var best = (long)_settings.DefendUnits;
+            var best = reach;
             var found = false;
             int tx = 0, ty = 0, radius = 0;
             foreach (var hero in _state.Heroes)
             {
-                if (hero.Side != Side.Player || !hero.Alive || hero.InvulnerableUntil > _state.Tick ||
-                    (ownLandOnly && _state.ColourAt(hero.X, hero.Y) != Side.Enemy))
+                if (hero.Side != Side.Player || !hero.Alive || hero.InvulnerableUntil > _state.Tick || (ownLandOnly && !OnEnemyLand(hero.X, hero.Y)))
                     continue;
 
                 var gap = Gap(soldier.X, soldier.Y, hero.X, hero.Y, body + _settings.HeroRadiusUnits);
@@ -375,7 +375,7 @@ namespace Core.BattleSystem.Services
 
             foreach (var other in _state.Soldiers)
             {
-                if (other.Side != Side.Player || (ownLandOnly && _state.ColourAt(other.X, other.Y) != Side.Enemy))
+                if (other.Side != Side.Player || (ownLandOnly && !OnEnemyLand(other.X, other.Y)))
                     continue;
 
                 var gap = Gap(soldier.X, soldier.Y, other.X, other.Y, body + body);
@@ -398,6 +398,31 @@ namespace Core.BattleSystem.Services
             Approach(ref soldier, tx, ty, radius);
             return true;
         }
+
+        /// <summary>
+        /// A unit of the player is on the enemy's land: a cell of the enemy within 3 cells of it. Its own brush paints the cells
+        /// under it at once (2 cells round a hero), so the cell under it alone would almost never tell.
+        /// </summary>
+        private bool OnEnemyLand(int x, int y)
+        {
+            const int reach = 3;
+            var grid = _state.Grid;
+            var cx = x / BattleSettings.UnitsPerCell;
+            var cy = y / BattleSettings.UnitsPerCell;
+            for (var dy = -reach; dy <= reach; dy++)
+            for (var dx = -reach; dx <= reach; dx++)
+            {
+                var px = cx + dx;
+                var py = cy + dy;
+                if (dx * dx + dy * dy <= reach * reach && px >= 0 && py >= 0 && px < grid.Size && py < grid.Size && grid.At(px, py) == Side.Enemy)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>How far a squad at home goes for a unit of the player on its land: 4 m, or anywhere on it with the alarm.</summary>
+        private long HomeReach() => _settings.EnemyAlarm ? long.MaxValue / 4 : _settings.DefendUnits;
 
         /// <summary>To a target of a radius, stopping within the reach of a blow from the edge of its body.</summary>
         private void Approach(ref SoldierState soldier, int x, int y, int radius)

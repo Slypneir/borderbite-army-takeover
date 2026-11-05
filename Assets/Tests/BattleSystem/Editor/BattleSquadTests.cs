@@ -21,6 +21,7 @@ namespace Tests.BattleSystem.Editor
             var settings = BattleDeterminismTests.Settings(layer3: true);
             settings.EnemySquads = true;
             // a quick wave for the checks: every 2 s, the sign 1 s before
+            settings.FirstWaveTicks = 60;
             settings.WaveEveryTicks = 60;
             settings.WaveWarnTicks = 30;
             settings.TruceTicks = 0;
@@ -39,7 +40,7 @@ namespace Tests.BattleSystem.Editor
         public void Squads_EightSoldiers_AGuardOfFiveAndASquadOfThreeAtHome()
         {
             var settings = Squads();
-            settings.WaveEveryTicks = 100000;
+            settings.FirstWaveTicks = 100000;
             var simulation = new BattleSimulation(settings);
             simulation.AddSoldiers(Side.Enemy, 8, 52 * Unit, 50 * Unit);
 
@@ -56,7 +57,7 @@ namespace Tests.BattleSystem.Editor
         public void Home_NeverStepsOnThePlayersLand()
         {
             var settings = Squads();
-            settings.WaveEveryTicks = 100000;
+            settings.FirstWaveTicks = 100000;
             var simulation = new BattleSimulation(settings);
             simulation.PaintRect(Side.Player, 20, 20, 44, 44);
             simulation.AddSoldiers(Side.Enemy, 10, 46 * Unit, 46 * Unit);
@@ -133,7 +134,7 @@ namespace Tests.BattleSystem.Editor
         public void ArmyCap_EnemyAtThePlayersArmyAndThree_StopsHiring()
         {
             var settings = Squads();
-            settings.WaveEveryTicks = 100000;
+            settings.FirstWaveTicks = 100000;
             var simulation = new BattleSimulation(settings);
             simulation.BuildBarracks(1, Side.Enemy);
             simulation.Give(Side.Enemy, 100, 0);
@@ -150,6 +151,34 @@ namespace Tests.BattleSystem.Editor
             simulation.ArmyOf(Side.Player).Should().Be(4);
             simulation.ArmyOf(Side.Enemy).Should().BeInRange(5, 7);
         }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void Alarm_AllAtHomeGoForTheIntruder_FarBeyond4m(bool alarm)
+        {
+            var settings = Squads();
+            settings.FirstWaveTicks = 100000;
+            settings.EnemyAlarm = alarm;
+            var simulation = new BattleSimulation(settings);
+            simulation.PaintRect(Side.Enemy, 34, 34, 63, 63);
+            simulation.AddSoldiers(Side.Enemy, 8, 54 * Unit, 46 * Unit);
+            Run(simulation, 1);
+            // the player's hero stands deep on the enemy's land, 8 m and more from every soldier of the enemy
+            simulation.TeleportHero(Side.Player, 38 * Unit, 58 * Unit);
+
+            Run(simulation, 45);
+
+            var hero = simulation.Heroes.First(h => h.Side == Side.Player);
+            var near = simulation.Soldiers.Count(s => s.Side == Side.Enemy &&
+                                                      BattleStateDistance(s.X, s.Y, hero.X, hero.Y) < 4 * 2 * Unit);
+            if (alarm)
+                near.Should().BeGreaterOrEqualTo(6);
+            else
+                near.Should().Be(0);
+        }
+
+        private static long BattleStateDistance(int x0, int y0, int x1, int y1) =>
+            (long)System.Math.Sqrt((double)(x1 - x0) * (x1 - x0) + (double)(y1 - y0) * (y1 - y0));
 
         private static int BattleStateMiddle(int cell) => cell * Unit + Unit / 2;
     }

@@ -108,6 +108,7 @@ namespace Meta.DeveloperTools.Services
         {
             var template = _battle.Current.Simulation.Settings;
             var lines = new List<string>();
+            var early30 = 0;
             for (var seed = 1; seed <= count; seed++)
             {
                 var settings = template.Clone();
@@ -160,10 +161,15 @@ namespace Meta.DeveloperTools.Services
                         waves++;
                 }
 
+                // the enemy's base broken in the first 30 s (task 4.28)
+                if (!simulation.Bases[(int)Side.Enemy].Standing && simulation.Tick <= 30 * settings.TicksPerSecond)
+                    early30++;
+
                 lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, base fell {fell}, squads {simulation.Squads.Count} ({waves} in a wave), blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
                           $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]} (within 5 s of coming back {early[1]}/{early[2]}), army {settings.ArmyMax} at {Seconds(full[1])}/{Seconds(full[2])}");
             }
 
+            lines.Add($"the enemy's base broken in the first 30 s: {early30}/{count}");
             return string.Join(" | ", lines);
         }
 

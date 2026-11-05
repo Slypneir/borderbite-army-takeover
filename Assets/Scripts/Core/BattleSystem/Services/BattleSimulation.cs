@@ -63,7 +63,7 @@ namespace Core.BattleSystem.Services
 
             _playerCommander = new Commander(_state, Side.Player);
             _state.Sides[(int)Side.Player].Gold = settings.PlayerStartGold;
-            _state.NextWaveTick = settings.WaveEveryTicks;
+            _state.NextWaveTick = settings.FirstWaveTicks;
             // a special level may start with barracks standing (layer 5 spec 2.3)
             for (var i = 0; i < map.Sites.Count; i++)
             {
@@ -107,10 +107,15 @@ namespace Core.BattleSystem.Services
         }
 
         /// <summary>The army of the enemy of a level (task 4.27): truce, squads, waves, the cap; at once, also in a running battle.</summary>
-        public void SetEnemyArmy(int truceTicks, int squadMin, int squadMax, int waveEveryTicks, int waveSquads, int waveWarnTicks,
-            int armySlack, int armyFloor, int defendUnits, int homeReachUnits)
+        public void SetEnemyArmy(int truceTicks, int squadMin, int squadMax, int firstWaveTicks, int waveEveryTicks, int waveSquads,
+            int waveWarnTicks, int armySlack, int armyFloor, int defendUnits, int homeReachUnits, bool alarm)
         {
             var settings = _state.Settings;
+            // a wave not yet announced keeps to the new first second while the battle has not passed it
+            if (!_state.WaveAnnounced && _state.NextWaveTick == settings.FirstWaveTicks && Tick < firstWaveTicks)
+                _state.NextWaveTick = firstWaveTicks;
+            settings.FirstWaveTicks = firstWaveTicks;
+            settings.EnemyAlarm = alarm;
             settings.TruceTicks = truceTicks;
             settings.SquadMin = System.Math.Max(1, squadMin);
             settings.SquadMax = System.Math.Max(settings.SquadMin, squadMax);
