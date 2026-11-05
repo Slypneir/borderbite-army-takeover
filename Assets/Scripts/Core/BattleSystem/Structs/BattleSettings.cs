@@ -35,6 +35,11 @@ namespace Core.BattleSystem.Structs
         public int WoodEveryTicks = 90;
         public int WoodMax = 8;
         public int ResourceAwayUnits = 4000;
+        /// <summary>
+        /// A new resource never appears this close to the edge of a place to build, empty or not, or to the walls of a base (task
+        /// 4.29: resources do not get in the way of building and do not crowd the bases).
+        /// </summary>
+        public int ResourceKeepOffUnits = 4000;
         /// <summary>The commander stops this close to a pile it walks to (half of it): then its hero mines it.</summary>
         public int PickupUnits = 2000;
         /// <summary>A hero mines a pile whose middle is this far from the edge of its body (task 4.19: 1.2 m).</summary>

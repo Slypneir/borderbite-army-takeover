@@ -126,6 +126,10 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("A new resource never appears closer than this to a hero or a soldier, meters. Starting value: 2.")]
         [Min(0f)] [SerializeField] private float resourceAway = 2f;
 
+        [Tooltip("A new resource never appears this close to the edge of a place to build, empty or not, or to the walls of a base, " +
+                 "meters (task 4.29). Starting value: 2.")]
+        [Min(0f)] [SerializeField] private float resourceKeepOff = 2f;
+
         [Tooltip("The hero picks a resource up within this distance, meters. Starting value: 1.")]
         [Min(0.1f)] [SerializeField] private float pickupReach = 1f;
 
@@ -263,6 +267,9 @@ namespace Meta.BattleSystem.Configuration
 
         /// <summary>Meters of the world for units of the simulation.</summary>
         public float MetersPerUnit => cellSize / BattleSettings.UnitsPerCell;
+
+        /// <summary>No resource closer than this to a place to build or the walls of a base, meters (task 4.29).</summary>
+        public float ResourceKeepOff => resourceKeepOff;
 
         [Header("Bases")]
         [Tooltip("Health of a base, points (spec 4.1, T13, task 4.16). Starting value: 200.")]
@@ -441,6 +448,7 @@ namespace Meta.BattleSystem.Configuration
                 WoodEveryTicks = Ticks(woodEvery),
                 WoodMax = woodMax,
                 ResourceAwayUnits = Units(resourceAway),
+                ResourceKeepOffUnits = Units(resourceKeepOff),
                 PickupUnits = Units(pickupReach),
                 MineReachUnits = Units(mineReach),
                 MineCooldownTicks = Ticks(mineEvery),

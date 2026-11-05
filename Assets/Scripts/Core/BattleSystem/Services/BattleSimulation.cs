@@ -284,6 +284,13 @@ namespace Core.BattleSystem.Services
             _economy.BuildBarracks(site, side);
         }
 
+        /// <summary>The developer brings down a barracks at once, as the last blow would.</summary>
+        public void DestroyBarracks(int site)
+        {
+            if (_state.Sites[site].Built)
+                _economy.Destroy(site);
+        }
+
         /// <summary>FNV-1a of the whole state: two runs are the same exactly when their hashes match at every tick.</summary>
         public ulong ComputeHash()
         {

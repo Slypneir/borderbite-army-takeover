@@ -250,6 +250,41 @@ namespace Meta.MapEditorSystem.Services
 
         public Vector2Int CornerOf(Side side) => side == Side.Enemy ? Map.EnemyBase.corner : Map.PlayerBase.corner;
 
+        /// <summary>
+        /// A start pile closer than <paramref name="keepOffCells"/> to the edge of a place to build or to the walls of a base: the
+        /// battle keeps new resources off there (task 4.29), the editor warns of a start pile there (layer 5 spec 2.5).
+        /// </summary>
+        public bool PileCrowds(Vector2Int cell, float keepOffCells)
+        {
+            bool Near(float cx, float cy, float half)
+            {
+                var dx = Mathf.Max(0f, Mathf.Abs(cell.x + 0.5f - cx) - half);
+                var dy = Mathf.Max(0f, Mathf.Abs(cell.y + 0.5f - cy) - half);
+                return dx * dx + dy * dy < keepOffCells * keepOffCells;
+            }
+
+            foreach (var site in Map.Sites)
+            {
+                if (Near(site.cell.x + 0.5f, site.cell.y + 0.5f, 1.5f))
+                    return true;
+            }
+
+            return Near(Map.PlayerBase.corner.x, Map.PlayerBase.corner.y, BaseHalf) || Near(Map.EnemyBase.corner.x, Map.EnemyBase.corner.y, BaseHalf);
+        }
+
+        /// <summary>The start piles closer than the keep-off to a place or a base: warnings of the editor.</summary>
+        public int CrowdingPiles(float keepOffCells)
+        {
+            var count = 0;
+            foreach (var pile in Map.Piles)
+            {
+                if (PileCrowds(pile.cell, keepOffCells))
+                    count++;
+            }
+
+            return count;
+        }
+
         private string PileError(Vector2Int cell)
         {
             if (Map.IsWater(cell.x, cell.y))

@@ -32,7 +32,9 @@ namespace Core.BattleSystem.Services
         public void Step()
         {
             Spawn(ResourceKind.Gold, _settings.GoldEveryTicks, _settings.GoldMax, _settings.GoldPortion);
-            Spawn(ResourceKind.Wood, _settings.WoodEveryTicks, _settings.WoodMax, _settings.WoodPortion);
+            // wood only while there is a place left to build on (task 4.30); the wood lying stays
+            if (AnyPlaceFree())
+                Spawn(ResourceKind.Wood, _settings.WoodEveryTicks, _settings.WoodMax, _settings.WoodPortion);
             Build();
             Hire();
             Heal();
@@ -144,7 +146,7 @@ namespace Core.BattleSystem.Services
             for (var attempt = 0; attempt < SpawnAttempts; attempt++)
             {
                 var cell = _state.Random.Next(grid.Total);
-                if (grid.IsProtected(cell) || (!anyLand && grid[cell] != Side.Neutral) || Taken(cell) || NearSomeone(cell))
+                if (grid.IsProtected(cell) || (!anyLand && grid[cell] != Side.Neutral) || Taken(cell) || NearSomeone(cell) || NearBuilding(cell))
                     continue;
 
                 Add(kind, cell, portion);
@@ -347,6 +349,50 @@ namespace Core.BattleSystem.Services
             }
 
             return false;
+        }
+
+        private bool AnyPlaceFree()
+        {
+            foreach (var site in _state.Sites)
+            {
+                if (!site.Built)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// The middle of a cell within the keep-off of the edge of a place to build (3 by 3 cells), empty or not, or of the walls of
+        /// a base (task 4.29).
+        /// </summary>
+        private bool NearBuilding(int cell)
+        {
+            var size = _state.Grid.Size;
+            var x = BattleState.Middle(cell % size);
+            var y = BattleState.Middle(cell / size);
+            var keep = _settings.ResourceKeepOffUnits;
+            foreach (var site in _state.Sites)
+            {
+                if (Within(x, y, BattleState.Middle(site.CenterX), BattleState.Middle(site.CenterY), BattleSettings.UnitsPerCell * 3 / 2, keep))
+                    return true;
+            }
+
+            foreach (var place in _state.Bases)
+            {
+                if (place.Standing && Within(x, y, place.X, place.Y, _settings.BaseHalfUnits, keep))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>A point within <paramref name="reach"/> of a square of half side <paramref name="half"/> round (cx, cy), or in it.</summary>
+        private static bool Within(int x, int y, int cx, int cy, int half, int reach)
+        {
+            long dx = System.Math.Max(0, System.Math.Abs(x - cx) - half);
+            long dy = System.Math.Max(0, System.Math.Abs(y - cy) - half);
+            return dx * dx + dy * dy < (long)reach * reach;
         }
 
         private bool NearSomeone(int cell)

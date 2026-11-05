@@ -47,6 +47,7 @@ MonoBehaviour:
   woodEvery: 3
   woodMax: 8
   resourceAway: 2
+  resourceKeepOff: 2
   pickupReach: 1
   mineReach: 1.2
   mineEvery: 0.25

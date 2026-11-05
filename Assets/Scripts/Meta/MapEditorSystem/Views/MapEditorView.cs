@@ -467,7 +467,9 @@ namespace Meta.MapEditorSystem.Views
 
             // no «×» and «·» in the font: words and bars
             var hover = _hover.x >= 0 ? $"   |   клетка {_hover.x}, {_hover.y}" : string.Empty;
-            status.text = $"суша {landShare}%   |   мест {m.Sites.Count}   |   золото {golds}, дерево {m.Piles.Count - golds}   |   " +
+            var crowding = _editing.CrowdingPiles(KeepOffCells);
+            var warning = crowding > 0 ? $"   |   у мест и штабов: {crowding}" : string.Empty;
+            status.text = $"суша {landShare}%   |   мест {m.Sites.Count}   |   золото {golds}, дерево {m.Piles.Count - golds}{warning}   |   " +
                           $"между штабами {meters:0.#} м{hover}";
         }
 
@@ -694,7 +696,12 @@ namespace Meta.MapEditorSystem.Views
 
             _editing.Commit();
             Changed();
+            if ((_tool == Tool.Gold || _tool == Tool.Wood) && _editing.PileCrowds(cell, KeepOffCells))
+                Say($"предупреждение: ресурс ближе {_rules.ResourceKeepOff:0.#} м к месту или штабу");
         }
+
+        /// <summary>The keep-off of resources from places and bases in cells (task 4.29).</summary>
+        private float KeepOffCells => _rules.ResourceKeepOff / _rules.CellSize;
 
         private bool Stroke(Vector2Int from, Vector2Int to) =>
             _tool == Tool.Eraser
