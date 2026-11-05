@@ -12,7 +12,7 @@ namespace Tests.BattleSystem.Editor
     /// shield of the player's side on its own land — every 3rd blow at a unit does not go through, the enemy has none; healing
     /// at home twice as often. Every number is a setting of the battle.
     /// </summary>
-    public sealed class BattleHomeTests
+    public sealed class BattleOwnLandTests
     {
         private const int Unit = BattleSettings.UnitsPerCell;
 
