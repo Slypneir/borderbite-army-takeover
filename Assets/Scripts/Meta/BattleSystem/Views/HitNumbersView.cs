@@ -7,11 +7,10 @@ using VContainer;
 namespace Meta.BattleSystem.Views
 {
     /// <summary>
-    /// The «−1» over a hit bar (task 4.22, battle-marks card «Попадание по полоске»): it shows from 0.16 s, when the lost segment
-    /// breaks, rises and fades by 0.86 s, golden (#ffe08a), with a pop at the start. Only the blows of the player's side on the
-    /// enemy's units get it (owner, 5 November); the bars of the player's units still break, without a number. Copies of
-    /// <see cref="template"/>; lives right under the canvas, anchored to its lower left corner. Buildings get no number: their
-    /// blows are frequent and would be noise.
+    /// The «−1» over the bar of the player's hero when it is hurt (task 4.22, battle-marks card «Попадание по полоске»; task 4.34,
+    /// spec 3.5): it shows from 0.16 s, when the lost segment breaks, rises and fades by 0.86 s, white. The enemy's units and the
+    /// player's soldiers get no number (owner: the screen was cluttered); their bars still flash, jerk and break. Copies of
+    /// <see cref="template"/>; lives right under the canvas, anchored to its lower left corner. Buildings get no number.
     /// </summary>
     public sealed class HitNumbersView : MonoBehaviour
     {
@@ -19,7 +18,6 @@ namespace Meta.BattleSystem.Views
         private const float Gone = 0.86f;
         private const float Rise = 40f;
         private static readonly Color Own = new Color(1f, 1f, 1f, 1f);
-        private static readonly Color Enemy = new Color(1f, 0.878f, 0.541f, 1f);
 
         [SerializeField] private TMP_Text template;
 
@@ -43,10 +41,11 @@ namespace Meta.BattleSystem.Views
                 _bars.Struck -= Add;
         }
 
-        private void Add(Vector3 world, bool enemy)
+        private void Add(Vector3 world, bool playerHero)
         {
-            // a number only for the damage the player deals (owner, 5 November)
-            if (!enemy)
+            // a number only over the player's hero when it is hurt (task 4.34, spec 3.5): the enemy's units and the player's
+            // soldiers get none, their bars still answer the blow
+            if (!playerHero)
                 return;
 
             Number number = null;
@@ -67,10 +66,9 @@ namespace Meta.BattleSystem.Views
 
             number.World = world;
             number.Age = 0f;
-            number.Enemy = enemy;
             // the static atlas of the font has the en dash, not the minus sign
             number.Label.text = "–1";
-            number.Label.color = enemy ? Enemy : Own;
+            number.Label.color = Own;
             number.Label.alpha = 0f;
             number.Label.gameObject.SetActive(true);
         }
@@ -94,8 +92,7 @@ namespace Meta.BattleSystem.Views
                 var t = Mathf.Clamp01((number.Age - Appear) / (Gone - Appear));
                 var rect = number.Label.rectTransform;
                 rect.anchoredPosition = (Vector2)screen / scale + Vector2.up * (Rise * t);
-                var pop = number.Enemy && t < 0.2f ? 1f + 0.4f * Mathf.Sin(t / 0.2f * Mathf.PI) : 1f;
-                rect.localScale = Vector3.one * ((number.Enemy ? 1.3f : 1f) * pop);
+                rect.localScale = Vector3.one;
                 number.Label.alpha = number.Age < Appear ? 0f : 1f - t * t;
             }
         }
@@ -105,7 +102,6 @@ namespace Meta.BattleSystem.Views
             public TMP_Text Label;
             public Vector3 World;
             public float Age;
-            public bool Enemy;
         }
     }
 }

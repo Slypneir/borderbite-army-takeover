@@ -239,10 +239,10 @@ namespace Meta.BattleSystem.Views
             var arrows = (RectTransform)waveSign.Find("Arrows");
             var angle = Mathf.Atan2(inward.y, inward.x) * Mathf.Rad2Deg;
             arrows.localRotation = Quaternion.Euler(0f, 0f, angle);
-            // the row starts 2 off the edge of the square plate along the ray: the arrows (32, anchored at the left of the
+            // the row starts 2 off the edge of the square plate along the ray: the arrows (40, anchored at the left of the
             // row of 48) never cover the plate, also on a diagonal
             var plateEdge = WaveSize / 2f / Mathf.Max(Mathf.Abs(inward.x), Mathf.Abs(inward.y), 0.01f);
-            arrows.anchoredPosition = inward * (plateEdge + 2f + 16f + 24f);
+            arrows.anchoredPosition = inward * (plateEdge + 2f + 20f + 24f);
             var phase = now * 1.2f % 1f;
             for (var i = 0; i < arrows.childCount; i++)
             {

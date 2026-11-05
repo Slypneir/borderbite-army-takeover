@@ -1595,11 +1595,12 @@ namespace Core.EditorTools
             // each chevron half a turn so that it points along the row
             var chevron = Icon("mark_wave_chevron_64");
             var arrows = Rect(sign, "Arrows", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            arrows.sizeDelta = new Vector2(48f, 32f);
+            arrows.sizeDelta = new Vector2(48f, 40f);
             for (var i = 0; i < 3; i++)
             {
+                // the 64 sprite at 40 units (UI review of 4.33)
                 var rect = Rect(arrows, "Arrow" + i, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-                rect.sizeDelta = Vector2.one * 32f;
+                rect.sizeDelta = Vector2.one * 40f;
                 if (chevron != null)
                 {
                     Picture(rect, chevron, Color.white).preserveAspect = true;
@@ -1614,17 +1615,17 @@ namespace Core.EditorTools
                 Stretch((RectTransform)arrow.transform);
             }
 
-            // five marks of the count under the plate: 16 wide with gaps of 4 at a plate of 96
+            // five marks of the count under the plate: the 32 × 16 sprite at 24 × 10 with gaps of 4 (UI review of 4.33)
             var pipOn = Icon("mark_wave_pip_on_32x16");
             var count = Rect(sign, "Marks", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             count.pivot = new Vector2(0.5f, 1f);
-            count.sizeDelta = new Vector2(5 * 16f + 4 * 4f, 8f);
+            count.sizeDelta = new Vector2(5 * 24f + 4 * 4f, 10f);
             count.anchoredPosition = new Vector2(0f, -6f);
             for (var i = 0; i < 5; i++)
             {
                 var mark = Rect(count, "Mark" + i, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-                mark.sizeDelta = new Vector2(16f, 8f);
-                mark.anchoredPosition = new Vector2(8f + i * 20f, 0f);
+                mark.sizeDelta = new Vector2(24f, 10f);
+                mark.anchoredPosition = new Vector2(12f + i * 28f, 0f);
                 Picture(mark, pipOn, pipOn != null ? Color.white : new Color(0.96f, 0.95f, 0.88f, 1f));
                 if (pipOn == null)
                     mark.gameObject.AddComponent<Outline>().effectColor = new Color(0.09f, 0.08f, 0.1f, 1f);

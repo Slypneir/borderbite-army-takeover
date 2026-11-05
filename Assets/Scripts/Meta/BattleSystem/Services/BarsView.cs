@@ -19,8 +19,8 @@ namespace Meta.BattleSystem.Services
     /// are one mesh rebuilt each frame, facing the camera: one draw for up to 60 soldiers and two heroes.
     /// A hit (task 4.22, battle-marks card «Попадание по полоске», owner's «A + C»): the lost segment goes white, the bar jerks
     /// sideways (0.15 s), the segment jumps up and swells (0.06–0.16 s), then breaks into voxels of the fill that fly and fade
-    /// by 0.86 s, and a «−1» rises (<see cref="Struck"/>, drawn by HitNumbersView). By the player's units it is restrained, by
-    /// the enemy's juicier: a bigger jump, more shards, a golden number. The jerk can be turned off (BattleViewConfig.barShake).
+    /// by 0.86 s; over the player's hero a «−1» rises (<see cref="Struck"/>, drawn by HitNumbersView; task 4.34). By the
+    /// player's units it is restrained, by the enemy's juicier: a bigger jump, more shards. The jerk can be turned off (BattleViewConfig.barShake).
     /// </summary>
     public sealed class BarsView : ILateTickable, IDisposable
     {
@@ -73,7 +73,7 @@ namespace Meta.BattleSystem.Services
             _camera = mainCamera;
         }
 
-        /// <summary>A unit lost a point: where over the world (the bar), and whether it is the enemy's — for the «−1».</summary>
+        /// <summary>A unit lost a point: where over the world (the bar), and whether it is the player's hero — for the «−1».</summary>
         public event Action<Vector3, bool> Struck;
 
         public void LateTick()
@@ -195,6 +195,8 @@ namespace Meta.BattleSystem.Services
                     Lose(key, centre, size, track.Full, lost, side);
             }
 
+            // the loss is answered once: without it every frame after a blow broke the same points again (UI review of 4.33)
+            track.Health = health;
             return now - track.HurtAt < _view.BarHoldSeconds;
         }
 
@@ -259,7 +261,7 @@ namespace Meta.BattleSystem.Services
             for (var i = 0; i < hit.Shards.Length; i++)
                 hit.Shards[i] = new Vector3(Next() * 2f - 1f, 1f + Next() * 1.5f, 0f);
             _hits.Add(hit);
-            Struck?.Invoke(centre + Vector3.up * size.y, hit.Enemy);
+            Struck?.Invoke(centre + Vector3.up * size.y, key == -1 - (int)Side.Player);
         }
 
         /// <summary>The sideways jerk of a bar for a while after its hit, meters (3 units by own, 4 by the enemy's).</summary>

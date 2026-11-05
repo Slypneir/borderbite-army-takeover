@@ -14,7 +14,7 @@ namespace Meta.BattleSystem.Services
     /// <summary>
     /// The dust of own land (task 4.33; battle-marks card «Своя земля: щит, блок, пыль»; spec 2.4a: a unit runs faster there):
     /// every hero and soldier of either side walking on the land of its side leaves at its feet, once in 0.12 s, a puff of 3 soft
-    /// voxels 4–7 units across, the light tone of its land — they go back and a little up, grow twice and are gone in 0.45 s.
+    /// voxels 5–8 units across (UI review of 4.33), the light tone of its land — they go back and a little up, grow twice and are gone in 0.45 s.
     /// No dust on the other side's land or on neutral land; at most 60 puffs at a time, more are not born. Cubes in the world,
     /// a placeholder until the art of the 3D artist.
     /// </summary>
@@ -143,7 +143,7 @@ namespace Meta.BattleSystem.Services
             for (var i = 0; i < Voxels; i++)
             {
                 var voxel = Take();
-                var size = Mathf.Lerp(4f, 7f, Next()) * UiUnit;
+                var size = Mathf.Lerp(5f, 8f, Next()) * UiUnit;
                 voxel.Size = size;
                 voxel.At = now;
                 var side = new Vector3(-direction.z, 0f, direction.x) * (Next() - 0.5f) * 0.6f;
