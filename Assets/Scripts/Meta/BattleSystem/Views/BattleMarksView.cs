@@ -3,6 +3,7 @@ using Core.BattleSystem.Enums;
 using Core.BattleSystem.Structs;
 using Meta.BattleSystem.Configuration;
 using Meta.BattleSystem.Interfaces;
+using Meta.BattleSystem.Services;
 using Meta.BattleSystem.Utils;
 using TMPro;
 using UnityEngine;
@@ -75,13 +76,15 @@ namespace Meta.BattleSystem.Views
         private int _captures;
         private object _simulation;
         private IBattleDriver _battle;
+        private HeroView _heroes;
         private BattleConfig _rules;
         private BattleViewConfig _view;
         private Camera _camera;
 
         [Inject]
-        public void Construct(IBattleDriver battle, BattleConfig rules, BattleViewConfig view, Camera mainCamera)
+        public void Construct(IBattleDriver battle, BattleConfig rules, BattleViewConfig view, Camera mainCamera, HeroView heroes)
         {
+            _heroes = heroes;
             _battle = battle;
             _rules = rules;
             _view = view;
@@ -241,6 +244,7 @@ namespace Meta.BattleSystem.Views
             // on a wide screen the top edge is near the hero: a sign whose arrows would reach into its zone shows none — even one
             // lay on the hero's bar there; its place at the edge still tells where the wave gathers
             cramped |= (place - centre).magnitude - WaveReach < HeroZone;
+            place = ClearOfHeroBar(place, (5f * 24f + 4f * 4f) / 2f, WaveSize / 2f, scale, area);
 
             waveSign.anchoredPosition = place + inward * (20f * leaving);
             var push = now - _wavePushAt < 0.2f ? 1f + 0.06f * Mathf.Sin((now - _wavePushAt) / 0.2f * Mathf.PI) : 1f;
@@ -292,6 +296,39 @@ namespace Meta.BattleSystem.Views
         private const float WaveReach = WaveSize / 2f + 2f + 40f + 36f;
         // the zone of the hero: no sign with its arrows comes closer to the middle of the frame (UI review of 4.36)
         private const float HeroZone = 160f;
+
+        // the bar of the hero: its middle over the feet and its half width, meters (BarsView); the gap a sign keeps over it
+        private const float HeroBarHeight = 2.15f;
+        private const float HeroBarHalf = 0.7f;
+        private const float HeroBarGap = 24f;
+
+        /// <summary>
+        /// A sign keeps at least 24 over the bar of the player's hero (UI review of 4.36): one lower than that over the bar moves
+        /// aside along the edge, by the shorter way that stays in the frame.
+        /// </summary>
+        private Vector2 ClearOfHeroBar(Vector2 middle, float half, float halfHeight, float scale, Rect area)
+        {
+            if (_heroes == null)
+                return middle;
+
+            var hero = _heroes.PositionOf(Side.Player) + Vector3.up * HeroBarHeight;
+            var right = _camera.transform.right * HeroBarHalf;
+            var barLeft = (Vector2)_camera.WorldToScreenPoint(hero - right) / scale;
+            var barRight = (Vector2)_camera.WorldToScreenPoint(hero + right) / scale;
+            var barTop = Mathf.Max(barLeft.y, barRight.y) + 6f;
+            if (middle.y - halfHeight >= barTop + HeroBarGap || middle.x + half < barLeft.x || middle.x - half > barRight.x)
+                return middle;
+
+            var toLeft = barLeft.x - half - 4f;
+            var toRight = barRight.x + half + 4f;
+            var leftFits = toLeft - half >= area.xMin - EdgeInset;
+            var rightFits = toRight + half <= area.xMax + EdgeInset;
+            if (leftFits && (!rightFits || middle.x - toLeft <= toRight - middle.x))
+                middle.x = toLeft;
+            else if (rightFits)
+                middle.x = toRight;
+            return middle;
+        }
 
         /// <summary>
         /// A sign at the edge that would stand on the banner of the second chance steps aside along the edge out of its width

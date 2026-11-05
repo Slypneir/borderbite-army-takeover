@@ -1774,9 +1774,10 @@ namespace Core.EditorTools
             // five marks of the count under the plate: the 32 × 16 sprite at 24 × 10 with gaps of 4 (UI review of 4.33)
             var pipOn = Icon("mark_wave_pip_on_32x16");
             var count = Rect(sign, "Marks", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
-            count.pivot = new Vector2(0.5f, 1f);
+            // on the lower rim of the plate, inside its edge, not under it: the sign is shorter (UI review of 4.36)
+            count.pivot = new Vector2(0.5f, 0f);
             count.sizeDelta = new Vector2(5 * 24f + 4 * 4f, 10f);
-            count.anchoredPosition = new Vector2(0f, -6f);
+            count.anchoredPosition = new Vector2(0f, 5f);
             for (var i = 0; i < 5; i++)
             {
                 var mark = Rect(count, "Mark" + i, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
