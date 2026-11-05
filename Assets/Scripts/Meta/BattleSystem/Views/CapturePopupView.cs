@@ -23,6 +23,8 @@ namespace Meta.BattleSystem.Views
         private const float MergeSeconds = 0.6f;
 
         [SerializeField] private TMP_Text template;
+        [Tooltip("The banner of the second chance: a part of the HUD, a popup within its width keeps under its teeth + 8 (task 4.36).")]
+        [SerializeField] private SecondChanceView banner;
 
         private readonly List<Popup> _popups = new List<Popup>();
         private IBattleDriver _battle;
@@ -113,7 +115,16 @@ namespace Meta.BattleSystem.Views
                     continue;
                 }
 
-                ((RectTransform)popup.Label.transform).anchoredPosition = Place(popup.World, scale) + Vector2.up * (_view.PopupRise * t);
+                var rect = (RectTransform)popup.Label.transform;
+                var place = Place(popup.World, scale) + Vector2.up * (_view.PopupRise * t);
+                if (banner != null)
+                {
+                    // under the banner the label stops at its teeth + 8, rising no higher
+                    var top = banner.CeilingAt(place.x, popup.Label.preferredWidth / 2f, float.PositiveInfinity, scale);
+                    place.y = Mathf.Min(place.y, top - rect.rect.height / 2f);
+                }
+
+                rect.anchoredPosition = place;
                 popup.Label.alpha = t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f;
             }
         }

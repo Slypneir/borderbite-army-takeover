@@ -306,6 +306,8 @@ namespace Core.EditorTools
             var banner = hud.GetComponent<SecondChanceView>();
             Wire(labels, ("hudBottom", counters), ("banner", banner));
             Wire(icons, ("hudBottom", counters), ("labels", labels), ("banner", banner));
+            Wire(popups, ("banner", banner));
+            Wire(marks, ("banner", banner));
             Wire(marks, ("hudBottom", counters));
             var orders = BuildOrders(area);
             BuildResourceFlight(area, hud);
@@ -589,11 +591,12 @@ namespace Core.EditorTools
             Picture(slash, null, new Color32(0xd8, 0x47, 0x3d, 0xff));
             // capitals at 36, thick by the dilate of the face that the view sets, with a dark rim (UI review of 4.36)
             var plaqueLabel = Text(plaque, "Label", 36, TextAlignmentOptions.Left);
-            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(62f, 0f);
-            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-10f, 0f);
+            // fields of 12 from the rim, and 4 more for the dilate of the face and the breath of 1.03 that the fit does not see
+            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(58f, 0f);
+            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-16f, 0f);
             plaqueLabel.fontStyle = FontStyles.UpperCase;
             plaqueLabel.enableAutoSizing = true;
-            plaqueLabel.fontSizeMin = 26f;
+            plaqueLabel.fontSizeMin = 28f;
             plaqueLabel.fontSizeMax = 36f;
             plaqueLabel.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             Picture(Rect(plaque, "Flash", Vector2.zero, Vector2.one), null, new Color(1f, 1f, 1f, 0f));

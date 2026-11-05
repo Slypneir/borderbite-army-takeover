@@ -51,6 +51,8 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private RectTransform signTemplate;
         [SerializeField] private TMP_Text countdown;
         [SerializeField] private RectTransform hudBottom;
+        [Tooltip("The banner of the second chance: a part of the HUD, signs at the top edge step aside out of its width (task 4.36).")]
+        [SerializeField] private SecondChanceView banner;
 
         [Tooltip("The row of the orders (task 4.18): nothing goes under it.")]
         [SerializeField] private RectTransform orderBar;
@@ -227,6 +229,8 @@ namespace Meta.BattleSystem.Views
             var inward = -direction.normalized;
             var place = Edge(centre, direction, area, WaveSize / 2f);
             var leaving = !coming ? Mathf.Clamp01(gone / WaveGone) : 0f;
+            // the marks under the plate are wider than it: 5 of 24 with gaps of 4
+            place = UnderBanner(place, (5f * 24f + 4f * 4f) / 2f, scale);
             waveSign.anchoredPosition = place + inward * (20f * leaving);
             var push = now - _wavePushAt < 0.2f ? 1f + 0.06f * Mathf.Sin((now - _wavePushAt) / 0.2f * Mathf.PI) : 1f;
             waveSign.localScale = Vector3.one * push;
@@ -271,6 +275,22 @@ namespace Meta.BattleSystem.Views
                 mark.gameObject.SetActive(true);
                 mark.GetComponent<Image>().sprite = lit ? pipOn : pipOff;
             }
+        }
+
+        /// <summary>
+        /// A sign at the edge that would stand on the banner of the second chance moves along the edge out of its width, to the
+        /// nearer side: under the banner it would hang in the middle of the frame, over the hero.
+        /// </summary>
+        private Vector2 UnderBanner(Vector2 middle, float half, float scale)
+        {
+            if (banner == null || !banner.Span(scale, out var left, out var right, out var bottom))
+                return middle;
+
+            if (middle.y - half > bottom || middle.x + half < left || middle.x - half > right)
+                return middle;
+
+            middle.x = middle.x - left < right - middle.x ? left - half : right + half;
+            return middle;
         }
 
         private void Threaten(int key, int x, int y, bool isBase, bool land, float now, bool wave = false)
@@ -369,7 +389,7 @@ namespace Meta.BattleSystem.Views
                 var sign = SignAt(shown++);
                 var size = threat.IsBase ? baseSignSize : signSize;
                 sign.Root.sizeDelta = Vector2.one * size;
-                sign.Root.anchoredPosition = Edge(centre, direction, area, size / 2f);
+                sign.Root.anchoredPosition = UnderBanner(Edge(centre, direction, area, size / 2f), size / 2f, scale);
                 sign.Point.localRotation = Quaternion.Euler(0f, 0f, angle - 90f);
                 sign.Building.SetActive(!threat.Land && !threat.Wave);
                 sign.Land.SetActive(threat.Land && !threat.Wave);

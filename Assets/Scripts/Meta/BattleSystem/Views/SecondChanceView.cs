@@ -163,18 +163,28 @@ namespace Meta.BattleSystem.Views
         /// </summary>
         public float CeilingAt(float x, float half, float ceiling, float scale)
         {
-            if (_cloth == null || !_cloth.gameObject.activeInHierarchy)
+            if (!Span(scale, out var left, out var right, out var bottom) || x + half < left || x - half > right)
                 return ceiling;
+
+            return Mathf.Min(ceiling, bottom);
+        }
+
+        /// <summary>
+        /// The room the banner takes, canvas units, with the gap of 8 round it: its sides and the line under its teeth; false
+        /// while it does not hang.
+        /// </summary>
+        public bool Span(float scale, out float left, out float right, out float bottom)
+        {
+            left = right = bottom = 0f;
+            if (_cloth == null || !_cloth.gameObject.activeInHierarchy)
+                return false;
 
             // an overlay canvas: world corners are screen pixels
             _cloth.GetWorldCorners(_corners);
-            var left = Mathf.Min(_corners[0].x, _corners[2].x) / scale;
-            var right = Mathf.Max(_corners[0].x, _corners[2].x) / scale;
-            var bottom = Mathf.Min(_corners[0].y, _corners[2].y) / scale - Teeth;
-            if (x + half < left - Gap || x - half > right + Gap)
-                return ceiling;
-
-            return Mathf.Min(ceiling, bottom - Gap);
+            left = Mathf.Min(_corners[0].x, _corners[2].x) / scale - Gap;
+            right = Mathf.Max(_corners[0].x, _corners[2].x) / scale + Gap;
+            bottom = Mathf.Min(_corners[0].y, _corners[2].y) / scale - Teeth * BannerScale - Gap;
+            return true;
         }
 
         private Color ColorOf(Side side) => side == Side.Player ? _view.PlayerColor : _view.EnemyColor;
