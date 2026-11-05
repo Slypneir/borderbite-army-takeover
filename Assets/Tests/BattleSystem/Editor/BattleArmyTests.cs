@@ -179,13 +179,16 @@ namespace Tests.BattleSystem.Editor
             simulation.Give(Side.Player, 50, 10);
             WalkOntoFirstPlace(simulation);
             Run(simulation, 31);
+            // the barracks stands by now: since 5 November a hero builds as it comes near, maybe before this
+            simulation.Sites[0].Barracks.Should().Be(Side.Player);
+            var before = simulation.ArmyOf(Side.Player);
 
             Run(simulation, 150);
 
             // the way to the place passes the pile of gold at (13, 13): the hero may mine a little of it
             var picked = simulation.Events.Where(e => e.Kind == EventKind.Pickup && e.Detail == (int)ResourceKind.Gold).Sum(e => e.Value);
-            simulation.ArmyOf(Side.Player).Should().Be(10);
-            simulation.SideOf(Side.Player).Gold.Should().Be(50 + picked - 10 * 1);
+            simulation.ArmyOf(Side.Player).Should().Be(before + 10);
+            simulation.SideOf(Side.Player).Gold.Should().Be(50 + picked - simulation.ArmyOf(Side.Player) * 1);
         }
 
         [Test]

@@ -69,6 +69,37 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
+        public void Build_NeutralPlace_HeroNear_BuildsWithoutPaintingFirst()
+        {
+            // owner, 5 November: a grey place builds too when the hero stands by it, as a pile is mined or an enemy struck
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings());
+            var site = simulation.Sites[0];
+            simulation.Give(Side.Player, 0, 10);
+            simulation.TeleportHero(Side.Player, BattleStateMiddle(site.CenterX), BattleStateMiddle(site.CenterY) - 3600);
+
+            simulation.Step();
+            simulation.Grid.At(site.CenterX, site.CenterY).Should().Be(Side.Neutral);
+            Run(simulation, 30);
+
+            simulation.Sites[0].Barracks.Should().Be(Side.Player);
+            simulation.Events.Should().Contain(e => e.Kind == EventKind.Built && e.Side == Side.Player && e.Id == 0);
+        }
+
+        [Test]
+        public void Build_PlaceOfTheEnemyColour_DoesNotBuild()
+        {
+            var simulation = new BattleSimulation(BattleDeterminismTests.Settings());
+            var site = simulation.Sites[0];
+            simulation.PaintRect(Side.Enemy, site.CenterX - 1, site.CenterY - 1, site.CenterX + 1, site.CenterY + 1);
+            simulation.Give(Side.Player, 0, 10);
+            simulation.TeleportHero(Side.Player, BattleStateMiddle(site.CenterX), BattleStateMiddle(site.CenterY) - 3600);
+
+            Run(simulation, 31);
+
+            simulation.Sites[0].Built.Should().BeFalse();
+        }
+
+        [Test]
         public void Build_HeroFarFromThePlace_DoesNotBuild()
         {
             // 2.8 m from the middle: beyond the reach of building

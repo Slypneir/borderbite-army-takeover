@@ -152,29 +152,51 @@ namespace Core.BattleSystem.Services
             }
         }
 
+        /// <summary>
+        /// A hero with the wood for it builds on an empty place it stands near, unless the place is of the other side's colour
+        /// (owner, 5 November: as it mines a pile or strikes an enemy near it; the place need not be painted first). The player's
+        /// hero comes first when both are near; the progress starts anew when the builder changes or steps away.
+        /// </summary>
         private void Build()
         {
             for (var s = 0; s < _state.Sites.Length; s++)
             {
                 ref var site = ref _state.Sites[s];
-                var owner = _state.Grid.At(site.CenterX, site.CenterY);
-                var hero = owner == Side.Neutral ? -1 : _state.HeroOf(owner);
-                var standing = !site.Built && hero >= 0 && _state.Heroes[hero].Alive && ByPlace(_state.Heroes[hero], site) &&
-                               _state.Sides[(int)owner].Wood >= _settings.BarracksWood &&
-                               (owner != Side.Enemy || _state.Tick >= _settings.EnemyBuildFromTicks);
-                if (!standing)
+                var builder = site.Built ? Side.Neutral : BuilderOf(site);
+                if (builder == Side.Neutral || builder != site.Builder)
                 {
+                    site.Builder = builder;
                     site.BuildProgress = 0;
-                    continue;
+                    if (builder == Side.Neutral)
+                        continue;
                 }
 
                 site.BuildProgress++;
                 if (site.BuildProgress < _settings.BuildTicks)
                     continue;
 
-                _state.Sides[(int)owner].Wood -= _settings.BarracksWood;
-                BuildBarracks(s, owner);
+                _state.Sides[(int)builder].Wood -= _settings.BarracksWood;
+                site.Builder = Side.Neutral;
+                BuildBarracks(s, builder);
             }
+        }
+
+        private static readonly Side[] Builders = { Side.Player, Side.Enemy };
+
+        private Side BuilderOf(SiteState site)
+        {
+            var colour = _state.Grid.At(site.CenterX, site.CenterY);
+            foreach (var side in Builders)
+            {
+                var hero = _state.HeroOf(side);
+                if (colour == BattleState.Enemy(side) || hero < 0 || !_state.Heroes[hero].Alive || !ByPlace(_state.Heroes[hero], site) ||
+                    _state.Sides[(int)side].Wood < _settings.BarracksWood || (side == Side.Enemy && _state.Tick < _settings.EnemyBuildFromTicks))
+                    continue;
+
+                return side;
+            }
+
+            return Side.Neutral;
         }
 
         /// <summary>While the hero stands near its own barracks, a soldier every period for gold, up to the limit of the army.</summary>

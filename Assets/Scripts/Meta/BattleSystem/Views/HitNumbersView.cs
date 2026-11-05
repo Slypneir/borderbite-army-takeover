@@ -8,9 +8,10 @@ namespace Meta.BattleSystem.Views
 {
     /// <summary>
     /// The «−1» over a hit bar (task 4.22, battle-marks card «Попадание по полоске»): it shows from 0.16 s, when the lost segment
-    /// breaks, rises and fades by 0.86 s. By the player's units it is white and small; by the enemy's golden (#ffe08a), larger,
-    /// with a pop at the start. Copies of <see cref="template"/>; lives right under the canvas, anchored to its lower left corner.
-    /// Buildings get no number: their blows are frequent and would be noise.
+    /// breaks, rises and fades by 0.86 s, golden (#ffe08a), with a pop at the start. Only the blows of the player's side on the
+    /// enemy's units get it (owner, 5 November); the bars of the player's units still break, without a number. Copies of
+    /// <see cref="template"/>; lives right under the canvas, anchored to its lower left corner. Buildings get no number: their
+    /// blows are frequent and would be noise.
     /// </summary>
     public sealed class HitNumbersView : MonoBehaviour
     {
@@ -44,6 +45,10 @@ namespace Meta.BattleSystem.Views
 
         private void Add(Vector3 world, bool enemy)
         {
+            // a number only for the damage the player deals (owner, 5 November)
+            if (!enemy)
+                return;
+
             Number number = null;
             foreach (var free in _numbers)
             {

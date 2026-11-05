@@ -20,9 +20,10 @@ namespace Meta.BattleSystem.Views
     /// </summary>
     /// <remarks>
     /// The mark of a place to build (task 4.26, battle-marks card «Метка места под казарму»; owner: seen always): a pin over every
-    /// empty place in the frame at any distance from the hero, its tip 1.2 m over the middle of the place — blue on the land of
-    /// the player with «[wood] 5» under it and the ring of building round the medallion, grey on neutral or enemy land with no
-    /// label. A built barracks has no pin. Off the frame no pin: the edges belong to the signs of threats.
+    /// empty place in the frame at any distance from the hero, its tip 1.2 m over the middle of the place — blue where the player
+    /// may build (its own or neutral land, owner 5 November) with «[wood] 5» under it and the ring of building round the
+    /// medallion, grey on enemy land with no label. A built barracks has no pin. Off the frame no pin: the edges belong to the
+    /// signs of threats.
     /// </remarks>
     public sealed class WorldLabelsView : MonoBehaviour
     {
@@ -146,7 +147,8 @@ namespace Meta.BattleSystem.Views
                 if (!shown)
                     continue;
 
-                var own = owner == Side.Player;
+                // the player may build on its own and on neutral land: the pin is its
+                var own = owner != Side.Enemy;
                 // over the hero building there: the medallion and the price see-through, the ring stays solid
                 var near = (new Vector2(x, z) - hero).sqrMagnitude < NearHero * NearHero;
                 foreach (var graphic in mark.PinGraphics)
@@ -177,7 +179,7 @@ namespace Meta.BattleSystem.Views
                         Dull(mark, purse.Wood >= _rules.BarracksWood);
                     }
 
-                    mark.Ring.enabled = own && site.BuildProgress > 0;
+                    mark.Ring.enabled = site.Builder == Side.Player && site.BuildProgress > 0;
                     mark.Ring.fillAmount = (float)site.BuildProgress / buildTicks;
                 }
 

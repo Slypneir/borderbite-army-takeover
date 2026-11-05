@@ -276,6 +276,7 @@ namespace Core.BattleSystem.Services
                 hash = Mix(hash, (int)site.Barracks);
                 hash = Mix(hash, site.Health);
                 hash = Mix(hash, site.BuildProgress);
+                hash = Mix(hash, (int)site.Builder);
             }
 
             foreach (var side in _state.Sides)
