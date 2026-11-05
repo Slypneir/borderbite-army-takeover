@@ -470,7 +470,20 @@ namespace Core.EditorTools
         private static void Icons()
         {
             HudSprites();
-            foreach (var name in new[] { "gold", "wood", "army", "crown", "up_hero", "up_brush", "up_soldiers", "up_gold" })
+            var plain = new List<string> { "gold", "wood", "army", "crown", "up_hero", "up_brush", "up_soldiers", "up_gold" };
+            // the shield of own land and the sign of a wave (task 4.33, art request 14)
+            foreach (var size in new[] { "128", "64" })
+            {
+                plain.Add("icon_shield_home_" + size);
+                // a white silhouette of the shield for its flash, made by the game from the alpha of the art
+                plain.Add("icon_shield_home_flash_" + size);
+                for (var shard = 1; shard <= 4; shard++)
+                    plain.Add($"icon_shield_home_shard_{shard}_{size}");
+            }
+
+            plain.AddRange(new[] { "mark_wave_chevron_64", "mark_wave_chevron_32", "mark_wave_pip_on_32x16", "mark_wave_pip_on_16x8",
+                "mark_wave_pip_off_32x16", "mark_wave_pip_off_16x8" });
+            foreach (var name in plain)
             {
                 var path = IconFolder + name + ".png";
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite

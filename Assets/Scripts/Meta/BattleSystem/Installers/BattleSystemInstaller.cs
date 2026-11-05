@@ -35,6 +35,7 @@ namespace Meta.BattleSystem.Installers
             builder.Register<BattleDriver>(Lifetime.Singleton).As<IBattleDriver, ITickable>();
             builder.Register<ViewMaterials>(Lifetime.Singleton).AsSelf().As<IDisposable>();
             builder.Register<EffectsView>(Lifetime.Singleton).AsSelf().As<ILateTickable>();
+            builder.Register<DustView>(Lifetime.Singleton).As<ILateTickable, IDisposable>();
             builder.Register<MapView>(Lifetime.Singleton).As<ILateTickable, IDisposable>();
             builder.Register<HeroView>(Lifetime.Singleton).AsSelf().As<ILateTickable, IDisposable>();
             builder.Register<SoldiersView>(Lifetime.Singleton).AsSelf().As<ILateTickable>();

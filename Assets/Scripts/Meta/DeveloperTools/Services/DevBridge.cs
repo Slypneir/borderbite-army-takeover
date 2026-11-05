@@ -267,6 +267,25 @@ namespace Meta.DeveloperTools.Services
         }
 #endif
 
+        /// <summary>How many events of a kind the battle has had, by side: «Shielded» → «player N, enemy M».</summary>
+        public static string Events(string kind)
+        {
+            var wanted = (EventKind)System.Enum.Parse(typeof(EventKind), kind);
+            var player = 0;
+            var enemy = 0;
+            foreach (var e in _battle.Current.Simulation.Events)
+            {
+                if (e.Kind != wanted)
+                    continue;
+                if (e.Side == Side.Player)
+                    player++;
+                else if (e.Side == Side.Enemy)
+                    enemy++;
+            }
+
+            return $"{kind}: player {player}, enemy {enemy}";
+        }
+
         /// <summary>«Play» of the main menu: the test level on its own map.</summary>
         public static string Play()
         {
@@ -383,6 +402,13 @@ namespace Meta.DeveloperTools.Services
         public static string PaintRect(string side, int x0, int y0, int x1, int y1)
         {
             _battle.Current.Simulation.PaintRect(SideOf(side), x0, y0, x1, y1);
+            return Battle();
+        }
+
+        /// <summary>Announces a wave of the enemy gathering at a cell (for a look at its sign); no squad leaves.</summary>
+        public static string AnnounceWave(int x, int y)
+        {
+            _battle.Current.Simulation.AnnounceWave(x, y);
             return Battle();
         }
 
@@ -539,7 +565,32 @@ namespace Meta.DeveloperTools.Services
         }
 
         /// <summary>The next blow of a side pauses the game this many seconds after it: the red flash of a hit (task 4.20) stays on the screen.</summary>
-        public static string FreezeAfterStrike(string side, float seconds)
+        public static string FreezeAfterStrike(string side, float seconds) => FreezeAfter(EventKind.Strike, side, seconds);
+
+        /// <summary>
+        /// The look of a block (task 4.33) at the player's hero and its first soldier at once, then the game pauses this many
+        /// seconds later: a screenshot of the drawing, the rules untouched.
+        /// </summary>
+        public static string ShowBlock(float seconds)
+        {
+            var view = Object.FindFirstObjectByType<Meta.BattleSystem.Views.OwnLandView>();
+            view.ShowBlock(-1);
+            foreach (var soldier in _battle.Current.Simulation.Soldiers)
+            {
+                if (soldier.Side != Side.Player)
+                    continue;
+
+                view.ShowBlock(soldier.Id);
+                break;
+            }
+
+            return FreezeIn(seconds);
+        }
+
+        /// <summary>The next blow a shield of own land takes (task 4.33): the game pauses this many seconds after it.</summary>
+        public static string FreezeAfterBlock(float seconds) => FreezeAfter(EventKind.Shielded, "Player", seconds);
+
+        private static string FreezeAfter(EventKind kind, string side, float seconds)
         {
             _debug.QuietFreeze = true;
             var runner = _battle.Current;
@@ -550,7 +601,7 @@ namespace Meta.DeveloperTools.Services
                 var events = runner.Simulation.Events;
                 var struck = false;
                 for (var i = System.Math.Min(seen, events.Count); i < events.Count && !struck; i++)
-                    struck = events[i].Kind == EventKind.Strike && events[i].Side == striker;
+                    struck = events[i].Kind == kind && events[i].Side == striker;
                 seen = events.Count;
                 if (!struck)
                     return;

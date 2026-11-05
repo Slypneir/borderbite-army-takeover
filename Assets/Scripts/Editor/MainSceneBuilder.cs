@@ -296,6 +296,7 @@ namespace Core.EditorTools
             var marks = BuildMarks(root);
             var popups = BuildPopups(root);
             var numbers = BuildHitNumbers(root);
+            var ownLand = BuildOwnLand(root);
             BuildStick(root);
             var area = Rect(root, "SafeArea", Vector2.zero, Vector2.one);
             area.gameObject.AddComponent<SafeAreaFitter>();
@@ -323,7 +324,7 @@ namespace Core.EditorTools
             var layers = go.AddComponent<BattleLayersView>();
             var serialized = new SerializedObject(layers);
             var over = serialized.FindProperty("overWorld");
-            var overLayers = new Component[] { icons, labels, marks, popups, numbers, hint, orders };
+            var overLayers = new Component[] { icons, labels, marks, popups, numbers, ownLand, hint, orders };
             over.arraySize = overLayers.Length;
             for (var i = 0; i < overLayers.Length; i++)
                 over.GetArrayElementAtIndex(i).objectReferenceValue = Group(overLayers[i].gameObject);
@@ -868,6 +869,8 @@ namespace Core.EditorTools
             var wave = Rect(sign, "Wave", new Vector2(0.18f, 0.18f), new Vector2(0.82f, 0.82f));
             Picture(wave, Icon("icon_order_units_128"), Color.white).preserveAspect = true;
 
+            var waveSign = BuildWaveSign(marks);
+
             var countdown = Text(marks, "Countdown", CountdownSize, TextAlignmentOptions.Bottom);
             var countdownRect = (RectTransform)countdown.transform;
             countdownRect.anchorMin = Vector2.zero;
@@ -878,7 +881,8 @@ namespace Core.EditorTools
             countdown.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
 
             var view = go.GetComponent<BattleMarksView>();
-            Wire(view, ("barTemplate", bar), ("signTemplate", sign), ("countdown", countdown));
+            Wire(view, ("barTemplate", bar), ("signTemplate", sign), ("countdown", countdown), ("waveSign", waveSign),
+                ("pipOn", Icon("mark_wave_pip_on_32x16")), ("pipOff", Icon("mark_wave_pip_off_32x16")));
             return view;
         }
 
@@ -1566,6 +1570,168 @@ namespace Core.EditorTools
         }
 
         /// <summary>The «−1» over a hit bar (task 4.22): a bold label with a dark rim, copied per hit.</summary>
+        /// <summary>
+        /// The sign of a wave of the enemy (task 4.33, card «Знак волны врага»): an iron plate 96 of the colour of attack with the
+        /// soldiers of the enemy over it at 1.15 of its side, three arrows on the side of the centre and five marks of the count
+        /// under it. The view turns, places and counts it; placeholders until the art of the 3D artist.
+        /// </summary>
+        private static RectTransform BuildWaveSign(RectTransform marks)
+        {
+            var sign = Rect(marks, "WaveSign", Vector2.zero, Vector2.zero);
+            sign.pivot = new Vector2(0.5f, 0.5f);
+            sign.sizeDelta = Vector2.one * 96f;
+            sign.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            var plate = Rect(sign, "Plate", Vector2.zero, Vector2.one);
+            var plateImage = Picture(plate, Icon("btn_order_attack_normal_128"), Color.white);
+            if (plateImage.sprite == null)
+                plateImage.color = new Color(0.62f, 0.16f, 0.14f, 1f);
+            var units = Rect(plate, "Units", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            units.sizeDelta = Vector2.one * 96f * 1.15f;
+            Picture(units, Icon("icon_order_units_128"), Color.white).preserveAspect = true;
+            var flash = Rect(plate, "Flash", Vector2.zero, Vector2.one);
+            Picture(flash, null, new Color(1f, 1f, 1f, 0f));
+
+            // three chevrons on the side of the centre (art request 14): the art points left, the view turns the row inward and
+            // each chevron half a turn so that it points along the row
+            var chevron = Icon("mark_wave_chevron_64");
+            var arrows = Rect(sign, "Arrows", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            arrows.sizeDelta = new Vector2(48f, 32f);
+            for (var i = 0; i < 3; i++)
+            {
+                var rect = Rect(arrows, "Arrow" + i, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+                rect.sizeDelta = Vector2.one * 32f;
+                if (chevron != null)
+                {
+                    Picture(rect, chevron, Color.white).preserveAspect = true;
+                    rect.localEulerAngles = new Vector3(0f, 0f, 180f);
+                    continue;
+                }
+
+                var arrow = Text(rect, "Glyph", 40, TextAlignmentOptions.Center);
+                arrow.text = ">";
+                arrow.fontStyle = FontStyles.Bold;
+                arrow.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+                Stretch((RectTransform)arrow.transform);
+            }
+
+            // five marks of the count under the plate: 16 wide with gaps of 4 at a plate of 96
+            var pipOn = Icon("mark_wave_pip_on_32x16");
+            var count = Rect(sign, "Marks", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            count.pivot = new Vector2(0.5f, 1f);
+            count.sizeDelta = new Vector2(5 * 16f + 4 * 4f, 8f);
+            count.anchoredPosition = new Vector2(0f, -6f);
+            for (var i = 0; i < 5; i++)
+            {
+                var mark = Rect(count, "Mark" + i, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+                mark.sizeDelta = new Vector2(16f, 8f);
+                mark.anchoredPosition = new Vector2(8f + i * 20f, 0f);
+                Picture(mark, pipOn, pipOn != null ? Color.white : new Color(0.96f, 0.95f, 0.88f, 1f));
+                if (pipOn == null)
+                    mark.gameObject.AddComponent<Outline>().effectColor = new Color(0.09f, 0.08f, 0.1f, 1f);
+            }
+
+            sign.gameObject.SetActive(false);
+            return sign;
+        }
+
+        /// <summary>
+        /// Own land on the screen (task 4.33, art request 14): the shield of the hero at its bar — the heraldic shield of the art,
+        /// its white silhouette as the flash, a ring, 4 shards of the full size of the shield with the pivots at their centres of
+        /// mass, and 6 voxels — and the template of a blocked blow: the same shield, a ring and 5 voxels. Without the art — a blue
+        /// disc with a cream cross and small shards.
+        /// </summary>
+        private static OwnLandView BuildOwnLand(RectTransform root)
+        {
+            var go = new GameObject("OwnLand", typeof(RectTransform), typeof(OwnLandView));
+            go.transform.SetParent(root, false);
+            Stretch((RectTransform)go.transform);
+            var area = (RectTransform)go.transform;
+            var blue = new Color(0.25f, 0.5f, 0.95f, 1f);
+            var cream = new Color(0.96f, 0.95f, 0.88f, 1f);
+            var dark = new Color(0.09f, 0.08f, 0.1f, 1f);
+            var circle = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath);
+            var ringSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.RingPath);
+
+            var shieldArt = Icon("icon_shield_home_64");
+            var flashArt = Icon("icon_shield_home_flash_64");
+
+            RectTransform Shield(RectTransform parent, string name, float size)
+            {
+                var shield = Rect(parent, name, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                shield.sizeDelta = Vector2.one * size;
+                shield.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+                if (shieldArt != null)
+                {
+                    Picture(shield, shieldArt, Color.white).preserveAspect = true;
+                    return shield;
+                }
+
+                Picture(shield, circle, blue);
+                var rim = shield.gameObject.AddComponent<Outline>();
+                rim.effectColor = dark;
+                rim.effectDistance = new Vector2(2f, -2f);
+                var upright = Rect(shield, "Upright", new Vector2(0.44f, 0.16f), new Vector2(0.56f, 0.84f));
+                Picture(upright, null, cream);
+                var bar = Rect(shield, "Bar", new Vector2(0.18f, 0.5f), new Vector2(0.82f, 0.62f));
+                Picture(bar, null, cream);
+                return shield;
+            }
+
+            RectTransform Pieces(RectTransform parent, string name, int count, float size)
+            {
+                var pieces = Rect(parent, name, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                for (var i = 0; i < count; i++)
+                {
+                    var piece = Rect(pieces, name + i, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                    piece.sizeDelta = Vector2.one * size;
+                    Picture(piece, null, i % 2 == 0 ? blue : cream);
+                    piece.gameObject.SetActive(false);
+                }
+
+                return pieces;
+            }
+
+            var icon = Rect(area, "Icon", Vector2.zero, Vector2.zero);
+            icon.sizeDelta = Vector2.one * 40f;
+            var heroShield = Shield(icon, "Shield", 40f);
+            var flash = Rect(heroShield, "Flash", Vector2.zero, Vector2.one);
+            Picture(flash, flashArt != null ? flashArt : circle, new Color(1f, 1f, 1f, 0f)).preserveAspect = true;
+            var ring = Rect(icon, "Ring", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            ring.sizeDelta = Vector2.one * 20f;
+            Picture(ring, ringSprite != null ? ringSprite : circle, cream).enabled = false;
+
+            // the shards by the cross: 1 upper left, 2 upper right, 3 lower left, 4 lower right; each file is the whole shield with
+            // only its shard, so each stands at the place of the shield, turning and flying about its centre of mass
+            var shards = Rect(icon, "Shards", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            var centres = new[] { new Vector2(0.29f, 0.78f), new Vector2(0.70f, 0.77f), new Vector2(0.31f, 0.36f), new Vector2(0.67f, 0.35f) };
+            for (var i = 0; i < centres.Length; i++)
+            {
+                var art = Icon($"icon_shield_home_shard_{i + 1}_64");
+                var shard = Rect(shards, "Shard" + (i + 1), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                shard.pivot = centres[i];
+                shard.sizeDelta = Vector2.one * (art != null ? 40f : 14f);
+                shard.anchoredPosition = (centres[i] - new Vector2(0.5f, 0.5f)) * 40f;
+                Picture(shard, art, art != null ? Color.white : i % 2 == 0 ? blue : cream).preserveAspect = art != null;
+                shard.gameObject.SetActive(false);
+            }
+
+            Pieces(icon, "Voxels", 6, 6f);
+
+            var block = Rect(area, "BlockTemplate", Vector2.zero, Vector2.zero);
+            block.sizeDelta = Vector2.one * 46f;
+            Shield(block, "Shield", 46f);
+            var blockRing = Rect(block, "Ring", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            blockRing.sizeDelta = Vector2.one * 16f;
+            Picture(blockRing, ringSprite != null ? ringSprite : circle, new Color(0.72f, 0.84f, 1f, 1f));
+            var voxels = Pieces(block, "Voxels", 5, 6f);
+            foreach (Transform voxel in voxels)
+                voxel.gameObject.SetActive(true);
+
+            var view = go.GetComponent<OwnLandView>();
+            Wire(view, ("icon", icon), ("blockTemplate", block));
+            return view;
+        }
+
         private static HitNumbersView BuildHitNumbers(RectTransform root)
         {
             var go = new GameObject("HitNumbers", typeof(RectTransform), typeof(HitNumbersView));

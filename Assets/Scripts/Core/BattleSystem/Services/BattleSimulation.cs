@@ -101,6 +101,9 @@ namespace Core.BattleSystem.Services
         /// The next wave of the enemy is chosen and leaves soon (task 4.27): where it gathers, in units — for the sign at the edge
         /// of the screen.
         /// </summary>
+        /// <summary>The tick the next wave of the enemy leaves (task 4.27): the count of its sign.</summary>
+        public int NextWaveTick => _state.NextWaveTick;
+
         public bool WaveComing(out int x, out int y)
         {
             x = _state.WaveFromX;
@@ -193,6 +196,18 @@ namespace Core.BattleSystem.Services
             }
 
             Decide();
+        }
+
+        /// <summary>
+        /// The developer announces a wave gathering at a cell, leaving in the warning time (its sign and count show); no squad
+        /// gathers, so none leaves.
+        /// </summary>
+        public void AnnounceWave(int cellX, int cellY)
+        {
+            _state.WaveAnnounced = true;
+            _state.WaveFromX = cellX * BattleSettings.UnitsPerCell + BattleSettings.UnitsPerCell / 2;
+            _state.WaveFromY = cellY * BattleSettings.UnitsPerCell + BattleSettings.UnitsPerCell / 2;
+            _state.NextWaveTick = _state.Tick + _state.Settings.WaveWarnTicks;
         }
 
         /// <summary>The developer paints a rectangle of cells, both corners included; no enclosure until the next tick.</summary>

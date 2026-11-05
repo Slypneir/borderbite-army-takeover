@@ -19,8 +19,10 @@ namespace Meta.BattleSystem.Views
     ///   enclosure out of sight: a point to the event with a mark inside (a building or land), red with a dark rim, at the edge
     ///   of the safe area (inset 24, under the HUD + 8 at the top); it pulses twice a second for 3 s, then stays, and goes 2 s
     ///   after the attack or at once when the place comes into the frame; no more than 3, those within 15° merge, the base first;
-    /// - the same sign with crossed swords while a wave of the enemy gathers to leave (task 4.27): it points where the squads of
-    ///   the wave are, from 5 s before they leave, and stays 2 s after;
+    /// - the sign of a wave of the enemy (task 4.33, card «Знак волны врага»), 5 s before it leaves, on the ray from the centre to
+    ///   where it gathers, at the edge like a sign of an attack: an iron plate 96 of the colour of attack with the soldiers of the
+    ///   enemy, three red arrows on the side of the centre running into the frame, five cream marks of the count under it that go
+    ///   out one a second with a push of 1.06; at zero it flashes white, moves 20 in and fades in 0.6 s. It does not blink;
     /// - «3, 2, 1» over the player's base while its hero waits to come back.
     /// Lives right under the canvas, anchored to its lower left corner; canvas units are pixels / (short side / 720).
     /// </summary>
@@ -41,6 +43,11 @@ namespace Meta.BattleSystem.Views
         private const int WaveKey = -1000;
 
         [SerializeField] private RectTransform barTemplate;
+        [Tooltip("The sign of a wave: Plate (with Flash), Arrows (3 children), Marks (5 children).")]
+        [SerializeField] private RectTransform waveSign;
+        [Tooltip("The lit and the dark mark of the count of a wave; without them the dark marks hide.")]
+        [SerializeField] private Sprite pipOn;
+        [SerializeField] private Sprite pipOff;
         [SerializeField] private RectTransform signTemplate;
         [SerializeField] private TMP_Text countdown;
         [SerializeField] private RectTransform hudBottom;
@@ -122,8 +129,7 @@ namespace Meta.BattleSystem.Views
                     Threaten(-100 - _captures, capture.CenterX, capture.CenterY, false, true, now);
             }
 
-            if (simulation.WaveComing(out var waveX, out var waveY))
-                Threaten(WaveKey, waveX, waveY, false, false, now, true);
+            DrawWave(simulation, scale, bounds, ceiling, now);
 
             DrawBars(simulation, scale, bounds, ceiling, now);
             DrawSigns(scale, bounds, ceiling, now);
@@ -155,6 +161,116 @@ namespace Meta.BattleSystem.Views
             bar.HitAt = now;
             if (battleEvent.Side == Side.Player)
                 Threaten(key, battleEvent.X, battleEvent.Y, isBase, false, now);
+        }
+
+        // ---- the sign of a wave (task 4.33)
+
+        private const float WaveSize = 96f;
+        private const float WaveGone = 0.6f;
+        private int _waveMarks = -1;
+        private float _wavePushAt = -10f;
+        private float _waveLeftAt = -10f;
+        private bool _waveWas;
+        private int _waveX;
+        private int _waveY;
+
+        private void DrawWave(Core.BattleSystem.Services.BattleSimulation simulation, float scale, Rect bounds, float ceiling, float now)
+        {
+            if (waveSign == null)
+                return;
+
+            var coming = simulation.WaveComing(out var x, out var y);
+            if (coming)
+            {
+                _waveX = x;
+                _waveY = y;
+                // the marks left: whole seconds to the leaving, up to 5
+                var left = (simulation.NextWaveTick - simulation.Tick) / (float)simulation.Settings.TicksPerSecond;
+                var marks = Mathf.Clamp(Mathf.CeilToInt(left), 0, 5);
+                if (marks != _waveMarks)
+                {
+                    if (_waveMarks >= 0)
+                        _wavePushAt = now;
+                    _waveMarks = marks;
+                }
+            }
+            else if (_waveWas)
+            {
+                _waveLeftAt = now;
+                _waveMarks = 0;
+            }
+
+            _waveWas = coming;
+            var gone = now - _waveLeftAt;
+            if (!coming && gone >= WaveGone)
+            {
+                waveSign.gameObject.SetActive(false);
+                _waveMarks = -1;
+                return;
+            }
+
+            var area = new Rect(bounds.xMin + EdgeInset, bounds.yMin + EdgeInset, bounds.width - 2f * EdgeInset, ceiling - bounds.yMin - EdgeInset);
+            var centre = area.center;
+            var screen = _camera.WorldToScreenPoint(new Vector3(_waveX * _rules.MetersPerUnit, 0f, _waveY * _rules.MetersPerUnit));
+            var point = (Vector2)screen / scale;
+            if (coming && screen.z > 0f && area.Contains(point))
+            {
+                // the squads are in sight: the world shows them, no sign
+                waveSign.gameObject.SetActive(false);
+                return;
+            }
+
+            var direction = point - centre;
+            if (screen.z <= 0f)
+                direction = -direction;
+            waveSign.gameObject.SetActive(true);
+            var inward = -direction.normalized;
+            var place = Edge(centre, direction, area, WaveSize / 2f);
+            var leaving = !coming ? Mathf.Clamp01(gone / WaveGone) : 0f;
+            waveSign.anchoredPosition = place + inward * (20f * leaving);
+            var push = now - _wavePushAt < 0.2f ? 1f + 0.06f * Mathf.Sin((now - _wavePushAt) / 0.2f * Mathf.PI) : 1f;
+            waveSign.localScale = Vector3.one * push;
+            var group = waveSign.GetComponent<CanvasGroup>();
+            group.alpha = 1f - leaving;
+            var flash = waveSign.Find("Plate/Flash").GetComponent<Image>();
+            flash.color = new Color(1f, 1f, 1f, !coming && gone < 0.12f ? 1f - gone / 0.12f : 0f);
+
+            // three arrows on the side of the centre, running into the frame 1.2 times a second
+            var arrows = (RectTransform)waveSign.Find("Arrows");
+            var angle = Mathf.Atan2(inward.y, inward.x) * Mathf.Rad2Deg;
+            arrows.localRotation = Quaternion.Euler(0f, 0f, angle);
+            // the row starts 2 off the edge of the square plate along the ray: the arrows (32, anchored at the left of the
+            // row of 48) never cover the plate, also on a diagonal
+            var plateEdge = WaveSize / 2f / Mathf.Max(Mathf.Abs(inward.x), Mathf.Abs(inward.y), 0.01f);
+            arrows.anchoredPosition = inward * (plateEdge + 2f + 16f + 24f);
+            var phase = now * 1.2f % 1f;
+            for (var i = 0; i < arrows.childCount; i++)
+            {
+                var arrow = (RectTransform)arrows.GetChild(i);
+                var t = (phase + i / 3f) % 1f;
+                arrow.anchoredPosition = new Vector2(t * 36f, 0f);
+                // the art is red itself; the glyph of the placeholder is tinted
+                var graphic = arrow.GetComponentInChildren<Graphic>();
+                var tint = graphic is Image ? Color.white : new Color(0.9f, 0.2f, 0.17f, 1f);
+                tint.a = Mathf.Sin(t * Mathf.PI);
+                graphic.color = tint;
+            }
+
+            // the marks go out from the left: the lit ones are the last (the sheet of the art)
+            var marksRoot = waveSign.Find("Marks");
+            for (var i = 0; i < marksRoot.childCount; i++)
+            {
+                var lit = i >= marksRoot.childCount - _waveMarks;
+                var mark = marksRoot.GetChild(i);
+                if (pipOn == null || pipOff == null)
+                {
+                    mark.gameObject.SetActive(lit);
+                    continue;
+                }
+
+                mark.gameObject.SetActive(true);
+                mark.GetComponent<Image>().sprite = lit ? pipOn : pipOff;
+            }
         }
 
         private void Threaten(int key, int x, int y, bool isBase, bool land, float now, bool wave = false)

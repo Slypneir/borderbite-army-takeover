@@ -154,9 +154,7 @@ namespace Meta.BattleSystem.Services
             }
             else if (battleEvent.Kind == EventKind.Strike && _bodies.TryGetValue(battleEvent.Id, out var body))
                 body.Pose.Blow();
-            // the shield of own land took the blow (task 4.32): a light flash, no number, the bar stays whole
-            else if (battleEvent.Kind == EventKind.Shielded && _view.HitFlash)
-                Flash(battleEvent.Id, new Color(0.75f, 0.92f, 1f, 1f));
+
         }
 
         /// <summary>The pose of a pooled body is made once and kept with it.</summary>
