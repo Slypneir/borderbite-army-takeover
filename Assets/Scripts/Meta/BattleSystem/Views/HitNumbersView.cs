@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using Core.BattleSystem.Enums;
 using Meta.BattleSystem.Services;
 using TMPro;
 using UnityEngine;
@@ -7,33 +7,54 @@ using VContainer;
 namespace Meta.BattleSystem.Views
 {
     /// <summary>
-    /// The «−1» over the bar of the player's hero when it is hurt (task 4.22, battle-marks card «Попадание по полоске»; task 4.34,
-    /// spec 3.5): it shows from 0.16 s, when the lost segment breaks, rises and fades by 0.86 s, white. The enemy's units and the
-    /// player's soldiers get no number (owner: the screen was cluttered); their bars still flash, jerk and break. Copies of
-    /// <see cref="template"/>; lives right under the canvas, anchored to its lower left corner. Buildings get no number.
+    /// The «−N» over the bar of the player's hero when it is hurt (task 4.22, battle-marks card «Попадание по полоске»; task 4.34,
+    /// spec 3.5; UI review of 4.34): 32 bold, white with a dark rim of 3, over the middle of the bar (its top + 8) wherever the
+    /// hero walks; it shows from 0.16 s, when the lost segment breaks, rises 24 and fades by 0.86 s. Blows less than 0.5 s apart
+    /// join it: «−2», «−3». The enemy's units and the player's soldiers get no number (owner: the screen was cluttered); their
+    /// bars still flash, jerk and break. Buildings get no number. Lives right under the canvas, anchored to its lower left
+    /// corner.
     /// </summary>
     public sealed class HitNumbersView : MonoBehaviour
     {
         private const float Appear = 0.16f;
         private const float Gone = 0.86f;
-        private const float Rise = 40f;
-        private static readonly Color Own = new Color(1f, 1f, 1f, 1f);
+        private const float Rise = 24f;
+        private const float Above = 8f;
+        private const float JoinSeconds = 0.5f;
+        // the bar of a hero (BarsView): its middle over the feet and its half height, meters
+        private const float BarHeight = 2.15f;
+        private const float BarHalf = 0.1f;
 
         [SerializeField] private TMP_Text template;
 
-        private readonly List<Number> _numbers = new List<Number>();
         private BarsView _bars;
+        private HeroView _heroes;
         private Camera _camera;
+        private TMP_Text _label;
+        private float _age = Gone;
+        private float _lastAt = -10f;
+        private int _sum;
 
         [Inject]
-        public void Construct(BarsView bars, Camera mainCamera)
+        public void Construct(BarsView bars, HeroView heroes, Camera mainCamera)
         {
             _bars = bars;
+            _heroes = heroes;
             _camera = mainCamera;
             _bars.Struck += Add;
         }
 
-        private void Awake() => template.gameObject.SetActive(false);
+        private void Awake()
+        {
+            _label = template;
+            _label.fontSize = 32f;
+            _label.fontStyle = FontStyles.Bold;
+            _label.color = Color.white;
+            _label.outlineColor = new Color32(0x17, 0x14, 0x1a, 0xff);
+            // a rim of 3 at a size of 32
+            _label.outlineWidth = 0.3f;
+            _label.gameObject.SetActive(false);
+        }
 
         private void OnDestroy()
         {
@@ -48,60 +69,35 @@ namespace Meta.BattleSystem.Views
             if (!playerHero)
                 return;
 
-            Number number = null;
-            foreach (var free in _numbers)
-            {
-                if (!free.Label.gameObject.activeSelf)
-                {
-                    number = free;
-                    break;
-                }
-            }
-
-            if (number == null)
-            {
-                number = new Number { Label = Instantiate(template, transform) };
-                _numbers.Add(number);
-            }
-
-            number.World = world;
-            number.Age = 0f;
+            var now = Time.time;
+            var joins = _label.gameObject.activeSelf && now - _lastAt < JoinSeconds;
+            _sum = joins ? _sum + 1 : 1;
+            // a joined blow shows the sum at once and starts the rise again; a first one waits for its segment to break
+            _age = joins ? Appear : 0f;
+            _lastAt = now;
             // the static atlas of the font has the en dash, not the minus sign
-            number.Label.text = "–1";
-            number.Label.color = Own;
-            number.Label.alpha = 0f;
-            number.Label.gameObject.SetActive(true);
+            _label.text = "–" + _sum;
+            _label.alpha = joins ? 1f : 0f;
+            _label.gameObject.SetActive(true);
         }
 
         private void LateUpdate()
         {
-            var scale = Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height)) / 720f;
-            foreach (var number in _numbers)
+            if (!_label.gameObject.activeSelf)
+                return;
+
+            _age += Time.deltaTime;
+            if (_age >= Gone)
             {
-                if (!number.Label.gameObject.activeSelf)
-                    continue;
-
-                number.Age += Time.deltaTime;
-                if (number.Age >= Gone)
-                {
-                    number.Label.gameObject.SetActive(false);
-                    continue;
-                }
-
-                var screen = _camera.WorldToScreenPoint(number.World);
-                var t = Mathf.Clamp01((number.Age - Appear) / (Gone - Appear));
-                var rect = number.Label.rectTransform;
-                rect.anchoredPosition = (Vector2)screen / scale + Vector2.up * (Rise * t);
-                rect.localScale = Vector3.one;
-                number.Label.alpha = number.Age < Appear ? 0f : 1f - t * t;
+                _label.gameObject.SetActive(false);
+                return;
             }
-        }
 
-        private sealed class Number
-        {
-            public TMP_Text Label;
-            public Vector3 World;
-            public float Age;
+            var scale = Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height)) / 720f;
+            var top = _heroes.PositionOf(Side.Player) + Vector3.up * (BarHeight + BarHalf);
+            var t = Mathf.Clamp01((_age - Appear) / (Gone - Appear));
+            _label.rectTransform.anchoredPosition = (Vector2)_camera.WorldToScreenPoint(top) / scale + Vector2.up * (Above + Rise * t);
+            _label.alpha = _age < Appear ? 0f : 1f - t * t;
         }
     }
 }

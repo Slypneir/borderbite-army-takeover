@@ -1738,12 +1738,12 @@ namespace Core.EditorTools
             var go = new GameObject("HitNumbers", typeof(RectTransform), typeof(HitNumbersView));
             go.transform.SetParent(root, false);
             Stretch((RectTransform)go.transform);
-            var label = Text((RectTransform)go.transform, "Template", 24, TextAlignmentOptions.Center);
+            var label = Text((RectTransform)go.transform, "Template", 32, TextAlignmentOptions.Center);
             var rect = (RectTransform)label.transform;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.zero;
             rect.pivot = new Vector2(0.5f, 0f);
-            rect.sizeDelta = new Vector2(80f, 32f);
+            rect.sizeDelta = new Vector2(120f, 44f);
             label.fontStyle = FontStyles.Bold;
             label.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             var view = go.GetComponent<HitNumbersView>();
