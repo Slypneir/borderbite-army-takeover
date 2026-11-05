@@ -22,6 +22,10 @@ MonoBehaviour:
   heroSpeed: 5
   heroRadius: 0.3
   brushDelay: 0.4
+  ownLandSpeed: 1.15
+  enemyLandSpeed: 0.85
+  shieldEvery: 3
+  homeHeal: 2
   heroBrush: 2
   heroHealth: 10
   enemyHeroHealth: 7

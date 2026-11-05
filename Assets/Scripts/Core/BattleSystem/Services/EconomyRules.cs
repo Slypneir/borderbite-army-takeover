@@ -243,7 +243,8 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
-                if (!hero.Alive || hero.Health >= _settings.HeroHealthOf(hero.Side) || !HealsNow(hero.FightTick, _settings.HeroHealAfterOf(hero.Side), _settings.HeroHealEveryOf(hero.Side)))
+                if (!hero.Alive || hero.Health >= _settings.HeroHealthOf(hero.Side) ||
+                    !HealsNow(hero.FightTick, _settings.HeroHealAfterOf(hero.Side), HomeEvery(hero.Side, hero.X, hero.Y, _settings.HeroHealEveryOf(hero.Side))))
                     continue;
 
                 hero.Health++;
@@ -253,12 +254,22 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
-                if (soldier.Health >= _settings.SoldierHealthOf(soldier.Side) || !HealsNow(soldier.FightTick, _settings.HealAfterTicks, _settings.HealEveryTicks))
+                if (soldier.Health >= _settings.SoldierHealthOf(soldier.Side) ||
+                    !HealsNow(soldier.FightTick, _settings.HealAfterTicks, HomeEvery(soldier.Side, soldier.X, soldier.Y, _settings.HealEveryTicks)))
                     continue;
 
                 soldier.Health++;
                 _state.Soldiers[i] = soldier;
             }
+        }
+
+        /// <summary>The period of healing of a unit: shorter on the land of its side (task 4.32: twice as often at home).</summary>
+        private int HomeEvery(Side side, int x, int y, int every)
+        {
+            if (_settings.HomeHealPermille == 1000 || _state.ColourAt(x, y) != side)
+                return every;
+
+            return System.Math.Max(1, (int)((every * 1000L + _settings.HomeHealPermille / 2) / _settings.HomeHealPermille));
         }
 
         private bool HealsNow(int fightTick, int after, int every)

@@ -48,6 +48,19 @@ namespace Meta.BattleSystem.Configuration
                  "the trail). Starting value: 0.4.")]
         [Min(0f)] [SerializeField] private float brushDelay = 0.4f;
 
+        [Header("Own land (task 4.32)")]
+        [Tooltip("Heroes and soldiers of both sides walk this many times as fast on the land of their side. Starting value: 1.15.")]
+        [Min(0.1f)] [SerializeField] private float ownLandSpeed = 1.15f;
+
+        [Tooltip("…and this many times as fast on the land of the other side. Starting value: 0.85.")]
+        [Min(0.1f)] [SerializeField] private float enemyLandSpeed = 0.85f;
+
+        [Tooltip("On its own land every this many-th blow at a unit of the player does not go through; 0 — no shield. Starting value: 3.")]
+        [Min(0)] [SerializeField] private int shieldEvery = 3;
+
+        [Tooltip("Out of a fight on the land of its side a unit heals this many times as often. Starting value: 2.")]
+        [Min(1f)] [SerializeField] private float homeHeal = 2f;
+
         [Tooltip("Radius of the brush of the hero: cells whose middle is this close become its colour, cells. Starting value: 2.")]
         [Min(0.5f)] [SerializeField] private float heroBrush = 2f;
 
@@ -441,6 +454,10 @@ namespace Meta.BattleSystem.Configuration
                 HeroRadiusUnits = Units(heroRadius),
                 HeroBrushUnits = Mathf.RoundToInt(heroBrush * BattleSettings.UnitsPerCell),
                 BrushDelayTicks = Mathf.RoundToInt(brushDelay * ticksPerSecond),
+                OwnLandSpeedPermille = Mathf.RoundToInt(ownLandSpeed * 1000f),
+                EnemyLandSpeedPermille = Mathf.RoundToInt(enemyLandSpeed * 1000f),
+                ShieldEvery = shieldEvery,
+                HomeHealPermille = Mathf.RoundToInt(homeHeal * 1000f),
                 EnclosureEveryTicks = enclosureEveryTicks,
                 MaxEnclosureCells = maxEnclosureCells,
                 VictoryPermille = Mathf.RoundToInt(victoryShare * 10f),

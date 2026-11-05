@@ -309,6 +309,7 @@ namespace Core.BattleSystem.Services
                 hash = Mix(hash, hero.DirectionY);
                 hash = Mix(hash, hero.Health);
                 hash = Mix(hash, hero.RespawnTick);
+                hash = Mix(hash, hero.ShieldHits);
             }
 
             foreach (var squad in _state.Squads)
@@ -318,6 +319,7 @@ namespace Core.BattleSystem.Services
             {
                 hash = Mix(hash, soldier.Id);
                 hash = Mix(hash, soldier.Squad);
+                hash = Mix(hash, soldier.ShieldHits);
                 hash = Mix(hash, soldier.X);
                 hash = Mix(hash, soldier.Y);
                 hash = Mix(hash, soldier.Health);
@@ -446,6 +448,8 @@ namespace Core.BattleSystem.Services
                 // the same step in every direction: the direction is scaled to the step, its own length does not count; the enemy's
                 // hero walks at the speed of the level
                 var step = hero.Side == Side.Enemy ? (int)((long)settings.HeroStepUnits * settings.EnemySpeedPermille / 1000) : settings.HeroStepUnits;
+                // own land helps, the other side's slows (task 4.32), over the speed of the level
+                step = _state.LandStep(hero.Side, hero.X, hero.Y, step);
                 var length = IntMath.Sqrt((long)hero.DirectionX * hero.DirectionX + (long)hero.DirectionY * hero.DirectionY);
                 var fromX = hero.X;
                 var fromY = hero.Y;

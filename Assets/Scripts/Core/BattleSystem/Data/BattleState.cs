@@ -135,6 +135,20 @@ namespace Core.BattleSystem.Data
             }
         }
 
+        /// <summary>
+        /// A step of a unit of a side at a point, on the land under it (task 4.32): longer on its own land, shorter on the other
+        /// side's, as it is on neutral land.
+        /// </summary>
+        public int LandStep(Side side, int x, int y, int step)
+        {
+            var colour = ColourAt(x, y);
+            if (colour == side)
+                return (int)((long)step * Settings.OwnLandSpeedPermille / 1000);
+            if (colour == Enemy(side))
+                return (int)((long)step * Settings.EnemyLandSpeedPermille / 1000);
+            return step;
+        }
+
         /// <summary>The colour of the cell under a point in units; off the map — neutral.</summary>
         public Side ColourAt(int x, int y)
         {

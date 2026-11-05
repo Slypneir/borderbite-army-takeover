@@ -17,5 +17,10 @@ namespace Core.BattleSystem.Enums
         /// <summary>The order of the army of the side changed; Value is the new <see cref="ArmyOrder"/>, Id 1 when it changed by
         /// itself (no targets left, T18), 0 by a command.</summary>
         OrderChanged,
+        /// <summary>
+        /// A blow at a unit of the player on its own land did not go through: its shield (task 4.32). Id: the soldier's id, or
+        /// −1 − the index of a hero.
+        /// </summary>
+        Shielded,
     }
 }

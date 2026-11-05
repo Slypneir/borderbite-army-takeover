@@ -26,6 +26,8 @@ namespace Core.BattleSystem.Structs
         public int AnchorY;
         /// <summary>The squad of a soldier of the enemy (task 4.27), 0 while it has none; the player's have none.</summary>
         public int Squad;
+        /// <summary>The blows at it on its own land, for the shield of the player's side (task 4.32).</summary>
+        public int ShieldHits;
         public int FacingX;
         public int FacingY;
     }

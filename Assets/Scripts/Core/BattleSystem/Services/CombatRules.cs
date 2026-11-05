@@ -161,6 +161,19 @@ namespace Core.BattleSystem.Services
             }
         }
 
+        /// <summary>
+        /// The shield of the player's side (task 4.32): a blow at its unit on its own land is counted, and every
+        /// <see cref="BattleSettings.ShieldEvery"/>-th does not go through.
+        /// </summary>
+        private bool Shielded(Side side, int x, int y, ref int hits)
+        {
+            if (side != Side.Player || _settings.ShieldEvery <= 0 || _state.ColourAt(x, y) != Side.Player)
+                return false;
+
+            hits++;
+            return hits % _settings.ShieldEvery == 0;
+        }
+
         /// <summary>The developer hurts a hero as a blow would; it may fall.</summary>
         public void HurtHero(int index, int damage) => Hurt(new Target { Kind = TargetKind.Hero, Index = index }, damage);
 
@@ -174,6 +187,14 @@ namespace Core.BattleSystem.Services
                     var hero = _state.Heroes[target.Index];
                     if (hero.InvulnerableUntil > _state.Tick)
                         return false;
+
+                    if (Shielded(hero.Side, hero.X, hero.Y, ref hero.ShieldHits))
+                    {
+                        hero.FightTick = _state.Tick;
+                        _state.Heroes[target.Index] = hero;
+                        _state.Emit(EventKind.Shielded, hero.Side, -1 - target.Index, 0, hero.X, hero.Y);
+                        return false;
+                    }
 
                     hero.Health -= damage;
                     hero.FightTick = _state.Tick;
@@ -192,6 +213,14 @@ namespace Core.BattleSystem.Services
                 case TargetKind.Soldier:
                 {
                     var soldier = _state.Soldiers[target.Index];
+                    if (Shielded(soldier.Side, soldier.X, soldier.Y, ref soldier.ShieldHits))
+                    {
+                        soldier.FightTick = _state.Tick;
+                        _state.Soldiers[target.Index] = soldier;
+                        _state.Emit(EventKind.Shielded, soldier.Side, soldier.Id, 0, soldier.X, soldier.Y);
+                        return false;
+                    }
+
                     soldier.Health -= damage;
                     soldier.FightTick = _state.Tick;
                     if (soldier.Health > 0)

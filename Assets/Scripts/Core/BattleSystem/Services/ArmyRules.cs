@@ -525,7 +525,7 @@ namespace Core.BattleSystem.Services
             if (length <= stopAt || length == 0)
                 return;
 
-            var step = System.Math.Min(_settings.SoldierStepUnits, length - stopAt);
+            var step = System.Math.Min(_state.LandStep(soldier.Side, soldier.X, soldier.Y, _settings.SoldierStepUnits), length - stopAt);
             soldier.X += (int)(dx * step / length);
             soldier.Y += (int)(dy * step / length);
             soldier.FacingX = (int)(dx * 1000 / length);

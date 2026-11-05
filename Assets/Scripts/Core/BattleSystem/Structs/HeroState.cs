@@ -21,6 +21,8 @@ namespace Core.BattleSystem.Structs
         public int InvulnerableUntil;
         /// <summary>The tick it last was hurt or struck; it heals only some time after it (T16).</summary>
         public int FightTick;
+        /// <summary>The blows at it on its own land, for the shield of the player's side (task 4.32).</summary>
+        public int ShieldHits;
         public int HomeX;
         public int HomeY;
 

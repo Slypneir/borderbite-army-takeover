@@ -20,6 +20,11 @@ namespace Meta.BattleSystem.Services
     /// </summary>
     public sealed class HeroView : ILateTickable, IDisposable
     {
+        // placeholders of task 4.32 until the card of the interface designer: the flash of the shield, the dust of own land
+        private static readonly Color ShieldColor = new Color(0.75f, 0.92f, 1f, 1f);
+        private static readonly Color DustColor = new Color(0.82f, 0.76f, 0.6f, 1f);
+        private const float DustEvery = 0.18f;
+
         private readonly BattleViewConfig _view;
         private readonly BattleConfig _rules;
         private readonly IBattleDriver _battle;
@@ -171,12 +176,32 @@ namespace Meta.BattleSystem.Services
 
                 body.Previous = body.Current;
                 body.Current = WorldOf(heroes[body.Index]);
+                Dust(body, heroes[body.Index]);
                 // less health than a tick ago: a hit, the hero flashes red (task 4.20)
                 var health = heroes[body.Index].Health;
                 if (body.Health >= 0 && health < body.Health && _view.HitFlash)
                     body.Flash.Hit();
                 body.Health = health;
             }
+        }
+
+        /// <summary>
+        /// A placeholder of the dust of own land (task 4.32: a hero runs faster there): a small puff under a hero walking on the
+        /// land of its side, a few a second, until the card of the interface designer.
+        /// </summary>
+        private void Dust(Body body, HeroState hero)
+        {
+            if (!hero.Alive || !hero.Moving || Time.time < body.DustAt)
+                return;
+
+            var grid = _runner.Simulation.Grid;
+            var cx = hero.X / Core.BattleSystem.Structs.BattleSettings.UnitsPerCell;
+            var cy = hero.Y / Core.BattleSystem.Structs.BattleSettings.UnitsPerCell;
+            if (!grid.Inside(cx, cy) || grid.At(cx, cy) != hero.Side)
+                return;
+
+            body.DustAt = Time.time + DustEvery;
+            _effects.Debris(body.Current + Vector3.up * 0.05f, DustColor, 2, 0.35f);
         }
 
         private void Handle(BattleEvent battleEvent)
@@ -199,6 +224,10 @@ namespace Meta.BattleSystem.Services
                     body.Pose.Blow();
                     Face(body, battleEvent);
                     break;
+                case EventKind.Shielded when body != null && _view.HitFlash:
+                    // the shield of own land took the blow (task 4.32): a light flash, no number, the bar stays whole
+                    body.Flash.Hit(ShieldColor);
+                    break;
                 case EventKind.HeroDied when body != null:
                     _effects.Death(_world.HeroDeathTemplate, Meters(battleEvent.X, battleEvent.Y), body.Transform.localRotation,
                         _view.HeroColor(battleEvent.Side), 10, 1f);
@@ -215,7 +244,7 @@ namespace Meta.BattleSystem.Services
         /// <summary>Blows and shots of a hero carry Id -1; deaths and returns are always a hero's.</summary>
         private static bool HeroEvent(BattleEvent battleEvent) => battleEvent.Kind switch
         {
-            EventKind.Shot or EventKind.Strike => battleEvent.Id < 0,
+            EventKind.Shot or EventKind.Strike or EventKind.Shielded => battleEvent.Id < 0,
             EventKind.HeroDied or EventKind.HeroRespawned => true,
             _ => false,
         };
@@ -263,6 +292,7 @@ namespace Meta.BattleSystem.Services
             public Vector3 Drawn;
             public Vector3 Attack;
             public float AttackUntil;
+            public float DustAt;
         }
     }
 }

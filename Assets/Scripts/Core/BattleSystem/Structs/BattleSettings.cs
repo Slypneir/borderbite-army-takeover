@@ -25,6 +25,20 @@ namespace Core.BattleSystem.Structs
         /// 0 — round the unit itself, as the checks of the older rules expect.
         /// </summary>
         public int BrushDelayTicks;
+        /// <summary>
+        /// Own land helps (task 4.32, spec 2.4a): heroes and soldiers of both sides walk at this share of their speed on the land
+        /// of their side, permille (1150 in the game)…
+        /// </summary>
+        public int OwnLandSpeedPermille = 1000;
+        /// <summary>…and at this share on the land of the other side (850 in the game); on neutral land as they are.</summary>
+        public int EnemyLandSpeedPermille = 1000;
+        /// <summary>
+        /// The shield of the player's side: on its own land every this many-th blow at a hero or a soldier of the player does not
+        /// go through (3 in the game); each unit counts its own blows. 0 — no shield. The enemy has none.
+        /// </summary>
+        public int ShieldEvery;
+        /// <summary>Out of a fight on the land of its side a unit heals this many times as often, permille (2000 in the game).</summary>
+        public int HomeHealPermille = 1000;
         public int EnclosureEveryTicks = 1;
         public int MaxEnclosureCells = 250;
         /// <summary>Land of a side cut off from its base and barracks goes back to grass, a piece up to the enclosure limit (owner, 4 November).</summary>
