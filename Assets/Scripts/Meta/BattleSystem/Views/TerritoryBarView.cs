@@ -9,7 +9,7 @@ namespace Meta.BattleSystem.Views
 {
     /// <summary>
     /// The territory bar at the top (stage 1 spec 2.6): blue share from the left, red from the right, grey between, a mark at
-    /// the victory share from each side and both percents as numbers. Shares count every cell of the map.
+    /// the victory share from each side and both percents as numbers. Shares count every cell of land, as the rules do.
     /// </summary>
     public sealed class TerritoryBarView : MonoBehaviour
     {
@@ -49,8 +49,9 @@ namespace Meta.BattleSystem.Views
 
             _player = player;
             _enemy = enemy;
-            var playerShare = (float)player / grid.Total;
-            var enemyShare = (float)enemy / grid.Total;
+            // the shares are of the land, as the rules count them: water is no part of the map to win (task 4.36)
+            var playerShare = (float)player / Mathf.Max(1, grid.LandTotal);
+            var enemyShare = (float)enemy / Mathf.Max(1, grid.LandTotal);
             playerFill.anchorMax = new Vector2(playerShare, 1f);
             enemyFill.anchorMin = new Vector2(1f - enemyShare, 0f);
             playerLabel.text = Mathf.FloorToInt(playerShare * 100f) + "%";

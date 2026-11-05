@@ -8,6 +8,8 @@
     { "key": "results.reason.share", "text": "{0}% of the land" },
     { "key": "results.reason.base", "text": "Base destroyed" },
     { "key": "results.share", "text": "Blue {0}%" },
+    { "key": "battle.second_chance", "text": "Second chance" },
+    { "key": "battle.no_respawns", "text": "No respawns" },
     { "key": "results.next", "text": "Next" },
     { "key": "upgrades.hero_power", "text": "Hero power" },
     { "key": "upgrades.hero_brush", "text": "Hero brush" },

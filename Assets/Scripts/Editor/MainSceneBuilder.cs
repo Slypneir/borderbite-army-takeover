@@ -426,6 +426,7 @@ namespace Core.EditorTools
 
             Wire(bar.gameObject.AddComponent<TerritoryBarView>(), ("playerFill", playerFill), ("enemyFill", enemyFill),
                 ("playerMark", playerMark), ("enemyMark", enemyMark), ("playerLabel", playerLabel), ("enemyLabel", enemyLabel));
+            BuildSecondChance(plate, bar, inner, playerLabel.transform.GetSiblingIndex());
 
             var row = Rect(plate, "Counters", Vector2.zero, Vector2.zero);
             var gold = Counter(row, "Gold", 0, "icon_gold_128", view.GoldColor, out var goldGain);
@@ -454,6 +455,148 @@ namespace Core.EditorTools
 
             layout.ApplyModifiedPropertiesWithoutUndo();
             return plate;
+        }
+
+        private static Sprite Placeholder(string name) => AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/Placeholder/" + name + ".png");
+
+        /// <summary>
+        /// The second chance on the bar (task 4.36, battle-hud card «Второй шанс на полосе»), placeholders until the art of the
+        /// 3D artist: the dashed line in the groove under the percents, two triangles on the rims at the middle, 8 voxels, the
+        /// banner on two ropes under the plate and the plaque «Возрождений нет» at the left under the HUD.
+        /// </summary>
+        private static void BuildSecondChance(RectTransform plate, RectTransform bar, RectTransform inner, int labelsAt)
+        {
+            var dark = new Color(0.09f, 0.08f, 0.1f, 1f);
+            var cream = new Color(0.96f, 0.95f, 0.88f, 1f);
+            var yellow = new Color(0.95f, 0.77f, 0.16f, 1f);
+
+            // the line in the groove: dark edges, yellow and dark strokes 7 / 5, a solid one of the side over them
+            var middle = Rect(inner, "Middle", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f));
+            middle.sizeDelta = new Vector2(10f, 0f);
+            middle.SetSiblingIndex(labelsAt);
+            Picture(middle, Placeholder("chance_white"), dark);
+            var dashes = Rect(middle, "Dashes", Vector2.zero, Vector2.one);
+            dashes.offsetMin = new Vector2(2f, 0f);
+            dashes.offsetMax = new Vector2(-2f, 0f);
+            Picture(dashes, Placeholder("chance_line_dash"), Color.white).type = Image.Type.Tiled;
+            var solid = Rect(middle, "Solid", Vector2.zero, Vector2.one);
+            solid.offsetMin = new Vector2(2f, 0f);
+            solid.offsetMax = new Vector2(-2f, 0f);
+            var solidImage = Picture(solid, Placeholder("chance_white"), Color.white);
+            solidImage.type = Image.Type.Filled;
+            solidImage.fillMethod = Image.FillMethod.Vertical;
+            solidImage.fillOrigin = (int)Image.OriginVertical.Top;
+            solidImage.enabled = false;
+
+            // the triangles on the rims, tips to the groove; the lower one turned over
+            var triangles = new RectTransform[2];
+            for (var i = 0; i < 2; i++)
+            {
+                var anchor = new Vector2(0.5f, i == 0 ? 1f : 0f);
+                var triangle = Rect(bar, i == 0 ? "ChanceTop" : "ChanceBottom", anchor, anchor);
+                triangle.sizeDelta = new Vector2(34f, 26f);
+                if (i == 1)
+                    triangle.localEulerAngles = new Vector3(0f, 0f, 180f);
+                Picture(Rect(triangle, "Rim", Vector2.zero, Vector2.one), Placeholder("chance_tri_rim"), dark);
+                Picture(Rect(triangle, "Fill", Vector2.zero, Vector2.one), Placeholder("chance_tri_fill"), Color.white).enabled = false;
+                Picture(Rect(triangle, "Hazard", Vector2.zero, Vector2.one), Placeholder("chance_tri_hazard"), Color.white);
+                Picture(Rect(triangle, "Flash", Vector2.zero, Vector2.one), Placeholder("chance_tri_rim"), new Color(1f, 1f, 1f, 0f));
+                triangles[i] = triangle;
+            }
+
+            var voxels = Rect(bar, "ChanceVoxels", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            for (var i = 0; i < 8; i++)
+            {
+                var voxel = Rect(voxels, "Voxel" + i, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+                voxel.sizeDelta = Vector2.one * 7f;
+                Picture(voxel, null, Color.white);
+                voxel.gameObject.SetActive(false);
+            }
+
+            // the banner on two ropes from the lower rim of the plate
+            var banner = Rect(bar, "Banner", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            banner.pivot = new Vector2(0.5f, 1f);
+            banner.sizeDelta = new Vector2(300f, 0f);
+            var ropes = Rect(banner, "Ropes", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            foreach (var (name, x) in new[] { ("Left", -110f), ("Right", 110f) })
+            {
+                var rope = Rect(ropes, name, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+                rope.pivot = new Vector2(0.5f, 1f);
+                rope.anchoredPosition = new Vector2(x, 0f);
+                rope.sizeDelta = new Vector2(5f, 22f);
+                Picture(rope, null, new Color(0.86f, 0.78f, 0.6f, 1f));
+                rope.gameObject.AddComponent<Outline>().effectColor = dark;
+            }
+
+            var cloth = Rect(banner, "Cloth", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+            cloth.pivot = new Vector2(0.5f, 1f);
+            cloth.sizeDelta = new Vector2(300f, 70f);
+            cloth.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
+            Picture(cloth, null, yellow);
+            var rim = cloth.gameObject.AddComponent<Outline>();
+            rim.effectColor = dark;
+            rim.effectDistance = new Vector2(3f, -3f);
+            var pole = Rect(cloth, "Pole", new Vector2(0f, 1f), new Vector2(1f, 1f));
+            pole.pivot = new Vector2(0.5f, 0.5f);
+            pole.sizeDelta = new Vector2(24f, 10f);
+            Picture(pole, null, new Color(0.45f, 0.29f, 0.16f, 1f));
+            // the toothed lower edge: dark and yellow teeth by turns
+            var teeth = Rect(cloth, "Teeth", new Vector2(0f, 0f), new Vector2(1f, 0f));
+            for (var i = 0; i < 15; i++)
+            {
+                var tooth = Rect(teeth, "Tooth" + i, new Vector2(0f, 0f), new Vector2(0f, 0f));
+                tooth.sizeDelta = Vector2.one * 14f;
+                tooth.anchoredPosition = new Vector2(10f + i * 20f, 0f);
+                tooth.localEulerAngles = new Vector3(0f, 0f, 45f);
+                Picture(tooth, null, i % 2 == 0 ? dark : yellow);
+            }
+
+            var shield = Rect(cloth, "Shield", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+            shield.sizeDelta = Vector2.one * 44f;
+            shield.anchoredPosition = new Vector2(38f, 2f);
+            Picture(shield, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), Color.white);
+            shield.gameObject.AddComponent<Outline>().effectColor = cream;
+            Picture(Rect(shield, "Upright", new Vector2(0.44f, 0.18f), new Vector2(0.56f, 0.82f)), null, cream);
+            Picture(Rect(shield, "Bar", new Vector2(0.2f, 0.5f), new Vector2(0.8f, 0.62f)), null, cream);
+            var bannerLabel = Text(cloth, "Label", 30, TextAlignmentOptions.Center);
+            var bannerRect = (RectTransform)bannerLabel.transform;
+            bannerRect.offsetMin = new Vector2(64f, 6f);
+            bannerRect.offsetMax = new Vector2(-10f, 0f);
+            bannerLabel.fontStyle = FontStyles.Bold;
+            bannerLabel.color = dark;
+            cloth.gameObject.SetActive(false);
+
+            // «Возрождений нет»: an iron rim on dark at the left under the HUD
+            var plaque = Rect(plate, "NoRespawns", Vector2.zero, Vector2.zero);
+            plaque.pivot = new Vector2(0f, 1f);
+            plaque.sizeDelta = new Vector2(360f, 58f);
+            var plaqueBack = Picture(plaque, Hud("hud_frame_256"), Color.white);
+            plaqueBack.type = Image.Type.Sliced;
+            plaqueBack.pixelsPerUnitMultiplier = 48f / 18f;
+            var hero = Rect(plaque, "Hero", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+            hero.sizeDelta = new Vector2(26f, 34f);
+            hero.anchoredPosition = new Vector2(32f, 0f);
+            Picture(hero, null, new Color(0.55f, 0.55f, 0.58f, 1f));
+            var slash = Rect(plaque, "Slash", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+            slash.sizeDelta = new Vector2(44f, 6f);
+            slash.anchoredPosition = new Vector2(32f, 0f);
+            slash.localEulerAngles = new Vector3(0f, 0f, -45f);
+            Picture(slash, null, new Color32(0xd8, 0x47, 0x3d, 0xff));
+            var plaqueLabel = Text(plaque, "Label", 30, TextAlignmentOptions.Left);
+            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(62f, 0f);
+            plaqueLabel.fontStyle = FontStyles.Bold;
+            plaqueLabel.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
+            Picture(Rect(plaque, "Flash", Vector2.zero, Vector2.one), null, new Color(1f, 1f, 1f, 0f));
+            plaque.gameObject.SetActive(false);
+
+            var view = plate.gameObject.AddComponent<SecondChanceView>();
+            Wire(view, ("bar", bar), ("plate", plate), ("solidLine", solidImage), ("voxels", voxels), ("banner", banner), ("plaque", plaque));
+            var serialized = new SerializedObject(view);
+            var list = serialized.FindProperty("triangles");
+            list.arraySize = 2;
+            for (var i = 0; i < 2; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = triangles[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static RectTransform Rivet(RectTransform plate, string name)

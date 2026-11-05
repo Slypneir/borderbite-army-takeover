@@ -424,6 +424,13 @@ namespace Meta.DeveloperTools.Services
             return Battle();
         }
 
+        /// <summary>Hurts the hero of a side by points, as blows would (task 4.36: a hero gone for good without its base).</summary>
+        public static string HurtHero(string side, int damage)
+        {
+            _battle.Current.Simulation.HurtHero(SideOf(side), damage);
+            return Battle();
+        }
+
         /// <summary>Gives a side cells until it has this percent of the map.</summary>
         public static string FillShare(string side, int percent)
         {

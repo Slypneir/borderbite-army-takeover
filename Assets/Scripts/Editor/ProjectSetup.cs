@@ -483,9 +483,12 @@ namespace Core.EditorTools
 
             plain.AddRange(new[] { "mark_wave_chevron_64", "mark_wave_chevron_32", "mark_wave_pip_on_32x16", "mark_wave_pip_on_16x8",
                 "mark_wave_pip_off_32x16", "mark_wave_pip_off_16x8" });
+            // the triangles of the middle of the territory bar, placeholders of the second chance (task 4.36)
+            foreach (var name in new[] { "chance_tri_rim", "chance_tri_fill", "chance_tri_hazard", "chance_line_dash", "chance_white" })
+                plain.Add("Assets/Sprites/UI/Placeholder/" + name + ".png");
             foreach (var name in plain)
             {
-                var path = IconFolder + name + ".png";
+                var path = name.StartsWith("Assets/") ? name : IconFolder + name + ".png";
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter importer) || importer.textureType == TextureImporterType.Sprite
                     && importer.filterMode == FilterMode.Bilinear)
                     continue;
