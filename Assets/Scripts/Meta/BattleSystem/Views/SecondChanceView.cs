@@ -173,9 +173,12 @@ namespace Meta.BattleSystem.Views
         /// The room the banner takes, canvas units, with the gap of 8 round it: its sides and the line under its teeth; false
         /// while it does not hang.
         /// </summary>
-        public bool Span(float scale, out float left, out float right, out float bottom)
+        public bool Span(float scale, out float left, out float right, out float bottom) => Span(scale, out left, out right, out bottom, out _);
+
+        /// <summary>The room of the banner as above and the top of its cloth.</summary>
+        public bool Span(float scale, out float left, out float right, out float bottom, out float top)
         {
-            left = right = bottom = 0f;
+            left = right = bottom = top = 0f;
             if (_cloth == null || !_cloth.gameObject.activeInHierarchy)
                 return false;
 
@@ -184,6 +187,7 @@ namespace Meta.BattleSystem.Views
             left = Mathf.Min(_corners[0].x, _corners[2].x) / scale - Gap;
             right = Mathf.Max(_corners[0].x, _corners[2].x) / scale + Gap;
             bottom = Mathf.Min(_corners[0].y, _corners[2].y) / scale - Teeth * BannerScale - Gap;
+            top = Mathf.Max(_corners[0].y, _corners[2].y) / scale;
             return true;
         }
 

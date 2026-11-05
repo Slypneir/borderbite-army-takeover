@@ -229,8 +229,19 @@ namespace Meta.BattleSystem.Views
             var inward = -direction.normalized;
             var place = Edge(centre, direction, area, WaveSize / 2f);
             var leaving = !coming ? Mathf.Clamp01(gone / WaveGone) : 0f;
-            // the marks under the plate are wider than it: 5 of 24 with gaps of 4
-            place = UnderBanner(place, (5f * 24f + 4f * 4f) / 2f, scale);
+            // the marks under the plate are wider than it: 5 of 24 with gaps of 4; the arrows reach WaveReach to the centre
+            var moved = UnderBanner(place, (5f * 24f + 4f * 4f) / 2f, WaveReach, scale, centre, area, out var cramped);
+            if (moved != place)
+            {
+                // stepped aside: the arrows point from the new place into the frame
+                place = moved;
+                inward = (centre - place).normalized;
+            }
+
+            // on a wide screen the top edge is near the hero: a sign whose arrows would reach into its zone shows none — even one
+            // lay on the hero's bar there; its place at the edge still tells where the wave gathers
+            cramped |= (place - centre).magnitude - WaveReach < HeroZone;
+
             waveSign.anchoredPosition = place + inward * (20f * leaving);
             var push = now - _wavePushAt < 0.2f ? 1f + 0.06f * Mathf.Sin((now - _wavePushAt) / 0.2f * Mathf.PI) : 1f;
             waveSign.localScale = Vector3.one * push;
@@ -251,12 +262,12 @@ namespace Meta.BattleSystem.Views
             for (var i = 0; i < arrows.childCount; i++)
             {
                 var arrow = (RectTransform)arrows.GetChild(i);
-                var t = (phase + i / 3f) % 1f;
+                var t = cramped ? 0f : (phase + i / 3f) % 1f;
                 arrow.anchoredPosition = new Vector2(t * 36f, 0f);
-                // the art is red itself; the glyph of the placeholder is tinted
+                // the art is red itself; the glyph of the placeholder is tinted; beside the banner with no room one arrow is left
                 var graphic = arrow.GetComponentInChildren<Graphic>();
                 var tint = graphic is Image ? Color.white : new Color(0.9f, 0.2f, 0.17f, 1f);
-                tint.a = Mathf.Sin(t * Mathf.PI);
+                tint.a = cramped ? 0f : Mathf.Sin(t * Mathf.PI);
                 graphic.color = tint;
             }
 
@@ -277,20 +288,41 @@ namespace Meta.BattleSystem.Views
             }
         }
 
+        // the arrows of a wave sign reach this far from its middle to the centre: half the plate, 2, an arrow of 40 and its run
+        private const float WaveReach = WaveSize / 2f + 2f + 40f + 36f;
+        // the zone of the hero: no sign with its arrows comes closer to the middle of the frame (UI review of 4.36)
+        private const float HeroZone = 160f;
+
         /// <summary>
-        /// A sign at the edge that would stand on the banner of the second chance moves along the edge out of its width, to the
-        /// nearer side: under the banner it would hang in the middle of the frame, over the hero.
+        /// A sign at the edge that would stand on the banner of the second chance steps aside along the edge out of its width
+        /// (UI review of 4.36): to the nearer side, else to the farther one, so that with its arrows it stays out of the zone of
+        /// the hero (160 round the middle of the frame) and in the frame; with room on neither it stands beside the banner at the
+        /// edge on the nearer side, <paramref name="cramped"/>, and its sign shows no arrows (one lay on the hero's bar on a wide
+        /// screen, where the top edge is some 180 from the hero).
         /// </summary>
-        private Vector2 UnderBanner(Vector2 middle, float half, float scale)
+        private Vector2 UnderBanner(Vector2 middle, float half, float reach, float scale, Vector2 centre, Rect area, out bool cramped)
         {
+            cramped = false;
             if (banner == null || !banner.Span(scale, out var left, out var right, out var bottom))
                 return middle;
 
             if (middle.y - half > bottom || middle.x + half < left || middle.x - half > right)
                 return middle;
 
-            middle.x = middle.x - left < right - middle.x ? left - half : right + half;
-            return middle;
+            var nearer = middle.x - left < right - middle.x ? left - half : right + half;
+            var farther = nearer < middle.x ? right + half : left - half;
+            foreach (var x in new[] { nearer, farther })
+            {
+                var place = new Vector2(x, middle.y);
+                // the inset of the edge may be spent here: the sign still stays inside the safe area
+                var inFrame = x - half >= area.xMin - EdgeInset && x + half <= area.xMax + EdgeInset;
+                if (inFrame && (place - centre).magnitude - reach >= HeroZone)
+                    return place;
+            }
+
+            // no room: beside the banner at the edge, the nearer side; the caller drops the arrows
+            cramped = true;
+            return new Vector2(nearer, middle.y);
         }
 
         private void Threaten(int key, int x, int y, bool isBase, bool land, float now, bool wave = false)
@@ -389,7 +421,8 @@ namespace Meta.BattleSystem.Views
                 var sign = SignAt(shown++);
                 var size = threat.IsBase ? baseSignSize : signSize;
                 sign.Root.sizeDelta = Vector2.one * size;
-                sign.Root.anchoredPosition = UnderBanner(Edge(centre, direction, area, size / 2f), size / 2f, scale);
+                // a sign of an attack reaches to the centre by its point, 40 out of its disc
+                sign.Root.anchoredPosition = UnderBanner(Edge(centre, direction, area, size / 2f), size / 2f, size / 2f + 40f, scale, centre, area, out _);
                 sign.Point.localRotation = Quaternion.Euler(0f, 0f, angle - 90f);
                 sign.Building.SetActive(!threat.Land && !threat.Wave);
                 sign.Land.SetActive(threat.Land && !threat.Wave);
