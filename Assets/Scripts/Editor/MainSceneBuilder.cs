@@ -587,10 +587,14 @@ namespace Core.EditorTools
             slash.anchoredPosition = new Vector2(32f, 0f);
             slash.localEulerAngles = new Vector3(0f, 0f, -45f);
             Picture(slash, null, new Color32(0xd8, 0x47, 0x3d, 0xff));
-            // Body bold capitals with a dark rim of 3 (UI review of 4.36)
-            var plaqueLabel = Text(plaque, "Label", BodySize, TextAlignmentOptions.Left);
+            // capitals at 36, thick by the dilate of the face that the view sets, with a dark rim (UI review of 4.36)
+            var plaqueLabel = Text(plaque, "Label", 36, TextAlignmentOptions.Left);
             ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(62f, 0f);
-            plaqueLabel.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-10f, 0f);
+            plaqueLabel.fontStyle = FontStyles.UpperCase;
+            plaqueLabel.enableAutoSizing = true;
+            plaqueLabel.fontSizeMin = 26f;
+            plaqueLabel.fontSizeMax = 36f;
             plaqueLabel.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             Picture(Rect(plaque, "Flash", Vector2.zero, Vector2.one), null, new Color(1f, 1f, 1f, 0f));
             plaque.gameObject.SetActive(false);

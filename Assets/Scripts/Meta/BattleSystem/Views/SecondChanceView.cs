@@ -23,8 +23,9 @@ namespace Meta.BattleSystem.Views
     ///   changes colour; taken from the player without a base — the ropes break and it falls turning and fades in 0.7 s;
     /// - a side without a base holding the chance: its triangles beat like a heart, a double push of 1.18 every 1.2 s;
     /// - «Возрождений нет» from the fall of the player's base: a plaque at the left under the HUD, an iron rim on dark, a grey
-    ///   hero with a crossed arrow and the text in calm scarlet #d8473d with a dark rim breathing (brightness 0.78 ↔ 1, scale
-    ///   1 ↔ 1.03 in 1.6 s); it slides in from the left in 0.35 s with a bounce and a white flash.
+    ///   hero with a crossed arrow and the text in calm scarlet with a dark rim breathing (#c23d34 ↔ #e0574b, scale 1 ↔ 1.03 in
+    ///   1.6 s); it slides in from the left in 0.35 s with a bounce and a white flash. On a tall screen the banner is at 0.8 and
+    ///   the plaque centred under it, as wide.
     /// </summary>
     public sealed class SecondChanceView : MonoBehaviour
     {
@@ -36,6 +37,8 @@ namespace Meta.BattleSystem.Views
         private const float PlaqueSeconds = 0.35f;
         private const float RopeLength = 30f;
         private const float RopeEnds = 22f;
+        // the ropes hang this far from the middle on a wide screen
+        private const float RopeApart = 160f;
         // the teeth hang under the cloth this far; labels keep this far under them
         private const float Teeth = 10f;
         private const float Gap = 8f;
@@ -74,6 +77,17 @@ namespace Meta.BattleSystem.Views
         private Image _plaqueFlash;
         private RectTransform _cloth;
         private RectTransform _ropes;
+        private float _plaqueWidth;
+        private float _plaqueHeight;
+
+        // a tall screen keeps the stack of the HUD, the banner and the plaque within a quarter of its height (UI review of 4.36)
+        private static float Hang => Narrow ? 18f : RopeLength;
+        private const float NarrowPlaqueHeight = 48f;
+
+        /// <summary>A tall screen: the banner at 0.8 and the plaque centred under it, the stack within a quarter of the height.</summary>
+        private static bool Narrow => Screen.height > Screen.width;
+
+        private static float BannerScale => Narrow ? 0.8f : 1f;
 
         [Inject]
         public void Construct(IBattleDriver battle, BattleViewConfig view)
@@ -90,9 +104,12 @@ namespace Meta.BattleSystem.Views
             _bannerLabel = _cloth.Find("Label").GetComponent<TMP_Text>();
             _plaqueLabel = plaque.Find("Label").GetComponent<TMP_Text>();
             _plaqueFlash = plaque.Find("Flash").GetComponent<Image>();
-            // a dark rim of 3 at the size of Body (UI review of 4.36)
+            // thick by the face, not by bold: a dilate of 0.25 and a dark rim of 2 at 36 (UI review of 4.36)
+            _plaqueLabel.fontMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, 0.25f);
             _plaqueLabel.outlineColor = Dark;
-            _plaqueLabel.outlineWidth = 0.3f;
+            _plaqueLabel.outlineWidth = 0.2f;
+            _plaqueWidth = plaque.sizeDelta.x;
+            _plaqueHeight = plaque.sizeDelta.y;
         }
 
         private void LateUpdate()
@@ -264,7 +281,7 @@ namespace Meta.BattleSystem.Views
                 // the ropes break: the banner falls turning and fades
                 var t = broken / BreakSeconds;
                 _ropes.gameObject.SetActive(false);
-                _cloth.anchoredPosition = new Vector2(0f, -RopeLength - 140f * t * t);
+                _cloth.anchoredPosition = new Vector2(0f, -Hang - 140f * t * t);
                 _cloth.localRotation = Quaternion.Euler(0f, 0f, -40f * t);
                 SetAlpha(_cloth, 1f - t);
                 return;
@@ -278,7 +295,7 @@ namespace Meta.BattleSystem.Views
             var fall = Mathf.Clamp01(drop / DropSeconds);
             // the fall with a bounce on the ropes at its end
             var bounce = drop > DropSeconds && drop < DropSeconds + 0.25f ? 8f * Mathf.Sin((drop - DropSeconds) / 0.25f * Mathf.PI) : 0f;
-            var hang = Mathf.Lerp(0f, RopeLength, fall * fall) + bounce;
+            var hang = Mathf.Lerp(0f, Hang, fall * fall) + bounce;
             SetRopes(Mathf.Max(RopeEnds, hang), 0f);
             _cloth.anchoredPosition = new Vector2(0f, -hang);
             var swing = drop > DropSeconds ? 6f * Mathf.Exp(-3f * (drop - DropSeconds) / SwingSeconds) *
@@ -288,7 +305,7 @@ namespace Meta.BattleSystem.Views
             // the chance passes while both bases stand: the banner turns over, the shield changes colour on its edge
             var turn = (now - _turnAt) / PassSeconds;
             var turning = turn < 1f;
-            _cloth.localScale = new Vector3(turning ? Mathf.Abs(Mathf.Cos(turn * Mathf.PI)) : 1f, 1f, 1f);
+            _cloth.localScale = new Vector3((turning ? Mathf.Abs(Mathf.Cos(turn * Mathf.PI)) : 1f) * BannerScale, BannerScale, 1f);
             _shield.color = ColorOf(turning && turn < 0.5f && _from != Side.Neutral ? _from : _holder);
             _bannerLabel.text = Loc.Get("battle.second_chance");
         }
@@ -297,6 +314,7 @@ namespace Meta.BattleSystem.Views
         {
             foreach (RectTransform rope in _ropes)
             {
+                rope.anchoredPosition = new Vector2(Mathf.Sign(rope.anchoredPosition.x) * RopeApart * BannerScale, 0f);
                 rope.sizeDelta = new Vector2(rope.sizeDelta.x, length);
                 rope.localRotation = Quaternion.Euler(0f, 0f, sway);
             }
@@ -311,24 +329,28 @@ namespace Meta.BattleSystem.Views
             var t = Mathf.Clamp01((now - _plaqueAt) / PlaqueSeconds);
             // out from the left with a bounce: past the place by 10%, then back
             var slide = t < 0.75f ? Mathf.Lerp(-1.1f, 0.06f, t / 0.75f) : Mathf.Lerp(0.06f, 0f, (t - 0.75f) / 0.25f);
-            // on a narrow screen the banner hangs over the left too: the plaque goes under its teeth, never over it
+            // on a tall screen the plaque stands centred under the teeth of the banner, as wide, one block with it; on a wide one
+            // at the left under the HUD
             var y = -10f;
             var left = 16f;
-            if (_cloth.gameObject.activeInHierarchy)
+            var width = _plaqueWidth;
+            if (Narrow && _cloth.gameObject.activeInHierarchy)
             {
                 _cloth.GetWorldCorners(_corners);
-                var clothLeft = plate.InverseTransformPoint(_corners[0]).x - plate.rect.xMin;
-                var clothBottom = plate.InverseTransformPoint(_corners[0]).y - plate.rect.yMin;
-                if (left + plaque.sizeDelta.x + Gap > clothLeft)
-                    y = Mathf.Min(y, clothBottom - Teeth - Gap);
+                var a = plate.InverseTransformPoint(_corners[0]);
+                var b = plate.InverseTransformPoint(_corners[2]);
+                width = Mathf.Abs(b.x - a.x);
+                left = Mathf.Min(a.x, b.x) - plate.rect.xMin;
+                y = Mathf.Min(a.y, b.y) - plate.rect.yMin - Teeth * BannerScale - Gap;
             }
 
-            plaque.anchoredPosition = new Vector2(left + slide * plaque.sizeDelta.x, y);
+            plaque.sizeDelta = new Vector2(width, Narrow ? NarrowPlaqueHeight : _plaqueHeight);
+            plaque.anchoredPosition = new Vector2(left + slide * width, y);
             var flash = now - _plaqueAt - PlaqueSeconds;
             _plaqueFlash.color = new Color(1f, 1f, 1f, flash >= 0f && flash < 0.12f ? 0.8f * (1f - flash / 0.12f) : 0f);
             var breath = 0.5f - 0.5f * Mathf.Cos(now / 1.6f * 2f * Mathf.PI);
-            var scarlet = new Color32(0xd8, 0x47, 0x3d, 0xff);
-            _plaqueLabel.color = Color.Lerp((Color)scarlet * 0.78f, scarlet, breath);
+            // the pulse is of colour, not of alpha: a paler letter reads worse (UI review of 4.36)
+            _plaqueLabel.color = Color.Lerp(new Color32(0xc2, 0x3d, 0x34, 0xff), new Color32(0xe0, 0x57, 0x4b, 0xff), breath);
             _plaqueLabel.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 1.03f, breath);
             _plaqueLabel.text = Loc.Get("battle.no_respawns");
         }
