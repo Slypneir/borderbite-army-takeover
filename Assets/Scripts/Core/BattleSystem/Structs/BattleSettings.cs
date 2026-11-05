@@ -111,6 +111,11 @@ namespace Core.BattleSystem.Structs
         public int SquadMax = 5;
         /// <summary>Squads that keep by the base and the barracks of the enemy.</summary>
         public int GuardSquads = 1;
+        /// <summary>
+        /// The soldiers of a guard (task 4.35, spec 4.2, T26): the first of the enemy's soldiers fill it, it grows no more, and
+        /// they stand over the cap of its army: the cap counts only the rest, the ones that go in waves.
+        /// </summary>
+        public int GuardUnits = 3;
         /// <summary>The first wave leaves this many ticks after the start (task 4.28: at the 20th second)…</summary>
         public int FirstWaveTicks = 600;
         /// <summary>…and then one every this many ticks.</summary>
@@ -125,7 +130,7 @@ namespace Core.BattleSystem.Structs
         public int WaveWarnTicks = 150;
         /// <summary>A squad of a wave with fewer soldiers than this goes home.</summary>
         public int WaveLeaveBelow = 2;
-        /// <summary>The enemy's army is at most the player's and this many more…</summary>
+        /// <summary>The enemy's army past its guard is at most the player's and this many more…</summary>
         public int EnemyArmySlack = 3;
         /// <summary>…but never held under this many.</summary>
         public int EnemyArmyFloor = 5;

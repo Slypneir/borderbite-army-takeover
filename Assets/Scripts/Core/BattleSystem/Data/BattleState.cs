@@ -103,15 +103,17 @@ namespace Core.BattleSystem.Data
         }
 
         /// <summary>
-        /// The most soldiers a side may have: 30, and the enemy's at most the player's army and the slack, never under the floor
-        /// (task 4.27: fall behind — it waits, catch up — it grows).
+        /// The most soldiers a side may have: 30, and the enemy's its guard and, past it, at most the player's army and the slack,
+        /// never under the floor (task 4.27: fall behind — it waits, catch up — it grows; task 4.35: the guard stands over the cap,
+        /// else it ate the cap and no squad was left for a wave).
         /// </summary>
         public int ArmyCapOf(Side side)
         {
             if (side != Side.Enemy || !Settings.EnemySquads)
                 return Settings.ArmyMax;
 
-            var cap = System.Math.Max(Settings.EnemyArmyFloor, ArmyOf(Side.Player) + Settings.EnemyArmySlack);
+            var cap = System.Math.Max(Settings.EnemyArmyFloor, ArmyOf(Side.Player) + Settings.EnemyArmySlack) +
+                      Settings.GuardSquads * Settings.GuardUnits;
             return System.Math.Min(Settings.ArmyMax, cap);
         }
 

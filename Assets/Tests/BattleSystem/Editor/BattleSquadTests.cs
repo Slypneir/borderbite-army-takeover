@@ -10,7 +10,8 @@ namespace Tests.BattleSystem.Editor
     /// <summary>
     /// Task 4.27, spec 4.2 «Армия врага»: squads of 3–5 with one on guard, the rest at home off the player's land; a wave every
     /// so often with a warning first, to the nearest barracks of the player; the fall of the player's hero sends the waves home
-    /// and spares the player's buildings while the hero is down; a truce at the start; the enemy's army at most the player's + 3.
+    /// and spares the player's buildings while the hero is down; a truce at the start; the enemy's army past a guard of 3 at most
+    /// the player's + 3 (task 4.35).
     /// </summary>
     public sealed class BattleSquadTests
     {
@@ -37,7 +38,7 @@ namespace Tests.BattleSystem.Editor
         private static int Members(BattleSimulation simulation, int squad) => simulation.Soldiers.Count(s => s.Squad == squad);
 
         [Test]
-        public void Squads_EightSoldiers_AGuardOfFiveAndASquadOfThreeAtHome()
+        public void Squads_EightSoldiers_AGuardOfThreeAndASquadOfFiveAtHome()
         {
             var settings = Squads();
             settings.FirstWaveTicks = 100000;
@@ -48,9 +49,9 @@ namespace Tests.BattleSystem.Editor
 
             simulation.Squads.Should().HaveCount(2);
             simulation.Squads[0].Role.Should().Be(SquadRole.Guard);
-            Members(simulation, simulation.Squads[0].Id).Should().Be(5);
+            Members(simulation, simulation.Squads[0].Id).Should().Be(3);
             simulation.Squads[1].Role.Should().Be(SquadRole.Home);
-            Members(simulation, simulation.Squads[1].Id).Should().Be(3);
+            Members(simulation, simulation.Squads[1].Id).Should().Be(5);
         }
 
         [Test]
@@ -143,13 +144,34 @@ namespace Tests.BattleSystem.Editor
 
             Run(simulation, 600);
 
-            // no army of the player: the floor of 5
-            simulation.ArmyOf(Side.Enemy).Should().Be(5);
-            // four of the player far away: the cap grows to 7, before they come to fight
+            // no army of the player: the guard of 3 over the floor of 5 (task 4.35)
+            simulation.ArmyOf(Side.Enemy).Should().Be(8);
+            // four of the player far away: the cap past the guard grows to 7, before they come to fight
             simulation.AddSoldiers(Side.Player, 4, 10 * Unit, 10 * Unit);
             Run(simulation, 120);
             simulation.ArmyOf(Side.Player).Should().Be(4);
-            simulation.ArmyOf(Side.Enemy).Should().BeInRange(5, 7);
+            simulation.ArmyOf(Side.Enemy).Should().BeInRange(8, 10);
+        }
+
+        [Test]
+        public void Guard_OverTheCap_TheFloorLeftForAWave()
+        {
+            // task 4.35: before, the guard took 5 of the floor of 5 and no squad was ever left at home for a wave
+            var settings = Squads();
+            settings.FirstWaveTicks = 100000;
+            var simulation = new BattleSimulation(settings);
+            simulation.BuildBarracks(1, Side.Enemy);
+            simulation.Give(Side.Enemy, 100, 0);
+            var site = simulation.Sites[1];
+            simulation.TeleportHero(Side.Enemy, BattleStateMiddle(site.CenterX), BattleStateMiddle(site.CenterY) - 3500);
+
+            Run(simulation, 600);
+
+            var guard = simulation.Squads.Single(s => s.Role == SquadRole.Guard);
+            Members(simulation, guard.Id).Should().Be(3);
+            var home = simulation.Squads.Where(s => s.Role == SquadRole.Home).ToList();
+            home.Should().NotBeEmpty();
+            home.Sum(s => Members(simulation, s.Id)).Should().Be(5);
         }
 
         [TestCase(true)]

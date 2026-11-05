@@ -90,7 +90,7 @@ namespace Core.BattleSystem.Services
             {
                 var squad = squads[i];
                 var promote = guards < _settings.GuardSquads &&
-                              ((squad.Role == SquadRole.Forming && _members[i] >= _settings.SquadMin) || squad.Role == SquadRole.Home);
+                              ((squad.Role == SquadRole.Forming && _members[i] >= GuardFull()) || squad.Role == SquadRole.Home);
                 if (promote)
                 {
                     squad.Role = SquadRole.Guard;
@@ -105,21 +105,49 @@ namespace Core.BattleSystem.Services
             Waves();
         }
 
-        /// <summary>The squad a new soldier joins: the one forming, else the smallest at home or on guard, else a new one.</summary>
+        /// <summary>A forming squad this big becomes the guard while one is missing.</summary>
+        private int GuardFull() => System.Math.Max(1, System.Math.Min(_settings.SquadMin, _settings.GuardUnits));
+
+        /// <summary>
+        /// The squad a new soldier joins (task 4.35): a guard short of its soldiers first, then the one forming (no bigger than a
+        /// guard while a guard is missing), else the smallest at home, else a new one.
+        /// </summary>
         private int Join()
         {
             var squads = _state.Squads;
+            var guards = 0;
             for (var i = 0; i < squads.Count; i++)
             {
-                if (squads[i].Role == SquadRole.Forming && _members[i] < _settings.SquadMax)
+                if (squads[i].Role != SquadRole.Guard)
+                    continue;
+
+                guards++;
+                if (_members[i] < _settings.GuardUnits)
+                    return i;
+            }
+
+            // a forming squad as big as a guard becomes the missing guard after this pass: it fills to a guard and no more
+            var future = -1;
+            for (var i = 0; i < squads.Count && guards < _settings.GuardSquads && future < 0; i++)
+            {
+                if (squads[i].Role == SquadRole.Forming && _members[i] >= GuardFull())
+                    future = i;
+            }
+
+            if (future >= 0 && _members[future] < _settings.GuardUnits)
+                return future;
+
+            var forming = guards < _settings.GuardSquads && future < 0 ? GuardFull() : _settings.SquadMax;
+            for (var i = 0; i < squads.Count; i++)
+            {
+                if (i != future && squads[i].Role == SquadRole.Forming && _members[i] < forming)
                     return i;
             }
 
             var pick = -1;
             for (var i = 0; i < squads.Count; i++)
             {
-                var role = squads[i].Role;
-                if ((role == SquadRole.Guard || role == SquadRole.Home) && _members[i] < _settings.SquadMax && (pick < 0 || _members[i] < _members[pick]))
+                if (squads[i].Role == SquadRole.Home && _members[i] < _settings.SquadMax && (pick < 0 || _members[i] < _members[pick]))
                     pick = i;
             }
 

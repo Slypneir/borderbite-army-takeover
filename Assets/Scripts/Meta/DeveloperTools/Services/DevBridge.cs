@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections.Generic;
+using System.Linq;
 using Core.BattleSystem.Enums;
 using Core.BattleSystem.Services;
 using Core.BattleSystem.Structs;
@@ -118,9 +119,20 @@ namespace Meta.DeveloperTools.Services
                 var limit = maxSeconds * settings.TicksPerSecond;
                 // the first second each army reached its limit (task 4.19: the economy is richer)
                 var full = new[] { -1f, -1f, -1f };
+                // the waves that left and the second of the first (task 4.35)
+                var left = 0;
+                var firstWave = -1f;
                 while (simulation.Result == BattleResult.None && simulation.Tick < limit)
                 {
+                    var announced = simulation.WaveComing(out _, out _);
                     simulation.Step();
+                    if (announced && !simulation.WaveComing(out _, out _) && simulation.Squads.Any(q => q.Role == SquadRole.Wave))
+                    {
+                        left++;
+                        if (firstWave < 0f)
+                            firstWave = simulation.Tick / (float)settings.TicksPerSecond;
+                    }
+
                     foreach (var side in new[] { Side.Player, Side.Enemy })
                     {
                         if (full[(int)side] < 0f && simulation.ArmyOf(side) >= settings.ArmyMax)
@@ -165,7 +177,7 @@ namespace Meta.DeveloperTools.Services
                 if (!simulation.Bases[(int)Side.Enemy].Standing && simulation.Tick <= 30 * settings.TicksPerSecond)
                     early30++;
 
-                lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, base fell {fell}, squads {simulation.Squads.Count} ({waves} in a wave), blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
+                lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, base fell {fell}, squads {simulation.Squads.Count} ({waves} in a wave), waves {left} (first at {Seconds(firstWave)}), blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
                           $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]} (within 5 s of coming back {early[1]}/{early[2]}), army {settings.ArmyMax} at {Seconds(full[1])}/{Seconds(full[2])}");
             }
 
