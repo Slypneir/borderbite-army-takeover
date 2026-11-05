@@ -1137,7 +1137,7 @@ namespace Core.EditorTools
 
         // the map editor: a tool of the owner, dense as a tool (screens/map-editor.md)
         private const float EditorSide = 340f;
-        private const float EditorRow = 36f;
+        private const float EditorRow = 32f;
         private const int EditorText = 20;
         private const float EditorGap = 6f;
         private static readonly Color EditorPanel = new Color(0.14f, 0.15f, 0.18f, 1f);
@@ -1199,37 +1199,44 @@ namespace Core.EditorTools
             Picture(panel, null, EditorPanel);
             var column = panel.gameObject.AddComponent<VerticalLayoutGroup>();
             column.padding = new RectOffset(14, 14, 12, 12);
-            column.spacing = EditorGap;
+            column.spacing = 5f;
             column.childControlWidth = true;
             column.childControlHeight = true;
             column.childForceExpandWidth = true;
             column.childForceExpandHeight = false;
 
-            Caption(panel, "Header", "Редактор карт", 28, 40f);
-            Caption(panel, "MapsLabel", "Карты", EditorText, 24f);
+            Caption(panel, "Header", "Редактор карт", 28, 34f);
+            Caption(panel, "MapsLabel", "Карты", EditorText, 22f);
             var list = BuildMapList(panel, out var template);
-            var newRow = EditorRowOf(panel, "NewRow");
-            Caption(newRow, "NewLabel", "Новая:", EditorText, EditorRow);
-            var create48 = Tool(newRow, "New48", "48");
-            var create64 = Tool(newRow, "New64", "64");
-            var create80 = Tool(newRow, "New80", "80");
+            var fileRow = EditorRowOf(panel, "FileRow");
+            var create = Tool(fileRow, "New", "Новая");
+            var copy = Tool(fileRow, "Copy", "Копия");
             var nameRow = EditorRowOf(panel, "NameRow");
             var nameField = NameField(nameRow);
             var rename = Tool(nameRow, "Rename", "Имя");
             rename.GetComponent<LayoutElement>().flexibleWidth = 0f;
             rename.GetComponent<LayoutElement>().preferredWidth = 80f;
-            var fileRow = EditorRowOf(panel, "FileRow");
-            var copy = Tool(fileRow, "Copy", "Копия");
-            var remove = Tool(fileRow, "Delete", "Удалить");
-            Caption(panel, "BrushLabel", "Кисть", EditorText, 24f);
-            var brushRow = EditorRowOf(panel, "BrushRow");
-            var land = Tool(brushRow, "Land", "Суша");
-            var water = Tool(brushRow, "Water", "Вода");
-            var sizeRow = EditorRowOf(panel, "SizeRow");
-            var brush1 = Tool(sizeRow, "Brush1", "1");
-            var brush3 = Tool(sizeRow, "Brush3", "3");
-            var brush5 = Tool(sizeRow, "Brush5", "5");
-            var grid = Tool(sizeRow, "Grid", "Сетка");
+            Caption(panel, "LandLabel", "Земля", EditorText, 22f);
+            var landRow = EditorRowOf(panel, "LandRow");
+            var land = Tool(landRow, "Land", "Суша");
+            var water = Tool(landRow, "Water", "Вода");
+            var eraser = Tool(landRow, "Eraser", "Ластик");
+            var shapeRow = EditorRowOf(panel, "ShapeRow");
+            var square = Tool(shapeRow, "Square", "Квадрат");
+            var circle = Tool(shapeRow, "Circle", "Круг");
+            var brushLabel = Caption(panel, "BrushLabel", "Кисть: 5", EditorText, 22f);
+            var slider = BrushSlider(panel);
+            Caption(panel, "ObjectsLabel", "Объекты", EditorText, 22f);
+            var objectRow = EditorRowOf(panel, "ObjectRow");
+            var gold = Tool(objectRow, "Gold", "Золото");
+            var wood = Tool(objectRow, "Wood", "Дерево");
+            var site = Tool(objectRow, "Site", "Место");
+            var baseRow = EditorRowOf(panel, "BaseRow");
+            var playerBase = Tool(baseRow, "PlayerBase", "Штаб игрока");
+            var enemyBase = Tool(baseRow, "EnemyBase", "Штаб врага");
+            var viewRow = EditorRowOf(panel, "ViewRow");
+            var mirror = Tool(viewRow, "Mirror", "Зеркало");
+            var grid = Tool(viewRow, "Grid", "Сетка");
             var historyRow = EditorRowOf(panel, "HistoryRow");
             var undo = Tool(historyRow, "Undo", "Отменить");
             var redo = Tool(historyRow, "Redo", "Повторить");
@@ -1268,9 +1275,10 @@ namespace Core.EditorTools
             var view = go.GetComponent<MapEditorView>();
             Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("viewport", viewport), ("map", raw), ("input", input),
                 ("listContent", list), ("itemTemplate", template), ("nameField", nameField), ("title", title), ("status", status),
-                ("message", message), ("create48", create48), ("create64", create64), ("create80", create80), ("copy", copy),
-                ("rename", rename), ("remove", remove), ("land", land), ("water", water), ("brush1", brush1), ("brush3", brush3),
-                ("brush5", brush5), ("grid", grid), ("save", save), ("undo", undo), ("redo", redo), ("play", play), ("exit", exit),
+                ("message", message), ("create", create), ("copy", copy), ("rename", rename), ("land", land), ("water", water),
+                ("eraser", eraser), ("square", square), ("circle", circle), ("brushSize", slider), ("brushLabel", brushLabel),
+                ("gold", gold), ("wood", wood), ("site", site), ("playerBase", playerBase), ("enemyBase", enemyBase),
+                ("mirror", mirror), ("grid", grid), ("save", save), ("undo", undo), ("redo", redo), ("play", play), ("exit", exit),
                 ("dialog", dialogGo.GetComponent<CanvasGroup>()), ("dialogText", dialogText), ("dialogYes", yes),
                 ("dialogYesCaption", yes.GetComponentInChildren<TMP_Text>()), ("dialogNo", no),
                 ("dialogNoCaption", no.GetComponentInChildren<TMP_Text>()), ("dialogCancel", cancel));
@@ -1281,7 +1289,7 @@ namespace Core.EditorTools
         private static RectTransform BuildMapList(RectTransform panel, out Button template)
         {
             var scroll = Rect(panel, "Maps", Vector2.zero, Vector2.one);
-            scroll.gameObject.AddComponent<LayoutElement>().preferredHeight = 176f;
+            scroll.gameObject.AddComponent<LayoutElement>().preferredHeight = 130f;
             Picture(scroll, null, EditorBack).raycastTarget = true;
             var viewport = Rect(scroll, "Viewport", Vector2.zero, Vector2.one);
             viewport.offsetMin = new Vector2(4f, 4f);
@@ -1303,10 +1311,42 @@ namespace Core.EditorTools
             view.movementType = ScrollRect.MovementType.Clamped;
             view.scrollSensitivity = 24f;
             template = Tool(content, "Item", "Карта");
-            template.GetComponentInChildren<TMP_Text>().alignment = TextAlignmentOptions.MidlineLeft;
-            var label = (RectTransform)template.GetComponentInChildren<TMP_Text>().transform;
-            label.offsetMin = new Vector2(10f, 0f);
+            var label = template.GetComponentInChildren<TMP_Text>();
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            ((RectTransform)label.transform).offsetMin = new Vector2(10f, 0f);
+            ((RectTransform)label.transform).offsetMax = new Vector2(-40f, 0f);
+            // the cross that deletes this map, at the right end of its row
+            var delete = Tool((RectTransform)template.transform, "Delete", "X");
+            Destroy(delete.GetComponent<LayoutElement>());
+            var deleteRect = (RectTransform)delete.transform;
+            deleteRect.anchorMin = new Vector2(1f, 0f);
+            deleteRect.anchorMax = new Vector2(1f, 1f);
+            deleteRect.pivot = new Vector2(1f, 0.5f);
+            deleteRect.offsetMin = new Vector2(-34f, 3f);
+            deleteRect.offsetMax = new Vector2(-3f, -3f);
+            delete.targetGraphic.color = new Color(0.32f, 0.33f, 0.36f);
+            delete.GetComponentInChildren<TMP_Text>().color = TextColor;
             return content;
+        }
+
+        private static void Destroy(Object target) => Object.DestroyImmediate(target);
+
+        /// <summary>The slider of the size of the brush, 1–15 cells: a dark groove, a light fill and a light knob.</summary>
+        private static Slider BrushSlider(RectTransform panel)
+        {
+            var go = DefaultControls.CreateSlider(new DefaultControls.Resources());
+            go.name = "BrushSize";
+            go.transform.SetParent(panel, false);
+            go.AddComponent<LayoutElement>().preferredHeight = 24f;
+            foreach (var image in go.GetComponentsInChildren<Image>(true))
+            {
+                image.sprite = null;
+                image.color = image.name == "Background" ? EditorBack : ButtonColor;
+            }
+
+            var slider = go.GetComponent<Slider>();
+            slider.handleRect.sizeDelta = new Vector2(18f, 0f);
+            return slider;
         }
 
         private static RectTransform EditorRowOf(RectTransform parent, string name)

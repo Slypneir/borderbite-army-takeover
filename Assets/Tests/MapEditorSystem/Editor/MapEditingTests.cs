@@ -118,6 +118,89 @@ namespace Tests.MapEditorSystem.Editor
         }
 
         [Test]
+        public void NewMapOfTheEditor_AllWater()
+        {
+            var sea = ScriptableObject.CreateInstance<BattleMapAsset>();
+            sea.ResetToWater(80);
+
+            sea.Size.Should().Be(80);
+            sea.LandCells().Should().Be(0);
+            sea.ToMap().IsWater(40, 40).Should().BeTrue();
+            Object.DestroyImmediate(sea);
+        }
+
+        [TestCase(1, 1)]
+        [TestCase(3, 9)]
+        [TestCase(5, 21)]
+        [TestCase(15, 177)]
+        public void RoundBrush_CellsWithinHalfItsSize(int size, int cells)
+        {
+            var brush = new System.Collections.Generic.List<Vector2Int>(
+                MapEditing.Brush(new Vector2Int(20, 20), size, MapEditing.Shape.Circle));
+
+            brush.Should().HaveCount(cells);
+            brush.Should().Contain(new Vector2Int(20, 20));
+        }
+
+        [Test]
+        public void Mirror_PaintsTheSymmetricCellsToo()
+        {
+            _editing.Paint(new Vector2Int(5, 10), 1, true, MapEditing.Shape.Square, true);
+
+            _editing.Map.IsWater(5, 10).Should().BeTrue();
+            _editing.Map.IsWater(42, 37).Should().BeTrue();
+            _editing.Map.LandCells().Should().Be(48 * 48 - 2);
+        }
+
+        [Test]
+        public void Piles_OnLandOnly_OnePerCell_MirroredWithTheMirror()
+        {
+            _editing.Paint(new Vector2Int(30, 30), 1, true, MapEditing.Shape.Square, false);
+
+            _editing.PlacePile(Core.BattleSystem.Enums.ResourceKind.Gold, new Vector2Int(20, 20), true).Should().BeNull();
+            _editing.PlacePile(Core.BattleSystem.Enums.ResourceKind.Wood, new Vector2Int(20, 20), false).Should().NotBeNull();
+            _editing.PlacePile(Core.BattleSystem.Enums.ResourceKind.Wood, new Vector2Int(30, 30), false).Should().NotBeNull();
+
+            _editing.Map.Piles.Should().HaveCount(2);
+            _editing.Map.Piles[1].cell.Should().Be(new Vector2Int(27, 27));
+        }
+
+        [Test]
+        public void Sites_ThreeByThreeOfLand_ClearOfOthersAndTheBases()
+        {
+            _editing.PlaceSite(new Vector2Int(20, 20), false).Should().BeNull();
+            _editing.PlaceSite(new Vector2Int(22, 21), false).Should().NotBeNull();
+            _editing.PlaceSite(new Vector2Int(8, 9), false).Should().NotBeNull();
+            _editing.Paint(new Vector2Int(31, 30), 1, true, MapEditing.Shape.Square, false);
+            _editing.PlaceSite(new Vector2Int(30, 30), false).Should().NotBeNull();
+
+            _editing.Map.Sites.Should().ContainSingle();
+        }
+
+        [Test]
+        public void Base_MovesWhereItIsPut_TheMirrorPutsTheOther()
+        {
+            _editing.PlaceBase(Core.BattleSystem.Enums.Side.Player, new Vector2Int(12, 20), true).Should().BeNull();
+
+            _editing.Map.PlayerBase.corner.Should().Be(new Vector2Int(12, 20));
+            _editing.Map.EnemyBase.corner.Should().Be(new Vector2Int(36, 28));
+            _editing.PlaceBase(Core.BattleSystem.Enums.Side.Enemy, new Vector2Int(14, 22), false).Should().NotBeNull();
+        }
+
+        [Test]
+        public void Eraser_TakesPilesAndPlaces_KeepsTheBases()
+        {
+            _editing.PlacePile(Core.BattleSystem.Enums.ResourceKind.Gold, new Vector2Int(20, 20), false);
+            _editing.PlaceSite(new Vector2Int(26, 20), false);
+
+            _editing.Erase(new Vector2Int(23, 20), 9, MapEditing.Shape.Square, false).Should().BeTrue();
+
+            _editing.Map.Piles.Should().BeEmpty();
+            _editing.Map.Sites.Should().BeEmpty();
+            _editing.Map.PlayerBase.corner.Should().Be(new Vector2Int(8, 8));
+        }
+
+        [Test]
         public void EditedMap_PlaysWithItsWater()
         {
             _editing.Paint(24, 24, 5, true);

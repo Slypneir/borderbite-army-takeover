@@ -88,6 +88,40 @@ namespace Meta.BattleSystem.Configuration
             rocks.Clear();
         }
 
+        /// <summary>
+        /// A new map of the editor as the owner asked (5 November): all water, the island is painted on it; the bases stand 8 cells
+        /// from two corners until they are put elsewhere.
+        /// </summary>
+        public void ResetToWater(int cells)
+        {
+            Reset(cells);
+            land = new string[cells];
+            for (var i = 0; i < cells; i++)
+                land[i] = new string(Water, cells);
+        }
+
+        /// <summary>Puts the base of a side by the corner of four cells under its middle.</summary>
+        public void SetBase(Side side, Vector2Int corner)
+        {
+            if (side == Side.Enemy)
+                enemyBase.corner = corner;
+            else
+                playerBase.corner = corner;
+        }
+
+        public void AddPile(ResourceKind kind, Vector2Int cell) => piles.Add(new PileSpot { kind = kind, cell = cell });
+
+        public void AddSite(Vector2Int cell) => sites.Add(new SiteSpot { cell = cell, barracks = Side.Neutral });
+
+        /// <summary>Takes away the piles, places and rocks whose cell is in the area; returns how many.</summary>
+        public int RemoveAt(Predicate<Vector2Int> inArea)
+        {
+            var count = piles.RemoveAll(pile => inArea(pile.cell));
+            count += sites.RemoveAll(site => inArea(site.cell));
+            count += rocks.RemoveAll(rock => inArea(rock.cell));
+            return count;
+        }
+
         /// <summary>Makes a cell water or land; true when it changed. The rows appear with the first water.</summary>
         public bool SetWater(int x, int y, bool water)
         {

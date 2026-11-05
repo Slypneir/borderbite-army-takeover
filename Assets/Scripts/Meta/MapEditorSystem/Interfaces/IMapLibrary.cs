@@ -19,7 +19,7 @@ namespace Meta.MapEditorSystem.Interfaces
         /// <summary>Writes the map under its name, a new file or over the old one.</summary>
         void Save(string name, BattleMapAsset map);
 
-        /// <summary>A new square of land of <paramref name="cells"/> under a free name; returns the name.</summary>
+        /// <summary>A new map of <paramref name="cells"/>, all water, under a free name; returns the name.</summary>
         string Create(int cells);
 
         /// <summary>A copy under a free name; returns the name.</summary>

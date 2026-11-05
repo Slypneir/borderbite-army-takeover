@@ -61,7 +61,7 @@ namespace Meta.MapEditorSystem.Services
         {
             var name = Free("Карта");
             var asset = ScriptableObject.CreateInstance<BattleMapAsset>();
-            asset.Reset(cells);
+            asset.ResetToWater(cells);
             AssetDatabase.CreateAsset(asset, PathOf(name));
             AssetDatabase.SaveAssetIfDirty(asset);
             return name;
