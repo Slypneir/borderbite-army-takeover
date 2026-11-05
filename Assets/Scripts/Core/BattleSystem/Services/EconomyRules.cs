@@ -24,7 +24,7 @@ namespace Core.BattleSystem.Services
         /// <summary>The start piles at the edges of both start areas, the enemy's mirrored through the centre.</summary>
         public void LayStartPiles()
         {
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             foreach (var pile in _state.Map.Piles)
                 Add(pile.Kind, pile.Y * size + pile.X, pile.Kind == ResourceKind.Gold ? _settings.GoldPortion : _settings.WoodPortion);
         }
@@ -59,7 +59,7 @@ namespace Core.BattleSystem.Services
         public void ProtectBase(Side side)
         {
             var place = _state.Bases[(int)side];
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             var radius = _settings.BaseAuraCells;
             var cx = place.X / BattleSettings.UnitsPerCell;
             var cy = place.Y / BattleSettings.UnitsPerCell;
@@ -69,7 +69,7 @@ namespace Core.BattleSystem.Services
             {
                 var dx = 2 * x + 1 - 2 * cx;
                 var dy = 2 * y + 1 - 2 * cy;
-                if (x < 0 || y < 0 || x >= size || y >= size || dx * dx + dy * dy > 4 * radius * radius)
+                if (!_state.Grid.Inside(x, y) || dx * dx + dy * dy > 4 * radius * radius)
                     continue;
 
                 _state.Grid.Set(y * size + x, side);
@@ -87,7 +87,7 @@ namespace Core.BattleSystem.Services
             ForAura(place, index => _state.Grid.SetProtected(index, false));
             for (var y = place.CenterY - 1; y <= place.CenterY + 1; y++)
             for (var x = place.CenterX - 1; x <= place.CenterX + 1; x++)
-                _state.Grid.Set(y * _state.Grid.Size + x, Side.Neutral);
+                _state.Grid.Set(y * _state.Grid.Width + x, Side.Neutral);
             _state.Emit(EventKind.Destroyed, side, site, 0, BattleState.Middle(place.CenterX), BattleState.Middle(place.CenterY));
         }
 
@@ -302,21 +302,21 @@ namespace Core.BattleSystem.Services
 
         private void ForAura(SiteState site, System.Action<int> visit)
         {
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             var radius = _settings.AuraCells;
             for (var y = site.CenterY - radius; y <= site.CenterY + radius; y++)
             for (var x = site.CenterX - radius; x <= site.CenterX + radius; x++)
             {
                 var dx = x - site.CenterX;
                 var dy = y - site.CenterY;
-                if (x >= 0 && y >= 0 && x < size && y < size && dx * dx + dy * dy <= radius * radius)
+                if (_state.Grid.Inside(x, y) && dx * dx + dy * dy <= radius * radius)
                     visit(y * size + x);
             }
         }
 
         private void Add(ResourceKind kind, int cell, int amount)
         {
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             _state.Resources.Add(new ResourceState
             {
                 Id = _state.NextId(),
@@ -368,7 +368,7 @@ namespace Core.BattleSystem.Services
         /// </summary>
         private bool NearBuilding(int cell)
         {
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             var x = BattleState.Middle(cell % size);
             var y = BattleState.Middle(cell / size);
             var keep = _settings.ResourceKeepOffUnits;
@@ -397,7 +397,7 @@ namespace Core.BattleSystem.Services
 
         private bool NearSomeone(int cell)
         {
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             var x = BattleState.Middle(cell % size);
             var y = BattleState.Middle(cell / size);
             var away2 = (long)_settings.ResourceAwayUnits * _settings.ResourceAwayUnits;

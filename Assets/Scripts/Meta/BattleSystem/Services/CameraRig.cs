@@ -72,12 +72,15 @@ namespace Meta.BattleSystem.Services
             if (_normalSize < 0f)
                 _normalSize = _camera.orthographicSize;
 
-            var size = _rules.MapSize;
-            var center = new Vector3(size / 2f, 0f, size / 2f);
+            var grid = _battle.Current.Simulation.Grid;
+            var width = grid.Width * _rules.CellSize;
+            var height = grid.Height * _rules.CellSize;
+            var center = new Vector3(width / 2f, 0f, height / 2f);
             var rotation = Quaternion.Euler(90f, 0f, 0f);
             _camera.transform.rotation = rotation;
             _camera.transform.position = center - rotation * Vector3.forward * Distance;
-            _camera.orthographicSize = size * 0.6f * Mathf.Max(1f, (float)Screen.height / Mathf.Max(1, Screen.width));
+            // both sides in the frame: the height, and the width at the aspect of the screen
+            _camera.orthographicSize = 0.6f * Mathf.Max(height, width * Screen.height / Mathf.Max(1f, Screen.width));
         }
     }
 }

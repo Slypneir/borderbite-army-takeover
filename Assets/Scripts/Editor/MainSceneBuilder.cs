@@ -1170,6 +1170,7 @@ namespace Core.EditorTools
             mapRect.sizeDelta = Vector2.one * 600f;
             var raw = mapRect.gameObject.AddComponent<RawImage>();
             raw.raycastTarget = false;
+            var (frame, frameLabel) = BuildMapFrame(mapRect);
 
             var title = Text(rect, "Title", 30, TextAlignmentOptions.Center);
             var titleRect = (RectTransform)title.transform;
@@ -1179,6 +1180,10 @@ namespace Core.EditorTools
             titleRect.offsetMin = new Vector2(EditorSide + 12f, -48f);
             titleRect.offsetMax = new Vector2(-12f, -6f);
             var status = Text(rect, "Status", EditorText, TextAlignmentOptions.Center);
+            // a long line of numbers shrinks to fit rather than run off the window
+            status.enableAutoSizing = true;
+            status.fontSizeMin = 12;
+            status.fontSizeMax = EditorText;
             var statusRect = (RectTransform)status.transform;
             statusRect.anchorMin = Vector2.zero;
             statusRect.anchorMax = new Vector2(1f, 0f);
@@ -1214,6 +1219,21 @@ namespace Core.EditorTools
             var fileRow = EditorRowOf(panel, "FileRow");
             var create = Tool(fileRow, "New", "Новая");
             var copy = Tool(fileRow, "Copy", "Копия");
+            var sizeRow = EditorRowOf(panel, "MapSizeRow");
+            var widthField = NameField(sizeRow);
+            widthField.name = "Width";
+            ((TMP_Text)widthField.placeholder).text = "ширина";
+            widthField.contentType = TMP_InputField.ContentType.IntegerNumber;
+            var by = Caption(sizeRow, "By", "на", EditorText, EditorRow);
+            by.alignment = TextAlignmentOptions.Center;
+            by.GetComponent<LayoutElement>().preferredWidth = 26f;
+            var heightField = NameField(sizeRow);
+            heightField.name = "Height";
+            ((TMP_Text)heightField.placeholder).text = "высота";
+            heightField.contentType = TMP_InputField.ContentType.IntegerNumber;
+            var resize = Tool(sizeRow, "Resize", "Задать");
+            resize.GetComponent<LayoutElement>().flexibleWidth = 0f;
+            resize.GetComponent<LayoutElement>().preferredWidth = 80f;
             var nameRow = EditorRowOf(panel, "NameRow");
             var nameField = NameField(nameRow);
             var rename = Tool(nameRow, "Rename", "Имя");
@@ -1277,6 +1297,7 @@ namespace Core.EditorTools
 
             var view = go.GetComponent<MapEditorView>();
             Wire(view, ("group", go.GetComponent<CanvasGroup>()), ("viewport", viewport), ("map", raw), ("input", input),
+                ("widthField", widthField), ("heightField", heightField), ("resize", resize), ("frame", frame), ("frameLabel", frameLabel),
                 ("listContent", list), ("itemTemplate", template), ("nameField", nameField), ("title", title), ("status", status),
                 ("message", message), ("create", create), ("copy", copy), ("rename", rename), ("land", land), ("water", water),
                 ("eraser", eraser), ("square", square), ("circle", circle), ("brushSize", slider), ("brushLabel", brushLabel),
@@ -1288,11 +1309,61 @@ namespace Core.EditorTools
             return view;
         }
 
+        /// <summary>
+        /// The frame of the map in the editor (owner, 5 November): the outline of the new bounds while pulled, with their size above,
+        /// and eight handles — the corners and the middles of the edges — pulled by the mouse.
+        /// </summary>
+        private static (RectTransform Frame, TMP_Text Label) BuildMapFrame(RectTransform mapRect)
+        {
+            var light = new Color(0.96f, 0.95f, 0.88f, 1f);
+            var frame = Rect(mapRect, "Frame", Vector2.zero, Vector2.one);
+            foreach (var (name, min, max, size) in new[]
+                     {
+                         ("West", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(3f, 0f)),
+                         ("East", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(3f, 0f)),
+                         ("South", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 3f)),
+                         ("North", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 3f)),
+                     })
+            {
+                var bar = Rect(frame, name, min, max);
+                bar.sizeDelta = size;
+                Picture(bar, null, light);
+            }
+
+            var label = Text(frame, "Size", 22, TextAlignmentOptions.Bottom);
+            var labelRect = (RectTransform)label.transform;
+            labelRect.anchorMin = new Vector2(0f, 1f);
+            labelRect.anchorMax = new Vector2(1f, 1f);
+            labelRect.pivot = new Vector2(0.5f, 0f);
+            labelRect.sizeDelta = new Vector2(0f, 30f);
+            labelRect.anchoredPosition = new Vector2(0f, 6f);
+            label.text = string.Empty;
+
+            for (var y = -1; y <= 1; y++)
+            for (var x = -1; x <= 1; x++)
+            {
+                if (x == 0 && y == 0)
+                    continue;
+
+                var anchor = new Vector2((x + 1) / 2f, (y + 1) / 2f);
+                var handle = Rect(mapRect, $"Handle{x + 1}{y + 1}", anchor, anchor);
+                handle.sizeDelta = Vector2.one * (x != 0 && y != 0 ? 20f : 16f);
+                var image = Picture(handle, null, light);
+                image.raycastTarget = true;
+                var outline = handle.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(0.06f, 0.07f, 0.09f, 1f);
+                outline.effectDistance = new Vector2(2f, -2f);
+                handle.gameObject.AddComponent<MapResizeHandle>().SetEdgeForEditor(new Vector2Int(x, y));
+            }
+
+            return (frame, label);
+        }
+
         /// <summary>The list of maps: a scrolled column of buttons made from a template, a map per button.</summary>
         private static RectTransform BuildMapList(RectTransform panel, out Button template)
         {
             var scroll = Rect(panel, "Maps", Vector2.zero, Vector2.one);
-            scroll.gameObject.AddComponent<LayoutElement>().preferredHeight = 130f;
+            scroll.gameObject.AddComponent<LayoutElement>().preferredHeight = 104f;
             Picture(scroll, null, EditorBack).raycastTarget = true;
             var viewport = Rect(scroll, "Viewport", Vector2.zero, Vector2.one);
             viewport.offsetMin = new Vector2(4f, 4f);

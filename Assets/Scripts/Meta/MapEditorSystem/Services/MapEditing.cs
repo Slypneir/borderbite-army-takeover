@@ -116,7 +116,26 @@ namespace Meta.MapEditorSystem.Services
         }
 
         /// <summary>The cell symmetric to a cell through the centre of the map.</summary>
-        public Vector2Int Mirror(Vector2Int cell) => new Vector2Int(Map.Size - 1 - cell.x, Map.Size - 1 - cell.y);
+        public Vector2Int Mirror(Vector2Int cell) => new Vector2Int(Map.Width - 1 - cell.x, Map.Height - 1 - cell.y);
+
+        /// <summary>
+        /// The bounds of the map (owner, 5 November): <paramref name="across"/> by <paramref name="up"/> cells, the old map moved by
+        /// the shift — a border pulled west or south moves it; the new land is water. True when the size changed; the step is made.
+        /// </summary>
+        public bool Resize(int across, int up, int shiftX, int shiftY)
+        {
+            if (Map == null)
+                return false;
+
+            across = Mathf.Clamp(across, BattleMapAsset.MinCells, BattleMapAsset.MaxCells);
+            up = Mathf.Clamp(up, BattleMapAsset.MinCells, BattleMapAsset.MaxCells);
+            if (across == Map.Width && up == Map.Height && shiftX == 0 && shiftY == 0)
+                return false;
+
+            Map.Resize(across, up, shiftX, shiftY);
+            Commit();
+            return true;
+        }
 
         /// <summary>
         /// The cells of a brush of <paramref name="size"/> round a cell: a square, or a circle whose cells have their middles within
@@ -235,10 +254,11 @@ namespace Meta.MapEditorSystem.Services
         /// </summary>
         public string PlaceBase(Side side, Vector2Int corner, bool mirror)
         {
-            var size = Map.Size;
-            corner = new Vector2Int(Mathf.Clamp(corner.x, BaseHalf, size - BaseHalf), Mathf.Clamp(corner.y, BaseHalf, size - BaseHalf));
+            var across = Map.Width;
+            var up = Map.Height;
+            corner = new Vector2Int(Mathf.Clamp(corner.x, BaseHalf, across - BaseHalf), Mathf.Clamp(corner.y, BaseHalf, up - BaseHalf));
             var otherSide = side == Side.Player ? Side.Enemy : Side.Player;
-            var otherCorner = mirror ? new Vector2Int(size - corner.x, size - corner.y) : CornerOf(otherSide);
+            var otherCorner = mirror ? new Vector2Int(across - corner.x, up - corner.y) : CornerOf(otherSide);
             if (Mathf.Abs(corner.x - otherCorner.x) < BaseHalf * 2 && Mathf.Abs(corner.y - otherCorner.y) < BaseHalf * 2)
                 return "штабы налезают друг на друга";
 

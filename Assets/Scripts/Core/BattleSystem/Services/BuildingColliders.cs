@@ -26,7 +26,8 @@ namespace Core.BattleSystem.Services
                 return;
 
             var min = _settings.HeroRadiusUnits;
-            var max = _settings.MapUnits - _settings.HeroRadiusUnits;
+            var maxX = _settings.MapWidthUnits - _settings.HeroRadiusUnits;
+            var maxY = _settings.MapHeightUnits - _settings.HeroRadiusUnits;
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
@@ -35,8 +36,8 @@ namespace Core.BattleSystem.Services
                 if (!hero.Alive || !PushOut(ref hero.X, ref hero.Y, _settings.HeroRadiusUnits))
                     continue;
 
-                hero.X = IntMath.Clamp(hero.X, min, max);
-                hero.Y = IntMath.Clamp(hero.Y, min, max);
+                hero.X = IntMath.Clamp(hero.X, min, maxX);
+                hero.Y = IntMath.Clamp(hero.Y, min, maxY);
                 _state.Settle(ref hero.X, ref hero.Y, fromX, fromY, _settings.HeroRadiusUnits);
                 _state.Heroes[i] = hero;
             }
@@ -49,8 +50,8 @@ namespace Core.BattleSystem.Services
                 if (!PushOut(ref soldier.X, ref soldier.Y, _settings.SoldierBodyUnits))
                     continue;
 
-                soldier.X = IntMath.Clamp(soldier.X, 0, _settings.MapUnits);
-                soldier.Y = IntMath.Clamp(soldier.Y, 0, _settings.MapUnits);
+                soldier.X = IntMath.Clamp(soldier.X, 0, _settings.MapWidthUnits);
+                soldier.Y = IntMath.Clamp(soldier.Y, 0, _settings.MapHeightUnits);
                 _state.Settle(ref soldier.X, ref soldier.Y, fromX, fromY, _settings.SoldierBodyUnits);
                 _state.Soldiers[i] = soldier;
             }

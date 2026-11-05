@@ -40,8 +40,8 @@ namespace Core.BattleSystem.Services
             {
                 Id = id,
                 Side = side,
-                X = IntMath.Clamp(x, 0, settings.MapUnits),
-                Y = IntMath.Clamp(y, 0, settings.MapUnits),
+                X = IntMath.Clamp(x, 0, settings.MapWidthUnits),
+                Y = IntMath.Clamp(y, 0, settings.MapHeightUnits),
                 Health = settings.SoldierHealthOf(side),
                 FightTick = state.Tick,
                 AnchorX = x,
@@ -231,9 +231,8 @@ namespace Core.BattleSystem.Services
             if (soldier.Goal == SoldierGoal.Cell && grid[soldier.GoalId] != soldier.Side && !grid.IsProtected(soldier.GoalId))
                 return true;
 
-            var size = grid.Size;
-            var cx = IntMath.Clamp(soldier.X / BattleSettings.UnitsPerCell, 0, size - 1);
-            var cy = IntMath.Clamp(soldier.Y / BattleSettings.UnitsPerCell, 0, size - 1);
+            var cx = IntMath.Clamp(soldier.X / BattleSettings.UnitsPerCell, 0, grid.Width - 1);
+            var cy = IntMath.Clamp(soldier.Y / BattleSettings.UnitsPerCell, 0, grid.Height - 1);
             soldier.Goal = SoldierGoal.None;
             foreach (var colour in new[] { Side.Neutral, BattleState.Enemy(soldier.Side) })
             {
@@ -252,14 +251,15 @@ namespace Core.BattleSystem.Services
         private bool NearestCell(Side side, int id, int cx, int cy, Side colour, out int found)
         {
             var grid = _state.Grid;
-            var size = grid.Size;
+            var size = grid.Width;
+            var height = grid.Height;
             found = -1;
-            for (var ring = 0; ring < size; ring++)
+            for (var ring = 0; ring < System.Math.Max(size, height); ring++)
             {
                 var best = long.MaxValue;
                 for (var y = cy - ring; y <= cy + ring; y++)
                 {
-                    if (y < 0 || y >= size)
+                    if (y < 0 || y >= height)
                         continue;
 
                     var edge = y == cy - ring || y == cy + ring;
@@ -292,7 +292,7 @@ namespace Core.BattleSystem.Services
         /// <summary>Another soldier of the side aims at a cell this close (they do not follow each other).</summary>
         private bool Claimed(Side side, int id, int x, int y)
         {
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             var spacing = _settings.CaptureSpacingCells;
             foreach (var other in _state.Soldiers)
             {
@@ -310,7 +310,7 @@ namespace Core.BattleSystem.Services
         private bool AnyCell(Side side)
         {
             var grid = _state.Grid;
-            for (var i = 0; i < grid.Size * grid.Size; i++)
+            for (var i = 0; i < grid.Total; i++)
             {
                 if (grid[i] != side && !grid.IsProtected(i))
                     return true;
@@ -507,7 +507,7 @@ namespace Core.BattleSystem.Services
                 }
                 case SoldierGoal.Cell:
                 {
-                    var size = _state.Grid.Size;
+                    var size = _state.Grid.Width;
                     x = BattleState.Middle(soldier.GoalId % size);
                     y = BattleState.Middle(soldier.GoalId / size);
                     return true;
@@ -574,8 +574,8 @@ namespace Core.BattleSystem.Services
                 }
 
                 GiveWay(ref a);
-                a.X = IntMath.Clamp(a.X, _settings.HeroRadiusUnits, _settings.MapUnits - _settings.HeroRadiusUnits);
-                a.Y = IntMath.Clamp(a.Y, _settings.HeroRadiusUnits, _settings.MapUnits - _settings.HeroRadiusUnits);
+                a.X = IntMath.Clamp(a.X, _settings.HeroRadiusUnits, _settings.MapWidthUnits - _settings.HeroRadiusUnits);
+                a.Y = IntMath.Clamp(a.Y, _settings.HeroRadiusUnits, _settings.MapHeightUnits - _settings.HeroRadiusUnits);
                 soldiers[i] = a;
             }
         }

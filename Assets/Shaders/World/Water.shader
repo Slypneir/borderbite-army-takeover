@@ -18,7 +18,7 @@ Shader "Borderbite/World/Water"
         _Trough ("Trough", Color) = (0.141, 0.404, 0.42, 1)
         _Foam ("Foam", Color) = (0.863, 0.922, 0.894, 1)
         _FoamRim ("Rim of the foam", Color) = (0.663, 0.839, 0.8, 1)
-        _MapSize ("Island side, m", Float) = 32
+        _MapSize ("Island across and up, m", Vector) = (32, 32, 0, 0)
         _PixelsPerMeter ("Voxels in a meter", Float) = 8
         _AbyssFrom ("Abyss from, m off the shore", Float) = 3
         _AbyssTo ("Abyss to, m", Float) = 16
@@ -77,7 +77,7 @@ Shader "Borderbite/World/Water"
                 half4 _Trough;
                 half4 _Foam;
                 half4 _FoamRim;
-                float _MapSize;
+                float4 _MapSize;
                 float _PixelsPerMeter;
                 float _AbyssFrom;
                 float _AbyssTo;
@@ -108,11 +108,12 @@ Shader "Borderbite/World/Water"
             // set per battle by MapView: not in the material's buffer
             float4 _Rocks[MAX_ROCKS];
             float _RockCount;
-            // a map with water (layer 5): the distance to the land in a texture, meters up to _LandDistRect.w, over the square
-            // from (x, y) of side z; off it, and on the square island, the distance to the square
+            // a map with water (layer 5): the distance to the land in a texture, meters up to _LandDistRange, over the rectangle
+            // from (x, y) of sides z, w; off it, and on the plain island, the distance to the rectangle of the map
             TEXTURE2D(_LandDist);
             SAMPLER(sampler_LandDist);
             float4 _LandDistRect;
+            float _LandDistRange;
             float _LandDistOn;
 
             struct Attributes
@@ -152,13 +153,13 @@ Shader "Borderbite/World/Water"
 
             float EdgeDistance(float2 p)
             {
-                float square = length(max(max(-p, p - _MapSize), 0));
-                float2 uv = (p - _LandDistRect.xy) / _LandDistRect.z;
+                float square = length(max(max(-p, p - _MapSize.xy), 0));
+                float2 uv = (p - _LandDistRect.xy) / _LandDistRect.zw;
                 if (_LandDistOn < 0.5 || any(uv < 0) || any(uv > 1))
                     return square;
 
                 // the lip under the shore of the 3D artist is not there at a cliff of cells: the foam keeps to the wall
-                return SAMPLE_TEXTURE2D_LOD(_LandDist, sampler_LandDist, uv, 0).r * _LandDistRect.w + max(0, _ShoreLip - 0.06);
+                return SAMPLE_TEXTURE2D_LOD(_LandDist, sampler_LandDist, uv, 0).r * _LandDistRange + max(0, _ShoreLip - 0.06);
             }
 
             float Depth(float2 p, float dEdge)

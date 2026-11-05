@@ -12,8 +12,8 @@ Shader "Borderbite/Map/Cells"
         _CellTex ("Cells: alpha the flash of a change (a texel per cell, point filter)", 2D) = "black" {}
         _FieldTex ("Distance to the borders, cells: r the player, g the enemy (bilinear)", 2D) = "black" {}
         _GrassTex ("Grass (point filter)", 2D) = "white" {}
-        _GrassTiles ("Grass tiles over the map", Float) = 1
-        _Cells ("Cells per side", Float) = 64
+        _GrassTiles ("Grass tiles over the map, across and up", Vector) = (1, 1, 0, 0)
+        _Cells ("Cells across and up", Vector) = (64, 64, 0, 0)
         _CellSize ("Side of a cell, meters", Float) = 0.5
         _FieldRange ("Distance kept in the field, cells", Float) = 4
         _PlayerColor ("Land of the player", Color) = (0.25, 0.5, 0.95, 1)
@@ -61,11 +61,11 @@ Shader "Borderbite/Map/Cells"
                 float4 _CellTex_ST;
                 float4 _FieldTex_ST;
                 float4 _GrassTex_ST;
-                float _Cells;
+                float4 _Cells;
                 float _CellSize;
                 float _FieldRange;
                 float _GridStrength;
-                float _GrassTiles;
+                float4 _GrassTiles;
                 float4 _PlayerColor;
                 float4 _EnemyColor;
                 float _LumMean;
@@ -124,21 +124,21 @@ Shader "Borderbite/Map/Cells"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                float2 grid = input.uv * _Cells;
+                float2 grid = input.uv * _Cells.xy;
                 float2 cell = floor(grid);
                 float2 f = frac(grid);
                 // the middle of cell i of the map is texel i + 1 of the field (a neutral ring around the map)
-                half2 field = SAMPLE_TEXTURE2D(_FieldTex, sampler_FieldTex, (grid + 1) / (_Cells + 2)).rg;
+                half2 field = SAMPLE_TEXTURE2D(_FieldTex, sampler_FieldTex, (grid + 1) / (_Cells.xy + 2)).rg;
                 float2 d = (field * 2 - 1) * _FieldRange * _CellSize;
 
-                half3 grass = LinearToSRGB(SAMPLE_TEXTURE2D(_GrassTex, sampler_GrassTex, input.uv * _GrassTiles).rgb);
+                half3 grass = LinearToSRGB(SAMPLE_TEXTURE2D(_GrassTex, sampler_GrassTex, input.uv * _GrassTiles.xy).rgb);
                 half lum = dot(grass, half3(0.2126, 0.7152, 0.0722));
                 half3 color = grass;
                 color = Land(color, grass, lum, LinearToSRGB(_EnemyColor.rgb), d.y);
                 color = Land(color, grass, lum, LinearToSRGB(_PlayerColor.rgb), d.x);
 
                 // a cell that changed flashes white for a moment, on its land
-                half4 texel = SAMPLE_TEXTURE2D(_CellTex, sampler_CellTex, (cell + 0.5) / _Cells);
+                half4 texel = SAMPLE_TEXTURE2D(_CellTex, sampler_CellTex, (cell + 0.5) / _Cells.xy);
                 clip(texel.r - 0.5);
                 half flash = texel.a;
                 color = lerp(color, half3(1, 1, 1), flash * _FlashStrength * step(0, max(d.x, d.y)));

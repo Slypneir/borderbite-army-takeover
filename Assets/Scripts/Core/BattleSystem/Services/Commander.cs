@@ -242,7 +242,7 @@ namespace Core.BattleSystem.Services
             y = 0;
             var best = (long)_settings.CommanderSightUnits * _settings.CommanderSightUnits;
             var found = false;
-            var size = _state.Grid.Size;
+            var size = _state.Grid.Width;
             foreach (var pile in _state.Resources)
             {
                 if (_state.Grid[pile.Cell] != Side.Neutral)
@@ -271,10 +271,9 @@ namespace Core.BattleSystem.Services
             x = 0;
             y = 0;
             var grid = _state.Grid;
-            var size = grid.Size;
             var best = long.MaxValue;
-            for (var cy = 0; cy < size; cy++)
-            for (var cx = 0; cx < size; cx++)
+            for (var cy = 0; cy < grid.Height; cy++)
+            for (var cx = 0; cx < grid.Width; cx++)
             {
                 if (grid.At(cx, cy) != colour || grid.IsWaterAt(cx, cy) || (atBorder && !NextToOwn(cx, cy)))
                     continue;
@@ -296,9 +295,8 @@ namespace Core.BattleSystem.Services
         private bool NextToOwn(int x, int y)
         {
             var grid = _state.Grid;
-            var last = grid.Size - 1;
-            return (x > 0 && grid.At(x - 1, y) == _side) || (x < last && grid.At(x + 1, y) == _side) ||
-                   (y > 0 && grid.At(x, y - 1) == _side) || (y < last && grid.At(x, y + 1) == _side);
+            return (x > 0 && grid.At(x - 1, y) == _side) || (x < grid.Width - 1 && grid.At(x + 1, y) == _side) ||
+                   (y > 0 && grid.At(x, y - 1) == _side) || (y < grid.Height - 1 && grid.At(x, y + 1) == _side);
         }
     }
 }

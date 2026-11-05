@@ -16,7 +16,8 @@ namespace Meta.MapEditorSystem.Views
     /// <summary>
     /// The map editor (layer 5, tasks 5.2–5.4; screens/map-editor.md), opened from the main menu by «Редактор». On the left the
     /// list of maps (a cross on a row deletes that map), «New» — a sea of 80 by 80 cells, the island is painted on it (owner,
-    /// 5 November) — «copy» and the name; the brushes of land and water and the eraser, square or round, 1–15 cells by a slider;
+    /// 5 November) — «copy» and the name; the size of the map, a rectangle: the fields of the width and the height, or the handles
+    /// on the frame round the map pulled by the mouse (owner, 5 November: the bounds he sets are the map); the brushes of land and water and the eraser, square or round, 1–15 cells by a slider;
     /// the objects put by a click: gold, wood, a place to build, the base of either side; the mirror through the centre; the grid,
     /// «save», «undo», «redo», «play» and «menu». In the middle the map from above, a block of texels per cell, and under the
     /// pointer what the tool would touch; below a line of the share of land, the places, the piles and the distance between the
@@ -67,6 +68,14 @@ namespace Meta.MapEditorSystem.Views
         [SerializeField] private TMP_Text status;
         [SerializeField] private TMP_Text message;
 
+        [Header("Size")]
+        [SerializeField] private TMP_InputField widthField;
+        [SerializeField] private TMP_InputField heightField;
+        [SerializeField] private Button resize;
+        [Tooltip("The outline of the new bounds while a handle is pulled, a child of the map stretched over it.")]
+        [SerializeField] private RectTransform frame;
+        [SerializeField] private TMP_Text frameLabel;
+
         [Header("Maps")]
         [SerializeField] private Button create;
         [SerializeField] private Button copy;
@@ -115,6 +124,8 @@ namespace Meta.MapEditorSystem.Views
         private Action _dialogNo;
         private Texture2D _texture;
         private Color32[] _pixels;
+        private int _texW;
+        private int _texH;
         private Tool _tool = Tool.Land;
         private MapEditing.Shape _shape = MapEditing.Shape.Circle;
         private int _brush = 5;
@@ -129,6 +140,13 @@ namespace Meta.MapEditorSystem.Views
         private Vector2Int _hoverCorner;
         private float _messageUntil;
         private string _lastName;
+        // the pull of a handle: the cells added at the west, east, south and north (negative — cut)
+        private Vector2 _pull;
+        private int _addWest;
+        private int _addEast;
+        private int _addSouth;
+        private int _addNorth;
+        private bool _resizing;
 
         public bool Shown => group.alpha > 0f;
 
@@ -187,6 +205,14 @@ namespace Meta.MapEditorSystem.Views
             dialogYes.onClick.AddListener(() => CloseDialog(_dialogYes));
             dialogNo.onClick.AddListener(() => CloseDialog(_dialogNo));
             dialogCancel.onClick.AddListener(() => CloseDialog(null));
+            resize.onClick.AddListener(ResizeFromFields);
+            foreach (var handle in map.GetComponentsInChildren<MapResizeHandle>(true))
+            {
+                handle.Began += BeginPull;
+                handle.Dragged += Pull;
+                handle.Ended += EndPull;
+            }
+
             input.Pressed += Press;
             input.Dragged += Drag;
             input.Released += Release;
@@ -236,7 +262,7 @@ namespace Meta.MapEditorSystem.Views
                 message.text = string.Empty;
 
             var keyboard = Keyboard.current;
-            if (keyboard == null || nameField.isFocused || dialog.alpha > 0f)
+            if (keyboard == null || nameField.isFocused || widthField.isFocused || heightField.isFocused || dialog.alpha > 0f)
                 return;
 
             var control = keyboard.ctrlKey.isPressed;
@@ -442,6 +468,12 @@ namespace Meta.MapEditorSystem.Views
             redo.interactable = _editing.CanRedo;
             save.interactable = _editing.Dirty;
             title.text = _editing.Name == null ? string.Empty : _editing.Name + (_editing.Dirty ? " *" : string.Empty);
+            if (_editing.Map != null && !widthField.isFocused && !heightField.isFocused)
+            {
+                widthField.SetTextWithoutNotify(_editing.Map.Width.ToString());
+                heightField.SetTextWithoutNotify(_editing.Map.Height.ToString());
+            }
+
             DrawStatus();
         }
 
@@ -456,7 +488,7 @@ namespace Meta.MapEditorSystem.Views
                 return;
             }
 
-            var landShare = Mathf.RoundToInt(m.LandCells() * 100f / (m.Size * m.Size));
+            var landShare = Mathf.RoundToInt(m.LandCells() * 100f / (m.Width * m.Height));
             var meters = Vector2Int.Distance(m.PlayerBase.corner, m.EnemyBase.corner) * _rules.CellSize;
             var golds = 0;
             foreach (var pile in m.Piles)
@@ -469,7 +501,7 @@ namespace Meta.MapEditorSystem.Views
             var hover = _hover.x >= 0 ? $"   |   клетка {_hover.x}, {_hover.y}" : string.Empty;
             var crowding = _editing.CrowdingPiles(KeepOffCells);
             var warning = crowding > 0 ? $"   |   у мест и штабов: {crowding}" : string.Empty;
-            status.text = $"суша {landShare}%   |   мест {m.Sites.Count}   |   золото {golds}, дерево {m.Piles.Count - golds}{warning}   |   " +
+            status.text = $"{m.Width} на {m.Height} клеток ({m.Width * _rules.CellSize:0.#} на {m.Height * _rules.CellSize:0.#} м)   |   суша {landShare}%   |   мест {m.Sites.Count}   |   золото {golds}, дерево {m.Piles.Count - golds}{warning}   |   " +
                           $"между штабами {meters:0.#} м{hover}";
         }
 
@@ -481,25 +513,27 @@ namespace Meta.MapEditorSystem.Views
             if (m == null)
                 return;
 
-            var side = m.Size * CellPixels;
-            if (_texture == null || _texture.width != side)
+            _texW = m.Width * CellPixels;
+            _texH = m.Height * CellPixels;
+            var side = _texW;
+            if (_texture == null || _texture.width != _texW || _texture.height != _texH)
             {
                 if (_texture != null)
                     Destroy(_texture);
-                _texture = new Texture2D(side, side, TextureFormat.RGBA32, false)
+                _texture = new Texture2D(_texW, _texH, TextureFormat.RGBA32, false)
                 {
                     name = "EditorMap",
                     filterMode = FilterMode.Point,
                     wrapMode = TextureWrapMode.Clamp,
                 };
-                _pixels = new Color32[side * side];
+                _pixels = new Color32[_texW * _texH];
                 map.texture = _texture;
             }
 
             var player = (Color32)_view.PlayerColor;
             var enemy = (Color32)_view.EnemyColor;
-            for (var y = 0; y < m.Size; y++)
-            for (var x = 0; x < m.Size; x++)
+            for (var y = 0; y < m.Height; y++)
+            for (var x = 0; x < m.Width; x++)
             {
                 Color32 color = Grass;
                 if (m.IsWater(x, y))
@@ -566,7 +600,7 @@ namespace Meta.MapEditorSystem.Views
             {
                 Area(_hoverCorner - new Vector2Int(3, 3), 6);
                 if (_mirror)
-                    Area(new Vector2Int(_editing.Map.Size, _editing.Map.Size) - _hoverCorner - new Vector2Int(3, 3), 6);
+                    Area(new Vector2Int(_editing.Map.Width, _editing.Map.Height) - _hoverCorner - new Vector2Int(3, 3), 6);
                 return;
             }
 
@@ -580,8 +614,8 @@ namespace Meta.MapEditorSystem.Views
             for (var py = y * CellPixels; py < (y + 1) * CellPixels; py++)
             for (var px = x * CellPixels; px < (x + 1) * CellPixels; px++)
             {
-                if (px >= 0 && py >= 0 && px < side && py < side)
-                    _pixels[py * side + px] = Color32.Lerp(_pixels[py * side + px], White, 0.4f);
+                if (px >= 0 && py >= 0 && px < _texW && py < _texH)
+                    _pixels[py * _texW + px] = Color32.Lerp(_pixels[py * _texW + px], White, 0.4f);
             }
         }
 
@@ -606,8 +640,8 @@ namespace Meta.MapEditorSystem.Views
             for (var py = y0 * CellPixels + inset; py < (y0 + cells) * CellPixels - inset; py++)
             for (var px = x0 * CellPixels + inset; px < (x0 + cells) * CellPixels - inset; px++)
             {
-                if (px >= 0 && py >= 0 && px < side && py < side)
-                    _pixels[py * side + px] = color;
+                if (px >= 0 && py >= 0 && px < _texW && py < _texH)
+                    _pixels[py * _texW + px] = color;
             }
         }
 
@@ -616,8 +650,8 @@ namespace Meta.MapEditorSystem.Views
         /// <summary>A line at the edge of every cell, darker every 8 cells (4 m).</summary>
         private void Grid(int side)
         {
-            for (var py = 0; py < side; py++)
-            for (var px = 0; px < side; px++)
+            for (var py = 0; py < _texH; py++)
+            for (var px = 0; px < _texW; px++)
             {
                 var onX = px % CellPixels == 0;
                 var onY = py % CellPixels == 0;
@@ -625,22 +659,107 @@ namespace Meta.MapEditorSystem.Views
                     continue;
 
                 var major = (onX && px / CellPixels % 8 == 0) || (onY && py / CellPixels % 8 == 0);
-                var i = py * side + px;
+                var i = py * _texW + px;
                 _pixels[i] = Color32.Lerp(_pixels[i], new Color32(0, 0, 0, 255), major ? 0.35f : 0.14f);
             }
         }
 
-        /// <summary>The map fills the shorter side of the window at zoom 1; the zoom and the move keep while the map is open.</summary>
+        /// <summary>The map fits the window at zoom 1 by its own sides; the zoom and the move keep while the map is open.</summary>
         private void Layout()
         {
-            if (_editing.Map == null)
+            var m = _editing.Map;
+            if (m == null)
                 return;
 
             var area = viewport.rect.size;
-            var fit = Mathf.Min(area.x, area.y) * 0.96f;
+            var fit = Mathf.Min(area.x / m.Width, area.y / m.Height) * 0.9f;
             var rect = map.rectTransform;
-            rect.sizeDelta = Vector2.one * (fit * _zoom);
+            rect.sizeDelta = new Vector2(m.Width, m.Height) * (fit * _zoom);
             rect.anchoredPosition = _pan;
+            if (!_resizing)
+            {
+                frame.offsetMin = Vector2.zero;
+                frame.offsetMax = Vector2.zero;
+                frameLabel.text = string.Empty;
+            }
+        }
+
+        // ---- the bounds of the map
+
+        private void ResizeFromFields()
+        {
+            if (!int.TryParse(widthField.text, out var across) || !int.TryParse(heightField.text, out var up))
+            {
+                Say("ширина и высота — целые числа клеток");
+                DrawTools();
+                return;
+            }
+
+            ApplySize(across, up, 0, 0);
+        }
+
+        private void ApplySize(int across, int up, int shiftX, int shiftY)
+        {
+            var clamped = Mathf.Clamp(across, BattleMapAsset.MinCells, BattleMapAsset.MaxCells) != across ||
+                          Mathf.Clamp(up, BattleMapAsset.MinCells, BattleMapAsset.MaxCells) != up;
+            if (_editing.Resize(across, up, shiftX, shiftY))
+            {
+                // the old cells keep their place on the screen: the view moves by the cells added at the west and the south
+                Changed();
+            }
+
+            if (clamped)
+                Say($"размер — от {BattleMapAsset.MinCells} до {BattleMapAsset.MaxCells} клеток по каждой стороне");
+            DrawTools();
+        }
+
+        private void BeginPull(MapResizeHandle handle, PointerEventData data)
+        {
+            _resizing = true;
+            _pull = Vector2.zero;
+            _addWest = _addEast = _addSouth = _addNorth = 0;
+        }
+
+        /// <summary>A handle pulled: the new bounds by whole cells, outlined over the map with their size.</summary>
+        private void Pull(MapResizeHandle handle, PointerEventData data)
+        {
+            var m = _editing.Map;
+            if (m == null || data.button != PointerEventData.InputButton.Left)
+                return;
+
+            _pull += data.delta / Scale();
+            var cell = map.rectTransform.rect.width / m.Width;
+            var cells = new Vector2Int(Mathf.RoundToInt(_pull.x / cell), Mathf.RoundToInt(_pull.y / cell));
+            int Fit(int add, int other, int now) =>
+                Mathf.Clamp(add, BattleMapAsset.MinCells - now - other, BattleMapAsset.MaxCells - now - other);
+            if (handle.Edge.x < 0)
+                _addWest = Fit(-cells.x, _addEast, m.Width);
+            else if (handle.Edge.x > 0)
+                _addEast = Fit(cells.x, _addWest, m.Width);
+            if (handle.Edge.y < 0)
+                _addSouth = Fit(-cells.y, _addNorth, m.Height);
+            else if (handle.Edge.y > 0)
+                _addNorth = Fit(cells.y, _addSouth, m.Height);
+
+            frame.offsetMin = new Vector2(-_addWest, -_addSouth) * cell;
+            frame.offsetMax = new Vector2(_addEast, _addNorth) * cell;
+            var across = m.Width + _addWest + _addEast;
+            var up = m.Height + _addSouth + _addNorth;
+            frameLabel.text = $"{across} на {up}  ({across * _rules.CellSize:0.#} на {up * _rules.CellSize:0.#} м)";
+        }
+
+        private void EndPull(MapResizeHandle handle, PointerEventData data)
+        {
+            var m = _editing.Map;
+            _resizing = false;
+            if (m == null)
+                return;
+
+            // the view fits the new bounds anew; the zoom keeps
+            _pan = Vector2.zero;
+            ApplySize(m.Width + _addWest + _addEast, m.Height + _addSouth + _addNorth, _addWest, _addSouth);
+            _addWest = _addEast = _addSouth = _addNorth = 0;
+            Layout();
         }
 
         /// <summary>The cell under the pointer, and the corner of four cells nearest to it (where a base goes).</summary>
@@ -653,11 +772,11 @@ namespace Meta.MapEditorSystem.Views
             if (m == null || !RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, data.position, data.pressEventCamera, out var local))
                 return false;
 
-            var u = (local.x / rect.rect.width + rect.pivot.x) * m.Size;
-            var v = (local.y / rect.rect.height + rect.pivot.y) * m.Size;
+            var u = (local.x / rect.rect.width + rect.pivot.x) * m.Width;
+            var v = (local.y / rect.rect.height + rect.pivot.y) * m.Height;
             cell = new Vector2Int(Mathf.FloorToInt(u), Mathf.FloorToInt(v));
             corner = new Vector2Int(Mathf.RoundToInt(u), Mathf.RoundToInt(v));
-            return u >= 0f && v >= 0f && u < m.Size && v < m.Size;
+            return u >= 0f && v >= 0f && u < m.Width && v < m.Height;
         }
 
         private void Press(PointerEventData data)

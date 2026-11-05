@@ -7,8 +7,8 @@ namespace Meta.BattleSystem.Utils
     /// <summary>
     /// The land of the sides as borders of «Civilization V» (task 4.21, the 3D artist's surface README «Земля сторон»): for each
     /// side a signed distance in cells at the middle of every cell, + inside, − outside — the distance to the nearest cell of the
-    /// other state less 0.5 — on a grid of (size + 2)² with a ring of neutral cells around the map, so the line also runs along
-    /// the shore; then a gauss blur (σ 1.1 cells) rounds the corners. Kept in a texture (size + 2)², bilinear: red the player,
+    /// other state less 0.5 — on a grid of (width + 2) by (height + 2) with a ring of neutral cells around the map, so the line also
+    /// runs along the shore; then a gauss blur (σ 1.1 cells) rounds the corners. Kept in a texture of that size, bilinear: red the player,
     /// green the enemy, ±<see cref="Range"/> cells over a byte. Integers of the battle never see it.
     /// </summary>
     public sealed class TerritoryField
@@ -17,8 +17,10 @@ namespace Meta.BattleSystem.Utils
         public const float Range = 4f;
         private const float Sigma = 1.1f;
 
-        private readonly int _size;
+        private readonly int _width;
+        private readonly int _height;
         private readonly int _side;
+        private readonly int _rows;
         private readonly float[] _distance;
         private readonly float[] _blurred;
         private readonly bool[] _inside;
@@ -26,16 +28,18 @@ namespace Meta.BattleSystem.Utils
         private readonly (int X, int Y, float D)[] _offsets;
         private readonly float[] _kernel;
 
-        public TerritoryField(int size)
+        public TerritoryField(int width, int height)
         {
-            _size = size;
-            _side = size + 2;
-            var cells = _side * _side;
+            _width = width;
+            _height = height;
+            _side = width + 2;
+            _rows = height + 2;
+            var cells = _side * _rows;
             _distance = new float[cells];
             _blurred = new float[cells];
             _inside = new bool[cells];
             _pixels = new Color32[cells];
-            Texture = new Texture2D(_side, _side, TextureFormat.RGBA32, false, true)
+            Texture = new Texture2D(_side, _rows, TextureFormat.RGBA32, false, true)
             {
                 name = "Territory",
                 filterMode = FilterMode.Bilinear,
@@ -90,15 +94,15 @@ namespace Meta.BattleSystem.Utils
 
         private void Field(Side[] owners, Side side)
         {
-            for (var y = 0; y < _side; y++)
+            for (var y = 0; y < _rows; y++)
             for (var x = 0; x < _side; x++)
             {
                 var mx = x - 1;
                 var my = y - 1;
-                _inside[y * _side + x] = mx >= 0 && my >= 0 && mx < _size && my < _size && owners[my * _size + mx] == side;
+                _inside[y * _side + x] = mx >= 0 && my >= 0 && mx < _width && my < _height && owners[my * _width + mx] == side;
             }
 
-            for (var y = 0; y < _side; y++)
+            for (var y = 0; y < _rows; y++)
             for (var x = 0; x < _side; x++)
             {
                 var index = y * _side + x;
@@ -109,7 +113,7 @@ namespace Meta.BattleSystem.Utils
                     var ox = x + dx;
                     var oy = y + dy;
                     // past the ring everything is outside, as the ring itself
-                    var other = ox >= 0 && oy >= 0 && ox < _side && oy < _side && _inside[oy * _side + ox];
+                    var other = ox >= 0 && oy >= 0 && ox < _side && oy < _rows && _inside[oy * _side + ox];
                     if (other == inside)
                         continue;
 
@@ -128,7 +132,7 @@ namespace Meta.BattleSystem.Utils
         private void Blur()
         {
             var radius = _kernel.Length / 2;
-            for (var y = 0; y < _side; y++)
+            for (var y = 0; y < _rows; y++)
             for (var x = 0; x < _side; x++)
             {
                 var sum = 0f;
@@ -138,11 +142,11 @@ namespace Meta.BattleSystem.Utils
             }
 
             for (var x = 0; x < _side; x++)
-            for (var y = 0; y < _side; y++)
+            for (var y = 0; y < _rows; y++)
             {
                 var sum = 0f;
                 for (var k = -radius; k <= radius; k++)
-                    sum += _blurred[Mathf.Clamp(y + k, 0, _side - 1) * _side + x] * _kernel[k + radius];
+                    sum += _blurred[Mathf.Clamp(y + k, 0, _rows - 1) * _side + x] * _kernel[k + radius];
                 _distance[y * _side + x] = sum;
             }
 

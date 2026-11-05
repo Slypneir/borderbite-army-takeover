@@ -26,7 +26,6 @@ namespace Core.BattleSystem.Services
         public void Drop(CellGrid grid, Side side, int maxCells, List<int[]> dropped)
         {
             _generation++;
-            var size = grid.Size;
 
             // the land joined to an anchor of the side
             var tail = 0;
@@ -43,7 +42,7 @@ namespace Core.BattleSystem.Services
             if (tail == 0)
                 return;
 
-            Flood(grid, side, size, 0, ref tail);
+            Flood(grid, side, 0, ref tail);
 
             // every other piece of the side is cut off
             for (var start = 0; start < grid.Total; start++)
@@ -54,7 +53,7 @@ namespace Core.BattleSystem.Services
                 var from = tail;
                 _mark[start] = _generation;
                 _queue[tail++] = start;
-                Flood(grid, side, size, from, ref tail);
+                Flood(grid, side, from, ref tail);
                 var count = tail - from;
                 if (count > maxCells)
                     continue;
@@ -70,17 +69,19 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private void Flood(CellGrid grid, Side side, int size, int head, ref int tail)
+        private void Flood(CellGrid grid, Side side, int head, ref int tail)
         {
+            var width = grid.Width;
+            var height = grid.Height;
             while (head < tail)
             {
                 var index = _queue[head++];
-                var x = index % size;
-                var y = index / size;
+                var x = index % width;
+                var y = index / width;
                 if (x > 0) Visit(grid, side, index - 1, ref tail);
-                if (x < size - 1) Visit(grid, side, index + 1, ref tail);
-                if (y > 0) Visit(grid, side, index - size, ref tail);
-                if (y < size - 1) Visit(grid, side, index + size, ref tail);
+                if (x < width - 1) Visit(grid, side, index + 1, ref tail);
+                if (y > 0) Visit(grid, side, index - width, ref tail);
+                if (y < height - 1) Visit(grid, side, index + width, ref tail);
             }
         }
 

@@ -5,15 +5,16 @@ using Core.BattleSystem.Structs;
 namespace Core.BattleSystem.Data
 {
     /// <summary>
-    /// The place of a battle (layer 5 spec 2.2–2.3): a square of cells, land or water, the two bases with their start areas,
+    /// The place of a battle (layer 5 spec 2.2–2.3): a rectangle of cells, land or water, the two bases with their start areas,
     /// the places to build (an empty one, or with a barracks of a side for special levels), the piles lying at the start and the
     /// rocks, which only the drawing reads. Water is like the sea past the edge: nobody walks into it, nobody paints it, it is not
     /// in the shares and an area touching it is not enclosed. Only the place: the numbers of a level stay in the settings (Т-Р5).
     /// </summary>
     public sealed class BattleMap
     {
-        public readonly int Size;
-        /// <summary>By cell, row by row from the lower left corner; null when the whole square is land.</summary>
+        public readonly int Width;
+        public readonly int Height;
+        /// <summary>By cell, row by row from the lower left corner (y * Width + x); null when the whole map is land.</summary>
         public readonly bool[] Water;
         /// <summary>The bases by side: [Player] and [Enemy]; [Neutral] stays empty.</summary>
         public readonly MapBase[] Bases = new MapBase[3];
@@ -22,16 +23,21 @@ namespace Core.BattleSystem.Data
         public readonly List<MapPile> Piles = new List<MapPile>();
         public readonly List<MapRock> Rocks = new List<MapRock>();
 
-        public BattleMap(int size, bool[] water = null)
+        public BattleMap(int width, int height, bool[] water = null)
         {
-            Size = size;
+            Width = width;
+            Height = height;
             Water = water;
         }
 
-        public bool IsWater(int x, int y) => Water != null && Water[y * Size + x];
+        public BattleMap(int size, bool[] water = null) : this(size, size, water)
+        {
+        }
+
+        public bool IsWater(int x, int y) => Water != null && Water[y * Width + x];
 
         /// <summary>Water, or off the map: the sea.</summary>
-        public bool IsWaterOrOff(int x, int y) => x < 0 || y < 0 || x >= Size || y >= Size || IsWater(x, y);
+        public bool IsWaterOrOff(int x, int y) => x < 0 || y < 0 || x >= Width || y >= Height || IsWater(x, y);
 
         /// <summary>
         /// The square island of all land of stage 1 from the settings (spec 2.1): the bases <see cref="BattleSettings.StartOffsetCells"/>
@@ -41,7 +47,7 @@ namespace Core.BattleSystem.Data
         public static BattleMap Square(BattleSettings settings)
         {
             var size = settings.MapCells;
-            var map = new BattleMap(size);
+            var map = new BattleMap(size, size);
             var near = settings.StartOffsetCells;
             var far = size - settings.StartOffsetCells;
             map.Bases[(int)Side.Player] = new MapBase(near, near, settings.StartRadiusCells);

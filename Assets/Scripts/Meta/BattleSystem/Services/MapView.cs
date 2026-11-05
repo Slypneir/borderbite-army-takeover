@@ -53,6 +53,7 @@ namespace Meta.BattleSystem.Services
         private static readonly int LandDistId = Shader.PropertyToID("_LandDist");
         private static readonly int LandDistRectId = Shader.PropertyToID("_LandDistRect");
         private static readonly int LandDistOnId = Shader.PropertyToID("_LandDistOn");
+        private static readonly int LandDistRangeId = Shader.PropertyToID("_LandDistRange");
         // the distance to the land is kept up to this many meters, at this many texels a meter: past it the sea is deep anyway
         private const float LandDistRange = 4f;
         private const int LandDistPerMeter = 4;
@@ -153,10 +154,11 @@ namespace Meta.BattleSystem.Services
         private void Take(BattleRunner runner)
         {
             _simulation = runner.Simulation;
-            var size = _simulation.Grid.Size;
+            var width = _simulation.Grid.Width;
+            var height = _simulation.Grid.Height;
             var key = KeyOf(_simulation.Settings.Map);
-            if (_texture == null || _texture.width != size || key != _mapKey)
-                Build(size, _simulation.Settings.Map, key);
+            if (_texture == null || _texture.width != width || _texture.height != height || key != _mapKey)
+                Build(width, height, _simulation.Settings.Map, key);
             Grass(_simulation.Settings.Seed);
 
             for (var i = 0; i < _shown.Length; i++)
@@ -206,10 +208,10 @@ namespace Meta.BattleSystem.Services
             return hash;
         }
 
-        private void Build(int size, BattleMap map, ulong key)
+        private void Build(int width, int height, BattleMap map, ulong key)
         {
             _mapKey = key;
-            var cells = size * size;
+            var cells = width * height;
             _land = new byte[cells];
             for (var i = 0; i < cells; i++)
                 _land[i] = map != null && map.Water != null && map.Water[i] ? (byte)0 : (byte)255;
@@ -222,20 +224,21 @@ namespace Meta.BattleSystem.Services
             _animating = new bool[cells];
             if (_texture != null)
                 UnityEngine.Object.Destroy(_texture);
-            _texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            _texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
             {
                 name = "Cells",
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp,
             };
 
-            var mapSize = size * _rules.CellSize;
+            var mapW = width * _rules.CellSize;
+            var mapH = height * _rules.CellSize;
             _cells = Copy(_view.CellsMaterial);
             _cells.SetTexture(CellTexId, _texture);
-            _cells.SetFloat(CellsId, size);
+            _cells.SetVector(CellsId, new Vector4(width, height, 0f, 0f));
             if (_field != null)
                 UnityEngine.Object.Destroy(_field.Texture);
-            _field = new TerritoryField(size);
+            _field = new TerritoryField(width, height);
             _cells.SetTexture(FieldTexId, _field.Texture);
             _cells.SetFloat(FieldRangeId, TerritoryField.Range);
             _cells.SetFloat(CellSizeId, _rules.CellSize);
@@ -243,9 +246,9 @@ namespace Meta.BattleSystem.Services
             _cells.SetColor(EnemyColorId, _view.EnemyColor);
             _cells.SetFloat(Shader.PropertyToID("_FlashStrength"), _view.FlashStrength);
             _world.Surface.sharedMaterial = _cells;
-            _world.Surface.transform.localPosition = new Vector3(mapSize / 2f, 0f, mapSize / 2f);
+            _world.Surface.transform.localPosition = new Vector3(mapW / 2f, 0f, mapH / 2f);
             _world.Surface.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            _world.Surface.transform.localScale = new Vector3(mapSize, mapSize, 1f);
+            _world.Surface.transform.localScale = new Vector3(mapW, mapH, 1f);
 
             var depth = _view.IslandDepth;
             _world.Island.sharedMaterial = Flat(_view.IslandColor);
@@ -265,16 +268,16 @@ namespace Meta.BattleSystem.Services
             else
             {
                 islandMesh.sharedMesh = _cube;
-                _world.Island.transform.localPosition = new Vector3(mapSize / 2f, -depth / 2f - 0.001f, mapSize / 2f);
-                _world.Island.transform.localScale = new Vector3(mapSize, depth, mapSize);
+                _world.Island.transform.localPosition = new Vector3(mapW / 2f, -depth / 2f - 0.001f, mapH / 2f);
+                _world.Island.transform.localScale = new Vector3(mapW, depth, mapH);
             }
 
-            LandDistance(wet ? map : null, mapSize);
-            BuildSea(mapSize, wet ? map : null);
+            LandDistance(wet ? map : null, mapW, mapH);
+            BuildSea(mapW, mapH, wet ? map : null);
             if (wet)
-                BuildCoast(map, mapSize);
+                BuildCoast(map, mapW, mapH);
             else
-                BuildShore(mapSize);
+                BuildShore(mapW, mapH);
             PlaceMapRocks(map);
         }
 
@@ -283,7 +286,6 @@ namespace Meta.BattleSystem.Services
         {
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
-            var size = map.Size;
             var up = Vector3.up;
             void Wall(Vector3 middle, Vector3 normal)
             {
@@ -297,9 +299,9 @@ namespace Meta.BattleSystem.Services
                 triangles.AddRange(new[] { s, s + 1, s + 2, s, s + 2, s + 3 });
             }
 
-            bool Wet(int x, int y) => x < 0 || y < 0 || x >= size || y >= size || map.IsWater(x, y);
-            for (var y = 0; y < size; y++)
-            for (var x = 0; x < size; x++)
+            bool Wet(int x, int y) => map.IsWaterOrOff(x, y);
+            for (var y = 0; y < map.Height; y++)
+            for (var x = 0; x < map.Width; x++)
             {
                 if (Wet(x, y))
                     continue;
@@ -329,28 +331,27 @@ namespace Meta.BattleSystem.Services
         /// the map and the waving sea round it, meters up to <see cref="LandDistRange"/>. Off for the square island: the water then
         /// measures from the square itself, as before.
         /// </summary>
-        private void LandDistance(BattleMap map, float mapSize)
+        private void LandDistance(BattleMap map, float mapW, float mapH)
         {
             Shader.SetGlobalFloat(LandDistOnId, map != null ? 1f : 0f);
             if (map == null)
                 return;
 
             var cell = _rules.CellSize;
-            var size = map.Size;
-            var extent = mapSize + SeaReach * 2f;
-            var texels = Mathf.CeilToInt(extent * LandDistPerMeter);
+            var texelsX = Mathf.CeilToInt((mapW + SeaReach * 2f) * LandDistPerMeter);
+            var texelsZ = Mathf.CeilToInt((mapH + SeaReach * 2f) * LandDistPerMeter);
             var reach = Mathf.CeilToInt(LandDistRange / cell) + 1;
-            var bytes = new byte[texels * texels];
-            for (var j = 0; j < texels; j++)
-            for (var i = 0; i < texels; i++)
+            var bytes = new byte[texelsX * texelsZ];
+            for (var j = 0; j < texelsZ; j++)
+            for (var i = 0; i < texelsX; i++)
             {
                 var px = -SeaReach + (i + 0.5f) / LandDistPerMeter;
                 var pz = -SeaReach + (j + 0.5f) / LandDistPerMeter;
                 var cx = Mathf.FloorToInt(px / cell);
                 var cz = Mathf.FloorToInt(pz / cell);
                 var best = LandDistRange;
-                for (var y = Mathf.Max(0, cz - reach); y <= Mathf.Min(size - 1, cz + reach); y++)
-                for (var x = Mathf.Max(0, cx - reach); x <= Mathf.Min(size - 1, cx + reach); x++)
+                for (var y = Mathf.Max(0, cz - reach); y <= Mathf.Min(map.Height - 1, cz + reach); y++)
+                for (var x = Mathf.Max(0, cx - reach); x <= Mathf.Min(map.Width - 1, cx + reach); x++)
                 {
                     if (map.IsWater(x, y))
                         continue;
@@ -360,14 +361,14 @@ namespace Meta.BattleSystem.Services
                     best = Mathf.Min(best, Mathf.Sqrt(dx * dx + dz * dz));
                 }
 
-                bytes[j * texels + i] = (byte)Mathf.RoundToInt(best / LandDistRange * 255f);
+                bytes[j * texelsX + i] = (byte)Mathf.RoundToInt(best / LandDistRange * 255f);
             }
 
-            if (_landDist == null || _landDist.width != texels)
+            if (_landDist == null || _landDist.width != texelsX || _landDist.height != texelsZ)
             {
                 if (_landDist != null)
                     UnityEngine.Object.Destroy(_landDist);
-                _landDist = new Texture2D(texels, texels, TextureFormat.R8, false, true)
+                _landDist = new Texture2D(texelsX, texelsZ, TextureFormat.R8, false, true)
                 {
                     name = "LandDistance",
                     filterMode = FilterMode.Bilinear,
@@ -378,7 +379,8 @@ namespace Meta.BattleSystem.Services
             _landDist.SetPixelData(bytes, 0);
             _landDist.Apply(false);
             Shader.SetGlobalTexture(LandDistId, _landDist);
-            Shader.SetGlobalVector(LandDistRectId, new Vector4(-SeaReach, -SeaReach, texels / (float)LandDistPerMeter, LandDistRange));
+            Shader.SetGlobalVector(LandDistRectId, new Vector4(-SeaReach, -SeaReach, texelsX / (float)LandDistPerMeter, texelsZ / (float)LandDistPerMeter));
+            Shader.SetGlobalFloat(LandDistRangeId, LandDistRange);
         }
 
         /// <summary>
@@ -387,7 +389,7 @@ namespace Meta.BattleSystem.Services
         /// horizon, a flat ring of the same water without waves. The ring leaves a hole for the mesh: translucent water must not
         /// lie twice. The outer vertices of the mesh do not move, so it meets the ring without a gap.
         /// </summary>
-        private void BuildSea(float mapSize, BattleMap map)
+        private void BuildSea(float mapW, float mapH, BattleMap map)
         {
             var source = _view.WaterMaterial;
             var water = _world.Water;
@@ -395,10 +397,12 @@ namespace Meta.BattleSystem.Services
             water.transform.localRotation = Quaternion.identity;
             water.transform.localScale = Vector3.one;
             var far = source != null ? Copy(source) : Flat(_view.WaterColor);
-            far.SetFloat(MapSizeId, mapSize);
+            far.SetVector(MapSizeId, new Vector4(mapW, mapH, 0f, 0f));
             far.SetFloat(WavesId, 0f);
             water.sharedMaterial = far;
-            water.GetComponent<MeshFilter>().sharedMesh = _farSea = SeaRing(mapSize, SeaReach, mapSize * 10f);
+            if (_farSea != null)
+                UnityEngine.Object.Destroy(_farSea);
+            water.GetComponent<MeshFilter>().sharedMesh = _farSea = SeaRing(mapW, mapH, SeaReach, Mathf.Max(mapW, mapH) * 10f);
 
             if (_nearSea == null)
             {
@@ -411,48 +415,49 @@ namespace Meta.BattleSystem.Services
 
             _nearSea.transform.localPosition = water.transform.localPosition;
             var waves = source != null ? Copy(source) : Flat(_view.WaterColor);
-            waves.SetFloat(MapSizeId, mapSize);
+            waves.SetVector(MapSizeId, new Vector4(mapW, mapH, 0f, 0f));
             waves.SetFloat(WavesId, 1f);
             _nearSea.sharedMaterial = waves;
             if (_seaGrid != null)
                 UnityEngine.Object.Destroy(_seaGrid);
-            _nearSea.GetComponent<MeshFilter>().sharedMesh = _seaGrid = SeaGrid(mapSize, SeaReach, SeaStep, SeaJitter, map, _rules.CellSize);
+            _nearSea.GetComponent<MeshFilter>().sharedMesh = _seaGrid = SeaGrid(mapW, mapH, SeaReach, SeaStep, SeaJitter, map, _rules.CellSize);
         }
 
         /// <summary>
         /// The squares of the grid from <paramref name="reach"/> off the island inwards, leaving out those under it: under the
         /// square island, or, on a map with water, those with no water within half a meter.
         /// </summary>
-        private static Mesh SeaGrid(float mapSize, float reach, float step, float jitter, BattleMap map, float cell)
+        private static Mesh SeaGrid(float mapW, float mapH, float reach, float step, float jitter, BattleMap map, float cell)
         {
-            var cells = Mathf.RoundToInt((mapSize + reach * 2f) / step);
+            var cellsX = Mathf.RoundToInt((mapW + reach * 2f) / step);
+            var cellsZ = Mathf.RoundToInt((mapH + reach * 2f) / step);
             var origin = -reach;
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
-            var index = new int[(cells + 1) * (cells + 1)];
-            for (var j = 0; j <= cells; j++)
-            for (var i = 0; i <= cells; i++)
+            var index = new int[(cellsX + 1) * (cellsZ + 1)];
+            for (var j = 0; j <= cellsZ; j++)
+            for (var i = 0; i <= cellsX; i++)
             {
-                var edge = i == 0 || j == 0 || i == cells || j == cells;
+                var edge = i == 0 || j == 0 || i == cellsX || j == cellsZ;
                 var x = origin + i * step + (edge ? 0f : (Hash(i, j, 71) - 0.5f) * 2f * jitter);
                 var z = origin + j * step + (edge ? 0f : (Hash(i, j, 72) - 0.5f) * 2f * jitter);
-                index[j * (cells + 1) + i] = vertices.Count;
+                index[j * (cellsX + 1) + i] = vertices.Count;
                 vertices.Add(new Vector3(x, 0f, z));
             }
 
-            for (var j = 0; j < cells; j++)
-            for (var i = 0; i < cells; i++)
+            for (var j = 0; j < cellsZ; j++)
+            for (var i = 0; i < cellsX; i++)
             {
                 // a square wholly under the island is never seen
                 var cx = origin + (i + 0.5f) * step;
                 var cz = origin + (j + 0.5f) * step;
-                if (map == null ? cx > step && cx < mapSize - step && cz > step && cz < mapSize - step : AllLand(map, cell, cx, cz, step))
+                if (map == null ? cx > step && cx < mapW - step && cz > step && cz < mapH - step : AllLand(map, cell, cx, cz, step))
                     continue;
 
-                var a = index[j * (cells + 1) + i];
-                var b = index[j * (cells + 1) + i + 1];
-                var c = index[(j + 1) * (cells + 1) + i + 1];
-                var d = index[(j + 1) * (cells + 1) + i];
+                var a = index[j * (cellsX + 1) + i];
+                var b = index[j * (cellsX + 1) + i + 1];
+                var c = index[(j + 1) * (cellsX + 1) + i + 1];
+                var d = index[(j + 1) * (cellsX + 1) + i];
                 if ((i + j) % 2 == 0)
                     triangles.AddRange(new[] { a, d, c, a, c, b });
                 else
@@ -463,7 +468,7 @@ namespace Meta.BattleSystem.Services
             mesh.SetVertices(vertices);
             mesh.SetTriangles(triangles, 0);
             // the waves rise up to a few tenths of a meter: bounds a little taller than the flat grid
-            mesh.bounds = new Bounds(new Vector3(mapSize / 2f, 0f, mapSize / 2f), new Vector3(mapSize + reach * 2f, 1f, mapSize + reach * 2f));
+            mesh.bounds = new Bounds(new Vector3(mapW / 2f, 0f, mapH / 2f), new Vector3(mapW + reach * 2f, 1f, mapH + reach * 2f));
             return mesh;
         }
 
@@ -478,7 +483,7 @@ namespace Meta.BattleSystem.Services
             for (var y = z0; y <= z1; y++)
             for (var x = x0; x <= x1; x++)
             {
-                if (x < 0 || y < 0 || x >= map.Size || y >= map.Size || map.IsWater(x, y))
+                if (map.IsWaterOrOff(x, y))
                     return false;
             }
 
@@ -486,10 +491,11 @@ namespace Meta.BattleSystem.Services
         }
 
         /// <summary>Four flat strips round the grid out to the horizon.</summary>
-        private static Mesh SeaRing(float mapSize, float reach, float horizon)
+        private static Mesh SeaRing(float mapW, float mapH, float reach, float horizon)
         {
             var lo = -reach;
-            var hi = mapSize + reach;
+            var hiX = mapW + reach;
+            var hiZ = mapH + reach;
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
             void Strip(float x0, float z0, float x1, float z1)
@@ -502,10 +508,10 @@ namespace Meta.BattleSystem.Services
                 triangles.AddRange(new[] { s, s + 1, s + 2, s, s + 2, s + 3 });
             }
 
-            Strip(-horizon, -horizon, lo, mapSize + horizon);
-            Strip(hi, -horizon, mapSize + horizon, mapSize + horizon);
-            Strip(lo, -horizon, hi, lo);
-            Strip(lo, hi, hi, mapSize + horizon);
+            Strip(-horizon, -horizon, lo, mapH + horizon);
+            Strip(hiX, -horizon, mapW + horizon, mapH + horizon);
+            Strip(lo, -horizon, hiX, lo);
+            Strip(lo, hiZ, hiX, mapH + horizon);
             var mesh = new Mesh { name = "SeaRing" };
             mesh.SetVertices(vertices);
             mesh.SetTriangles(triangles, 0);
@@ -529,7 +535,7 @@ namespace Meta.BattleSystem.Services
         /// out to the water (their +z), and a few rocks in the water, bottoms 0.5 m under it. After import the corner piece
         /// covers -x, +z of its origin.
         /// </summary>
-        private void BuildShore(float mapSize)
+        private void BuildShore(float mapW, float mapH)
         {
             foreach (var piece in _shore)
                 UnityEngine.Object.Destroy(piece.gameObject);
@@ -542,27 +548,34 @@ namespace Meta.BattleSystem.Services
             for (var k = 0; k < 4; k++)
                 last[k] = -1;
             var step = 0;
-            for (var along = length / 2f; along < mapSize; along += length, step++)
+            for (var along = length / 2f; along < Mathf.Max(mapW, mapH); along += length, step++)
             {
-                Place(Shore(0, step, last), new Vector3(along, 0f, 0f), 180f);
-                Place(Shore(1, step, last), new Vector3(along, 0f, mapSize), 0f);
-                Place(Shore(2, step, last), new Vector3(0f, 0f, along), -90f);
-                Place(Shore(3, step, last), new Vector3(mapSize, 0f, along), 90f);
+                if (along < mapW)
+                {
+                    Place(Shore(0, step, last), new Vector3(along, 0f, 0f), 180f);
+                    Place(Shore(1, step, last), new Vector3(along, 0f, mapH), 0f);
+                }
+
+                if (along < mapH)
+                {
+                    Place(Shore(2, step, last), new Vector3(0f, 0f, along), -90f);
+                    Place(Shore(3, step, last), new Vector3(mapW, 0f, along), 90f);
+                }
             }
 
             if (_world.ShoreCornerTemplate != null)
             {
-                Place(_world.ShoreCornerTemplate, new Vector3(0f, 0f, mapSize), 0f);
-                Place(_world.ShoreCornerTemplate, new Vector3(mapSize, 0f, mapSize), 90f);
-                Place(_world.ShoreCornerTemplate, new Vector3(mapSize, 0f, 0f), 180f);
+                Place(_world.ShoreCornerTemplate, new Vector3(0f, 0f, mapH), 0f);
+                Place(_world.ShoreCornerTemplate, new Vector3(mapW, 0f, mapH), 90f);
+                Place(_world.ShoreCornerTemplate, new Vector3(mapW, 0f, 0f), 180f);
                 Place(_world.ShoreCornerTemplate, new Vector3(0f, 0f, 0f), -90f);
             }
 
-            SeaRocks(mapSize);
+            SeaRocks(mapW, mapH);
         }
 
         /// <summary>A few rocks in the sea off the square, bottoms 0.5 m under the water, with foam round them.</summary>
-        private void SeaRocks(float mapSize)
+        private void SeaRocks(float mapW, float mapH)
         {
             var rocks = _world.RockTemplates;
             if (rocks == null || rocks.Length == 0)
@@ -572,8 +585,8 @@ namespace Meta.BattleSystem.Services
             var spots = new[]
             {
                 new Vector2(-3f, 6f), new Vector2(-2.6f, 21f), new Vector2(9f, -3.2f), new Vector2(24f, -2.6f),
-                new Vector2(mapSize + 3f, 26f), new Vector2(mapSize + 2.6f, 11f), new Vector2(23f, mapSize + 3.2f),
-                new Vector2(8f, mapSize + 2.6f), new Vector2(-3.4f, mapSize + 3.4f), new Vector2(mapSize + 3.4f, -3.4f),
+                new Vector2(mapW + 3f, 26f), new Vector2(mapW + 2.6f, 11f), new Vector2(23f, mapH + 3.2f),
+                new Vector2(8f, mapH + 2.6f), new Vector2(-3.4f, mapH + 3.4f), new Vector2(mapW + 3.4f, -3.4f),
             };
             var bottom = -_view.WaterDepth - 0.5f;
             var water = _world.Water.sharedMaterial;
@@ -610,7 +623,7 @@ namespace Meta.BattleSystem.Services
         /// block of 4 × 4 cells of land with 4 cells of water before it, a corner piece where two such sides of a block meet
         /// round the outside; the rest of the coast is the cliff of the cells. The rocks in the sea off the square stay.
         /// </summary>
-        private void BuildCoast(BattleMap map, float mapSize)
+        private void BuildCoast(BattleMap map, float mapW, float mapH)
         {
             foreach (var piece in _shore)
                 UnityEngine.Object.Destroy(piece.gameObject);
@@ -618,10 +631,9 @@ namespace Meta.BattleSystem.Services
             if (_world.ShoreTemplate != null)
             {
                 var cell = _rules.CellSize;
-                var blocks = map.Size / ShoreCells;
                 var length = ShoreCells * cell;
-                for (var by = 0; by < blocks; by++)
-                for (var bx = 0; bx < blocks; bx++)
+                for (var by = 0; by < map.Height / ShoreCells; by++)
+                for (var bx = 0; bx < map.Width / ShoreCells; bx++)
                 {
                     if (!Solid(map, bx, by))
                         continue;
@@ -657,7 +669,7 @@ namespace Meta.BattleSystem.Services
                 }
             }
 
-            SeaRocks(mapSize);
+            SeaRocks(mapW, mapH);
         }
 
         /// <summary>A block of 4 × 4 cells all land.</summary>
@@ -783,7 +795,7 @@ namespace Meta.BattleSystem.Services
             for (; _captures < captures.Count; _captures++)
             {
                 var capture = captures[_captures];
-                var size = _simulation.Grid.Size;
+                var size = _simulation.Grid.Width;
                 var originX = capture.OriginX / (float)BattleSettings.UnitsPerCell;
                 var originY = capture.OriginY / (float)BattleSettings.UnitsPerCell;
                 var farthest = 0.001f;
@@ -886,7 +898,8 @@ namespace Meta.BattleSystem.Services
             size = _grass.width;
             _cells.SetTexture(GrassTexId, _grass);
             // the grass covers this many meters once; a larger map repeats it
-            _cells.SetFloat(GrassTilesId, _simulation.Grid.Size * _rules.CellSize / ((float)size / surface.PixelsPerMeter));
+            var tile = (float)size / surface.PixelsPerMeter;
+            _cells.SetVector(GrassTilesId, new Vector4(_simulation.Grid.Width * _rules.CellSize / tile, _simulation.Grid.Height * _rules.CellSize / tile, 0f, 0f));
             _cells.SetFloat(LightenId, surface.Lighten);
             _cells.SetFloat(PaintAlphaId, surface.PaintAlpha);
             _cells.SetFloat(LumMeanId, surface.LumMean);

@@ -166,7 +166,7 @@ namespace Meta.FlowSystem.Views
             goal = default;
             var hero = _hero.Position;
             var best = float.MaxValue;
-            var size = simulation.Grid.Size;
+            var size = simulation.Grid.Width;
             var purse = simulation.SideOf(Side.Player);
             var wantWood = step == 2 && purse.Wood < simulation.Settings.BarracksWood;
             if (step == 1 || wantWood)

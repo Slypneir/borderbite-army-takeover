@@ -190,7 +190,13 @@ namespace Core.BattleSystem.Structs
         /// <summary>The autopilot orders «Ко мне» while the army is smaller than this, then frees it: a tool of the runs, not a rule.</summary>
         public int AutopilotRallyBelow = 8;
 
-        public int MapUnits => MapCells * UnitsPerCell;
+        /// <summary>The cells of the map across and up: the map of the battle sets them (layer 5); 0 — the square of <see cref="MapCells"/>.</summary>
+        public int MapWidth;
+        public int MapHeight;
+
+        public int MapWidthUnits => (MapWidth > 0 ? MapWidth : MapCells) * UnitsPerCell;
+
+        public int MapHeightUnits => (MapHeight > 0 ? MapHeight : MapCells) * UnitsPerCell;
 
         /// <summary>The full health of the hero of a side: the player's grows with its upgrade.</summary>
         public int HeroHealthOf(Enums.Side side) => side == Enums.Side.Player ? HeroHealth + PlayerHeroBonusHealth : EnemyHeroHealth;

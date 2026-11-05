@@ -3,7 +3,8 @@ using Core.BattleSystem.Enums;
 namespace Core.BattleSystem.Data
 {
     /// <summary>
-    /// The square map of cells, row by row from the lower left corner: index = y * <see cref="Size"/> + x. Every cell is of one
+    /// The map of cells, <see cref="Width"/> by <see cref="Height"/> (owner, 5 November: a map of any size, a rectangle), row by
+    /// row from the lower left corner: index = y * <see cref="Width"/> + x. Every cell is of one
     /// side; a protected cell (an aura of a building, layer 3) keeps its side against brushes and enclosures. A cell of water
     /// (layer 5) is neutral for ever: protected, out of the counts and the shares. The counts of the sides are kept on every
     /// change, <see cref="Version"/> grows with it: the drawing compares it instead of the cells.
@@ -15,11 +16,12 @@ namespace Core.BattleSystem.Data
         private readonly bool[] _water;
         private readonly int[] _counts = new int[3];
 
-        public CellGrid(int size, bool[] water = null)
+        public CellGrid(int width, int height, bool[] water = null)
         {
-            Size = size;
-            _cells = new Side[size * size];
-            _protected = new bool[size * size];
+            Width = width;
+            Height = height;
+            _cells = new Side[width * height];
+            _protected = new bool[width * height];
             _water = water;
             LandTotal = _cells.Length;
             if (water != null)
@@ -34,7 +36,11 @@ namespace Core.BattleSystem.Data
             _counts[(int)Side.Neutral] = LandTotal;
         }
 
-        public int Size { get; }
+        public int Width { get; }
+
+        public int Height { get; }
+
+        public bool Inside(int x, int y) => x >= 0 && y >= 0 && x < Width && y < Height;
 
         public int Total => _cells.Length;
 
@@ -48,14 +54,14 @@ namespace Core.BattleSystem.Data
 
         public Side this[int index] => _cells[index];
 
-        public Side At(int x, int y) => _cells[y * Size + x];
+        public Side At(int x, int y) => _cells[y * Width + x];
 
         public bool IsProtected(int index) => _protected[index] || (_water != null && _water[index]);
 
         public bool IsWater(int index) => _water != null && _water[index];
 
         /// <summary>Water, or off the map: the sea.</summary>
-        public bool IsWaterAt(int x, int y) => x < 0 || y < 0 || x >= Size || y >= Size || (_water != null && _water[y * Size + x]);
+        public bool IsWaterAt(int x, int y) => !Inside(x, y) || (_water != null && _water[y * Width + x]);
 
         public int Count(Side side) => _counts[(int)side];
 
@@ -64,9 +70,9 @@ namespace Core.BattleSystem.Data
 
         public bool IsEdge(int index)
         {
-            var x = index % Size;
-            var y = index / Size;
-            return x == 0 || y == 0 || x == Size - 1 || y == Size - 1;
+            var x = index % Width;
+            var y = index / Width;
+            return x == 0 || y == 0 || x == Width - 1 || y == Height - 1;
         }
 
         /// <summary>Gives the cell to a side unless it is protected; true when the cell changed.</summary>

@@ -34,7 +34,7 @@ namespace Tests.MapEditorSystem.Editor
         [Test]
         public void NewMap_SquareOfLand_BasesInTwoCorners()
         {
-            _file.Size.Should().Be(48);
+            _file.Width.Should().Be(48);
             _file.LandCells().Should().Be(48 * 48);
             _file.PlayerBase.corner.Should().Be(new Vector2Int(8, 8));
             _file.EnemyBase.corner.Should().Be(new Vector2Int(40, 40));
@@ -123,7 +123,7 @@ namespace Tests.MapEditorSystem.Editor
             var sea = ScriptableObject.CreateInstance<BattleMapAsset>();
             sea.ResetToWater(80);
 
-            sea.Size.Should().Be(80);
+            sea.Width.Should().Be(80);
             sea.LandCells().Should().Be(0);
             sea.ToMap().IsWater(40, 40).Should().BeTrue();
             Object.DestroyImmediate(sea);
@@ -207,7 +207,7 @@ namespace Tests.MapEditorSystem.Editor
 
             var map = _editing.Map.ToMap();
 
-            map.Size.Should().Be(48);
+            map.Width.Should().Be(48);
             map.IsWater(24, 24).Should().BeTrue();
             map.IsWater(10, 10).Should().BeFalse();
         }

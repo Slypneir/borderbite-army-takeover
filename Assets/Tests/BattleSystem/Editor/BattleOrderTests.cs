@@ -153,7 +153,7 @@ namespace Tests.BattleSystem.Editor
             Run(simulation, 3);
             var cells = simulation.Soldiers.Where(s => s.Side == Side.Player).Select(s => s.GoalId).ToList();
             simulation.Soldiers.Should().OnlyContain(s => s.Goal == SoldierGoal.Cell);
-            var size = simulation.Grid.Size;
+            var size = simulation.Grid.Width;
             for (var i = 0; i < cells.Count; i++)
             for (var j = i + 1; j < cells.Count; j++)
             {

@@ -27,12 +27,12 @@ namespace Tests.BattleSystem.Editor
         {
             var settings = BattleDeterminismTests.Settings(layer3: layer3);
             var square = BattleMap.Square(settings);
-            var water = new bool[square.Size * square.Size];
+            var water = new bool[square.Width * square.Height];
             for (var y = LakeFrom; y <= LakeTo; y++)
             for (var x = LakeFrom; x <= LakeTo; x++)
-                water[y * square.Size + x] = true;
+                water[y * square.Width + x] = true;
 
-            var map = new BattleMap(square.Size, water);
+            var map = new BattleMap(square.Width, square.Height, water);
             map.Bases[(int)Side.Player] = square.Bases[(int)Side.Player];
             map.Bases[(int)Side.Enemy] = square.Bases[(int)Side.Enemy];
             map.Sites.AddRange(square.Sites);
@@ -168,7 +168,7 @@ namespace Tests.BattleSystem.Editor
 
             var simulation = new BattleSimulation(settings);
 
-            simulation.Grid.Size.Should().Be(48);
+            simulation.Grid.Width.Should().Be(48);
             simulation.Bases[(int)Side.Player].X.Should().Be(10 * Unit);
             simulation.Bases[(int)Side.Enemy].Y.Should().Be(24 * Unit);
             simulation.Grid.At(10, 24).Should().Be(Side.Player);
@@ -176,6 +176,66 @@ namespace Tests.BattleSystem.Editor
             simulation.Sites.Should().HaveCount(2);
             simulation.Sites[1].Barracks.Should().Be(Side.Enemy);
             simulation.Resources.Should().ContainSingle(r => r.Kind == ResourceKind.Wood && r.Cell == 30 * 48 + 14);
+        }
+
+        [Test]
+        public void RectangleMap_70By40_PlaysWithinItsBounds()
+        {
+            // owner, 5 November: a map of the size he sets, a rectangle
+            var settings = BattleDeterminismTests.Settings(layer3: true);
+            settings.PlayerAutopilot = true;
+            var map = new BattleMap(70, 40);
+            map.Bases[(int)Side.Player] = new MapBase(8, 8, 6);
+            map.Bases[(int)Side.Enemy] = new MapBase(62, 32, 6);
+            map.Sites.Add(new MapSite(20, 20, Side.Neutral));
+            map.Sites.Add(new MapSite(50, 20, Side.Neutral));
+            settings.Map = map;
+            var simulation = new BattleSimulation(settings);
+
+            simulation.Grid.Width.Should().Be(70);
+            simulation.Grid.Height.Should().Be(40);
+            simulation.Grid.Total.Should().Be(2800);
+            simulation.Grid.At(62, 32).Should().Be(Side.Enemy);
+            for (var i = 0; i < 1800 && simulation.Result == BattleResult.None; i++)
+            {
+                simulation.Step();
+                foreach (var hero in simulation.Heroes)
+                {
+                    hero.X.Should().BeInRange(0, 70 * Unit);
+                    hero.Y.Should().BeInRange(0, 40 * Unit);
+                }
+
+                foreach (var soldier in simulation.Soldiers)
+                    soldier.Y.Should().BeInRange(0, 40 * Unit);
+                foreach (var pile in simulation.Resources)
+                    pile.Y.Should().BeLessThan(40 * Unit);
+            }
+        }
+
+        [Test]
+        public void MapFile_Resize_MovesTheMapAndKeepsTheBasesInside()
+        {
+            var asset = ScriptableObject.CreateInstance<BattleMapAsset>();
+            asset.Reset(64, 64);
+            asset.SetWater(10, 10, true);
+            asset.AddPile(ResourceKind.Gold, new Vector2Int(60, 5));
+            asset.AddSite(new Vector2Int(30, 30));
+
+            // grown by 6 cells to the west, cut to 40 up
+            asset.Resize(70, 40, 6, 0);
+
+            asset.Width.Should().Be(70);
+            asset.Height.Should().Be(40);
+            asset.IsWater(16, 10).Should().BeTrue();
+            asset.IsWater(2, 10).Should().BeTrue();
+            asset.IsWater(20, 20).Should().BeFalse();
+            asset.Piles.Should().ContainSingle(p => p.cell == new Vector2Int(66, 5));
+            asset.Sites.Should().ContainSingle(s => s.cell == new Vector2Int(36, 30));
+            asset.EnemyBase.corner.y.Should().BeLessOrEqualTo(37);
+            var back = asset.ToMap();
+            back.Width.Should().Be(70);
+            back.Height.Should().Be(40);
+            Object.DestroyImmediate(asset);
         }
 
         [Test]

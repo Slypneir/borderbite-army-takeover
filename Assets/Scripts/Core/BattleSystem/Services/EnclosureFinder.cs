@@ -30,13 +30,14 @@ namespace Core.BattleSystem.Services
         public void Enclose(CellGrid grid, Side side, int maxCells, List<int[]> taken, List<int> fromEnemy)
         {
             _generation++;
-            var size = grid.Size;
+            var width = grid.Width;
+            var height = grid.Height;
             for (var start = 0; start < grid.Total; start++)
             {
                 if (grid[start] == side || _mark[start] == _generation || grid.IsWater(start))
                     continue;
 
-                var count = Flood(grid, side, start, size, out var touchesEdge, out var open);
+                var count = Flood(grid, side, start, width, height, out var touchesEdge, out var open);
                 if (touchesEdge || open > maxCells)
                     continue;
 
@@ -62,7 +63,7 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private int Flood(CellGrid grid, Side side, int start, int size, out bool touchesEdge, out int open)
+        private int Flood(CellGrid grid, Side side, int start, int width, int height, out bool touchesEdge, out int open)
         {
             _touchesWater = false;
             touchesEdge = false;
@@ -77,15 +78,15 @@ namespace Core.BattleSystem.Services
                 if (!grid.IsProtected(index))
                     open++;
 
-                var x = index % size;
-                var y = index / size;
-                if (x == 0 || y == 0 || x == size - 1 || y == size - 1)
+                var x = index % width;
+                var y = index / width;
+                if (x == 0 || y == 0 || x == width - 1 || y == height - 1)
                     touchesEdge = true;
 
                 if (x > 0) Visit(grid, side, index - 1, ref tail);
-                if (x < size - 1) Visit(grid, side, index + 1, ref tail);
-                if (y > 0) Visit(grid, side, index - size, ref tail);
-                if (y < size - 1) Visit(grid, side, index + size, ref tail);
+                if (x < width - 1) Visit(grid, side, index + 1, ref tail);
+                if (y > 0) Visit(grid, side, index - width, ref tail);
+                if (y < height - 1) Visit(grid, side, index + width, ref tail);
             }
 
             touchesEdge |= _touchesWater;

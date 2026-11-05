@@ -233,7 +233,7 @@ namespace Meta.BattleSystem.Configuration
 
         public int MaxStepsPerFrame => maxStepsPerFrame;
         public int TicksPerSecond => ticksPerSecond;
-        public int MapCells => Map != null ? Map.Size : mapCells;
+        public int MapCells => Map != null ? Mathf.Max(Map.Width, Map.Height) : mapCells;
         public float CellSize => cellSize;
         public float MapSize => MapCells * cellSize;
 

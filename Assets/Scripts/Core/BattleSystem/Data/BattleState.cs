@@ -43,9 +43,10 @@ namespace Core.BattleSystem.Data
             Settings = settings;
             // a battle with no map of its own is fought on the square island of the settings
             settings.Map ??= BattleMap.Square(settings);
-            settings.MapCells = settings.Map.Size;
+            settings.MapWidth = settings.Map.Width;
+            settings.MapHeight = settings.Map.Height;
             Map = settings.Map;
-            Grid = new CellGrid(Map.Size, Map.Water);
+            Grid = new CellGrid(Map.Width, Map.Height, Map.Water);
             Random = new DeterministicRandom(settings.Seed);
             Sites = new SiteState[Map.Sites.Count];
             for (var i = 0; i < Sites.Length; i++)
@@ -139,7 +140,7 @@ namespace Core.BattleSystem.Data
         {
             var cx = x / BattleSettings.UnitsPerCell;
             var cy = y / BattleSettings.UnitsPerCell;
-            return cx < 0 || cy < 0 || cx >= Grid.Size || cy >= Grid.Size ? Side.Neutral : Grid.At(cx, cy);
+            return Grid.Inside(cx, cy) ? Grid.At(cx, cy) : Side.Neutral;
         }
 
         /// <summary>The middle of a cell in units.</summary>

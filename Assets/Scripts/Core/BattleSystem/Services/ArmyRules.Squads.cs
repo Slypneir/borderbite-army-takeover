@@ -336,7 +336,7 @@ namespace Core.BattleSystem.Services
 
                     if (AimAtEdge(ref soldier))
                     {
-                        var size = _state.Grid.Size;
+                        var size = _state.Grid.Width;
                         Walk(ref soldier, BattleState.Middle(soldier.GoalId % size), BattleState.Middle(soldier.GoalId / size), 0);
                         return;
                     }
@@ -414,7 +414,7 @@ namespace Core.BattleSystem.Services
             {
                 var px = cx + dx;
                 var py = cy + dy;
-                if (dx * dx + dy * dy <= reach * reach && px >= 0 && py >= 0 && px < grid.Size && py < grid.Size && grid.At(px, py) == Side.Enemy)
+                if (dx * dx + dy * dy <= reach * reach && grid.Inside(px, py) && grid.At(px, py) == Side.Enemy)
                     return true;
             }
 
@@ -444,20 +444,21 @@ namespace Core.BattleSystem.Services
         private bool AimAtEdge(ref SoldierState soldier)
         {
             var grid = _state.Grid;
-            var size = grid.Size;
+            var size = grid.Width;
+            var height = grid.Height;
             if (soldier.Goal == SoldierGoal.Cell && grid[soldier.GoalId] == Side.Neutral && !grid.IsProtected(soldier.GoalId))
                 return true;
 
             soldier.Goal = SoldierGoal.None;
             var cx = Utils.IntMath.Clamp(soldier.X / BattleSettings.UnitsPerCell, 0, size - 1);
-            var cy = Utils.IntMath.Clamp(soldier.Y / BattleSettings.UnitsPerCell, 0, size - 1);
+            var cy = Utils.IntMath.Clamp(soldier.Y / BattleSettings.UnitsPerCell, 0, height - 1);
             for (var ring = 0; ring <= HomeSearchCells; ring++)
             {
                 var found = -1;
                 var best = long.MaxValue;
                 for (var y = cy - ring; y <= cy + ring; y++)
                 {
-                    if (y < 0 || y >= size)
+                    if (y < 0 || y >= height)
                         continue;
 
                     var edge = y == cy - ring || y == cy + ring;
@@ -495,9 +496,8 @@ namespace Core.BattleSystem.Services
         private bool ByEnemyLand(int x, int y)
         {
             var grid = _state.Grid;
-            var last = grid.Size - 1;
-            return (x > 0 && grid.At(x - 1, y) == Side.Enemy) || (x < last && grid.At(x + 1, y) == Side.Enemy) ||
-                   (y > 0 && grid.At(x, y - 1) == Side.Enemy) || (y < last && grid.At(x, y + 1) == Side.Enemy);
+            return (x > 0 && grid.At(x - 1, y) == Side.Enemy) || (x < grid.Width - 1 && grid.At(x + 1, y) == Side.Enemy) ||
+                   (y > 0 && grid.At(x, y - 1) == Side.Enemy) || (y < grid.Height - 1 && grid.At(x, y + 1) == Side.Enemy);
         }
 
         /// <summary>A cell within the reach of home of the base or a barracks of the enemy: the land «рядом», not the whole map.</summary>

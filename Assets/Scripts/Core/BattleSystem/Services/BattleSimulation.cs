@@ -195,9 +195,9 @@ namespace Core.BattleSystem.Services
         /// <summary>The developer paints a rectangle of cells, both corners included; no enclosure until the next tick.</summary>
         public void PaintRect(Side side, int x0, int y0, int x1, int y1)
         {
-            for (var y = IntMath.Clamp(System.Math.Min(y0, y1), 0, Grid.Size - 1); y <= IntMath.Clamp(System.Math.Max(y0, y1), 0, Grid.Size - 1); y++)
-            for (var x = IntMath.Clamp(System.Math.Min(x0, x1), 0, Grid.Size - 1); x <= IntMath.Clamp(System.Math.Max(x0, x1), 0, Grid.Size - 1); x++)
-                Grid.Paint(y * Grid.Size + x, side);
+            for (var y = IntMath.Clamp(System.Math.Min(y0, y1), 0, Grid.Height - 1); y <= IntMath.Clamp(System.Math.Max(y0, y1), 0, Grid.Height - 1); y++)
+            for (var x = IntMath.Clamp(System.Math.Min(x0, x1), 0, Grid.Width - 1); x <= IntMath.Clamp(System.Math.Max(x0, x1), 0, Grid.Width - 1); x++)
+                Grid.Paint(y * Grid.Width + x, side);
         }
 
         /// <summary>
@@ -280,7 +280,7 @@ namespace Core.BattleSystem.Services
         public void BuildBarracks(int site, Side side)
         {
             ref var place = ref _state.Sites[site];
-            Grid.Set(place.CenterY * Grid.Size + place.CenterX, side);
+            Grid.Set(place.CenterY * Grid.Width + place.CenterX, side);
             _economy.BuildBarracks(site, side);
         }
 
@@ -381,13 +381,13 @@ namespace Core.BattleSystem.Services
         private void PaintStart(int centerX, int centerY, int radius, Side side)
         {
             // a cell is in the circle when its middle is: (x + 0.5 - c)^2 + (y + 0.5 - c)^2 <= r^2, doubled to stay in integers
-            for (var y = 0; y < Grid.Size; y++)
-            for (var x = 0; x < Grid.Size; x++)
+            for (var y = 0; y < Grid.Height; y++)
+            for (var x = 0; x < Grid.Width; x++)
             {
                 var dx = 2 * x + 1 - 2 * centerX;
                 var dy = 2 * y + 1 - 2 * centerY;
                 if (dx * dx + dy * dy <= 4 * radius * radius)
-                    Grid.Set(y * Grid.Size + x, side);
+                    Grid.Set(y * Grid.Width + x, side);
             }
         }
 
@@ -432,7 +432,8 @@ namespace Core.BattleSystem.Services
         {
             var settings = _state.Settings;
             var min = settings.HeroRadiusUnits;
-            var max = settings.MapUnits - settings.HeroRadiusUnits;
+            var maxX = settings.MapWidthUnits - settings.HeroRadiusUnits;
+            var maxY = settings.MapHeightUnits - settings.HeroRadiusUnits;
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
@@ -445,8 +446,8 @@ namespace Core.BattleSystem.Services
                 var length = IntMath.Sqrt((long)hero.DirectionX * hero.DirectionX + (long)hero.DirectionY * hero.DirectionY);
                 var fromX = hero.X;
                 var fromY = hero.Y;
-                hero.X = IntMath.Clamp(hero.X + (int)(hero.DirectionX * (long)step / length), min, max);
-                hero.Y = IntMath.Clamp(hero.Y + (int)(hero.DirectionY * (long)step / length), min, max);
+                hero.X = IntMath.Clamp(hero.X + (int)(hero.DirectionX * (long)step / length), min, maxX);
+                hero.Y = IntMath.Clamp(hero.Y + (int)(hero.DirectionY * (long)step / length), min, maxY);
                 // nobody walks into water (layer 5 spec 2.2): along the shore instead
                 _state.Settle(ref hero.X, ref hero.Y, fromX, fromY, settings.HeroRadiusUnits);
                 // the truce: the enemy's hero stays off the player's land (task 4.27)
@@ -472,17 +473,17 @@ namespace Core.BattleSystem.Services
         {
             const int unit = BattleSettings.UnitsPerCell;
             var radius2 = (long)radius * radius;
-            var x0 = IntMath.Clamp((x - radius) / unit, 0, Grid.Size - 1);
-            var x1 = IntMath.Clamp((x + radius) / unit, 0, Grid.Size - 1);
-            var y0 = IntMath.Clamp((y - radius) / unit, 0, Grid.Size - 1);
-            var y1 = IntMath.Clamp((y + radius) / unit, 0, Grid.Size - 1);
+            var x0 = IntMath.Clamp((x - radius) / unit, 0, Grid.Width - 1);
+            var x1 = IntMath.Clamp((x + radius) / unit, 0, Grid.Width - 1);
+            var y0 = IntMath.Clamp((y - radius) / unit, 0, Grid.Height - 1);
+            var y1 = IntMath.Clamp((y + radius) / unit, 0, Grid.Height - 1);
             for (var cy = y0; cy <= y1; cy++)
             for (var cx = x0; cx <= x1; cx++)
             {
                 long dx = cx * unit + unit / 2 - x;
                 long dy = cy * unit + unit / 2 - y;
                 if (dx * dx + dy * dy <= radius2)
-                    Grid.Paint(cy * Grid.Size + cx, side);
+                    Grid.Paint(cy * Grid.Width + cx, side);
             }
         }
 
@@ -516,8 +517,8 @@ namespace Core.BattleSystem.Services
             long sumY = 0;
             foreach (var index in cells)
             {
-                sumX += index % Grid.Size;
-                sumY += index / Grid.Size;
+                sumX += index % Grid.Width;
+                sumY += index / Grid.Width;
             }
 
             const int unit = BattleSettings.UnitsPerCell;
@@ -555,10 +556,10 @@ namespace Core.BattleSystem.Services
 
         private void Fill(Side side, int target, Side from)
         {
-            var size = Grid.Size;
-            for (var row = 0; row < size && Grid.Count(side) < target; row++)
+            var size = Grid.Width;
+            for (var row = 0; row < Grid.Height && Grid.Count(side) < target; row++)
             {
-                var y = side == Side.Player ? row : size - 1 - row;
+                var y = side == Side.Player ? row : Grid.Height - 1 - row;
                 for (var x = 0; x < size && Grid.Count(side) < target; x++)
                 {
                     var index = y * size + x;
