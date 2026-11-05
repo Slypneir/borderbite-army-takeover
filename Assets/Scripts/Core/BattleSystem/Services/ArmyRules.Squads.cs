@@ -400,26 +400,10 @@ namespace Core.BattleSystem.Services
         }
 
         /// <summary>
-        /// A unit of the player is on the enemy's land: a cell of the enemy within 3 cells of it. Its own brush paints the cells
-        /// under it at once (2 cells round a hero), so the cell under it alone would almost never tell.
+        /// A unit of the player is on the enemy's land: the cell under it is the enemy's (task 4.31: the brush follows the trail, so
+        /// the cell under a unit on the move keeps its colour; a unit standing still makes it its own in 0.4 s).
         /// </summary>
-        private bool OnEnemyLand(int x, int y)
-        {
-            const int reach = 3;
-            var grid = _state.Grid;
-            var cx = x / BattleSettings.UnitsPerCell;
-            var cy = y / BattleSettings.UnitsPerCell;
-            for (var dy = -reach; dy <= reach; dy++)
-            for (var dx = -reach; dx <= reach; dx++)
-            {
-                var px = cx + dx;
-                var py = cy + dy;
-                if (dx * dx + dy * dy <= reach * reach && grid.Inside(px, py) && grid.At(px, py) == Side.Enemy)
-                    return true;
-            }
-
-            return false;
-        }
+        private bool OnEnemyLand(int x, int y) => _state.ColourAt(x, y) == Side.Enemy;
 
         /// <summary>How far a squad at home goes for a unit of the player on its land: 4 m, or anywhere on it with the alarm.</summary>
         private long HomeReach() => _settings.EnemyAlarm ? long.MaxValue / 4 : _settings.DefendUnits;

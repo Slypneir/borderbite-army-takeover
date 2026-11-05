@@ -20,6 +20,11 @@ namespace Core.BattleSystem.Structs
         public int HeroStepUnits = 333;
         public int HeroRadiusUnits = 600;
         public int HeroBrushUnits = 2000;
+        /// <summary>
+        /// The brush of a hero or a soldier paints round where the unit was this many ticks ago (task 4.31: 0.4 s in the game);
+        /// 0 — round the unit itself, as the checks of the older rules expect.
+        /// </summary>
+        public int BrushDelayTicks;
         public int EnclosureEveryTicks = 1;
         public int MaxEnclosureCells = 250;
         /// <summary>Land of a side cut off from its base and barracks goes back to grass, a piece up to the enclosure limit (owner, 4 November).</summary>

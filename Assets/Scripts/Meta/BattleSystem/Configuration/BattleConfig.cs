@@ -44,6 +44,10 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("Radius of the body of the hero: how close it comes to the edge of the map, meters. Starting value: 0.3.")]
         [Min(0f)] [SerializeField] private float heroRadius = 0.3f;
 
+        [Tooltip("The brush of a hero or a soldier paints round where it was this long ago, seconds (task 4.31: the paint follows " +
+                 "the trail). Starting value: 0.4.")]
+        [Min(0f)] [SerializeField] private float brushDelay = 0.4f;
+
         [Tooltip("Radius of the brush of the hero: cells whose middle is this close become its colour, cells. Starting value: 2.")]
         [Min(0.5f)] [SerializeField] private float heroBrush = 2f;
 
@@ -436,6 +440,7 @@ namespace Meta.BattleSystem.Configuration
                 HeroStepUnits = Units(heroSpeed / ticksPerSecond),
                 HeroRadiusUnits = Units(heroRadius),
                 HeroBrushUnits = Mathf.RoundToInt(heroBrush * BattleSettings.UnitsPerCell),
+                BrushDelayTicks = Mathf.RoundToInt(brushDelay * ticksPerSecond),
                 EnclosureEveryTicks = enclosureEveryTicks,
                 MaxEnclosureCells = maxEnclosureCells,
                 VictoryPermille = Mathf.RoundToInt(victoryShare * 10f),

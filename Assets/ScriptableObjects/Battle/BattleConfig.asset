@@ -21,6 +21,7 @@ MonoBehaviour:
   startOffset: 8
   heroSpeed: 5
   heroRadius: 0.3
+  brushDelay: 0.4
   heroBrush: 2
   heroHealth: 10
   enemyHeroHealth: 7

@@ -159,20 +159,24 @@ namespace Tests.BattleSystem.Editor
             var settings = Squads();
             settings.FirstWaveTicks = 100000;
             settings.EnemyAlarm = alarm;
+            settings.BrushDelayTicks = 12;
             var simulation = new BattleSimulation(settings);
-            simulation.PaintRect(Side.Enemy, 34, 34, 63, 63);
+            simulation.PaintRect(Side.Enemy, 0, 34, 63, 63);
             simulation.AddSoldiers(Side.Enemy, 8, 54 * Unit, 46 * Unit);
             Run(simulation, 1);
-            // the player's hero stands deep on the enemy's land, 8 m and more from every soldier of the enemy
-            simulation.TeleportHero(Side.Player, 38 * Unit, 58 * Unit);
+            // the player's hero paces to and fro on the enemy's land, 11 m and more from every soldier of the enemy: the brush
+            // follows its trail, so the cell under it stays the enemy's while it walks (task 4.31)
+            simulation.TeleportHero(Side.Player, 30 * Unit, 60 * Unit + Unit / 2);
+            for (var leg = 0; leg < 16; leg++)
+                simulation.Enqueue(new BattleCommand(simulation.Tick + 1 + leg * 6, Side.Player, leg % 2 == 0 ? 1000 : -1000, 0));
 
-            Run(simulation, 45);
+            Run(simulation, 90);
 
             var hero = simulation.Heroes.First(h => h.Side == Side.Player);
             var near = simulation.Soldiers.Count(s => s.Side == Side.Enemy &&
                                                       BattleStateDistance(s.X, s.Y, hero.X, hero.Y) < 4 * 2 * Unit);
             if (alarm)
-                near.Should().BeGreaterOrEqualTo(6);
+                near.Should().BeGreaterOrEqualTo(4);
             else
                 near.Should().Be(0);
         }

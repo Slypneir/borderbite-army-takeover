@@ -30,6 +30,7 @@ namespace Core.BattleSystem.Services
         private readonly ArmyRules _army;
         private readonly CombatRules _combat;
         private readonly BuildingColliders _colliders;
+        private readonly BrushTrails _trails;
 
         public BattleSimulation(BattleSettings settings)
         {
@@ -40,6 +41,7 @@ namespace Core.BattleSystem.Services
             _army = new ArmyRules(_state);
             _combat = new CombatRules(_state, _economy);
             _colliders = new BuildingColliders(_state);
+            _trails = new BrushTrails(settings.BrushDelayTicks);
 
             var map = _state.Map;
             foreach (var side in new[] { Side.Player, Side.Enemy })
@@ -179,6 +181,7 @@ namespace Core.BattleSystem.Services
             _army.Step();
             _colliders.Step();
             _economy.Step();
+            RecordTrails();
             PaintBrushes(Side.Enemy);
             PaintBrushes(Side.Player);
             if (Tick % _state.Settings.EnclosureEveryTicks == 0)
@@ -457,19 +460,61 @@ namespace Core.BattleSystem.Services
             }
         }
 
-        private void PaintBrushes(Side side)
+        /// <summary>Where every living hero and soldier stands after this tick's walk: the trails of the brushes (task 4.31).</summary>
+        private void RecordTrails()
         {
-            foreach (var hero in _state.Heroes)
+            for (var i = 0; i < _state.Heroes.Count; i++)
             {
-                if (hero.Side == side && hero.Alive)
-                    PaintCircle(hero.X, hero.Y, _state.Settings.HeroBrushUnits + (side == Side.Player ? _state.Settings.PlayerBrushBonusUnits : 0), side);
+                var hero = _state.Heroes[i];
+                if (hero.Alive)
+                    _trails.Record(-1 - i, hero.X, hero.Y, Tick);
             }
 
-            _army.Paint(side, PaintCircle);
+            foreach (var soldier in _state.Soldiers)
+                _trails.Record(soldier.Id, soldier.X, soldier.Y, Tick);
+            _trails.Forget(Tick);
         }
 
-        /// <summary>Every cell whose middle is within <paramref name="radius"/> units of the point becomes the side's.</summary>
-        private void PaintCircle(int x, int y, int radius, Side side)
+        /// <summary>
+        /// The brushes of a side: round the point of the trail of each unit (task 4.31). The cell under a unit on the move is left
+        /// as it is on this tick — the trail paints it once it comes; a unit standing still has its trail on it.
+        /// </summary>
+        private void PaintBrushes(Side side)
+        {
+            for (var i = 0; i < _state.Heroes.Count; i++)
+            {
+                var hero = _state.Heroes[i];
+                if (hero.Side != side || !hero.Alive)
+                    continue;
+
+                _trails.Point(-1 - i, out var x, out var y);
+                var radius = _state.Settings.HeroBrushUnits + (side == Side.Player ? _state.Settings.PlayerBrushBonusUnits : 0);
+                PaintCircle(x, y, radius, side, Under(x, y, hero.X, hero.Y));
+            }
+
+            foreach (var soldier in _state.Soldiers)
+            {
+                if (soldier.Side != side)
+                    continue;
+
+                _trails.Point(soldier.Id, out var x, out var y);
+                PaintCircle(x, y, _state.Settings.SoldierBrushUnits, side, Under(x, y, soldier.X, soldier.Y));
+            }
+        }
+
+        /// <summary>The cell under a unit when its trail is behind it, else none (-1): it stands, the trail is on it.</summary>
+        private int Under(int trailX, int trailY, int x, int y)
+        {
+            if (trailX == x && trailY == y)
+                return -1;
+
+            var cx = x / BattleSettings.UnitsPerCell;
+            var cy = y / BattleSettings.UnitsPerCell;
+            return Grid.Inside(cx, cy) ? cy * Grid.Width + cx : -1;
+        }
+
+        /// <summary>Every cell whose middle is within <paramref name="radius"/> units of the point becomes the side's, but one to skip.</summary>
+        private void PaintCircle(int x, int y, int radius, Side side, int skip = -1)
         {
             const int unit = BattleSettings.UnitsPerCell;
             var radius2 = (long)radius * radius;
@@ -482,8 +527,9 @@ namespace Core.BattleSystem.Services
             {
                 long dx = cx * unit + unit / 2 - x;
                 long dy = cy * unit + unit / 2 - y;
-                if (dx * dx + dy * dy <= radius2)
-                    Grid.Paint(cy * Grid.Width + cx, side);
+                var index = cy * Grid.Width + cx;
+                if (dx * dx + dy * dy <= radius2 && index != skip)
+                    Grid.Paint(index, side);
             }
         }
 
