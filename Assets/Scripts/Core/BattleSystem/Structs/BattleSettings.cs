@@ -43,7 +43,15 @@ namespace Core.BattleSystem.Structs
         public int MaxEnclosureCells = 250;
         /// <summary>Land of a side cut off from its base and barracks goes back to grass, a piece up to the enclosure limit (owner, 4 November).</summary>
         public bool DropCutOffLand = true;
-        public int VictoryPermille = 700;
+        /// <summary>A side with this share of the map wins, permille (owner, 5 November: 80%, was 70%).</summary>
+        public int VictoryPermille = 800;
+        /// <summary>
+        /// The second chance (task 4.36, spec 2.6a): the first side to hold this share of the map gets it; 0 turns it off. A side
+        /// with it whose base falls fights on, without respawns.
+        /// </summary>
+        public int SecondChancePermille = 500;
+        /// <summary>The other side takes the second chance away at this share: a step over the middle, so it does not jump.</summary>
+        public int SecondChanceStealPermille = 510;
         public uint Seed = 1;
 
         // layer 2: resources

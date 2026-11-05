@@ -22,5 +22,7 @@ namespace Core.BattleSystem.Enums
         /// −1 − the index of a hero.
         /// </summary>
         Shielded,
+        /// <summary>The second chance went to the side (task 4.36); Value is the side that held it, Neutral at the first.</summary>
+        SecondChance,
     }
 }

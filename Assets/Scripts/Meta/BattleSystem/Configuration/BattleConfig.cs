@@ -118,8 +118,15 @@ namespace Meta.BattleSystem.Configuration
                  "for both sides. Starting value: 250 (about 6% of the map, owner's decision of 4 November, stage 1 spec 2.5).")]
         [Min(1)] [SerializeField] private int maxEnclosureCells = 250;
 
-        [Tooltip("A side with this share of the map wins, percent. Starting value: 70.")]
-        [Range(1f, 100f)] [SerializeField] private float victoryShare = 70f;
+        [Tooltip("A side with this share of the map wins, percent. Starting value: 80 (owner, 5 November; was 70).")]
+        [Range(1f, 100f)] [SerializeField] private float victoryShare = 80f;
+
+        [Tooltip("The second chance (spec 2.6a): the first side with this share of the map gets it, percent; 0 turns it off. A side " +
+                 "with it whose base falls fights on, without respawns. Starting value: 50.")]
+        [Range(0f, 100f)] [SerializeField] private float secondChanceShare = 50f;
+
+        [Tooltip("The other side takes the second chance away at this share, percent. Starting value: 51.")]
+        [Range(0f, 100f)] [SerializeField] private float secondChanceSteal = 51f;
 
         [Header("Resources")]
         [Tooltip("Gold in a pile. Starting value: 4.")]
@@ -275,6 +282,7 @@ namespace Meta.BattleSystem.Configuration
         public void SetMapForEditor(BattleMapAsset value) => map = value;
 #endif
         public float VictoryShare => victoryShare;
+        public float SecondChanceShare => secondChanceShare;
         public int BarracksWood => barracksWood;
         public int SoldierGold => soldierGold;
         public int ArmyMax => armyMax;
@@ -461,6 +469,8 @@ namespace Meta.BattleSystem.Configuration
                 EnclosureEveryTicks = enclosureEveryTicks,
                 MaxEnclosureCells = maxEnclosureCells,
                 VictoryPermille = Mathf.RoundToInt(victoryShare * 10f),
+                SecondChancePermille = Mathf.RoundToInt(secondChanceShare * 10f),
+                SecondChanceStealPermille = Mathf.RoundToInt(secondChanceSteal * 10f),
                 Seed = seed,
 
                 GoldPortion = goldPortion,

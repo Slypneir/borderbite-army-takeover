@@ -252,14 +252,14 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Victory_SeventyPercentBlue_BattleEnds()
+        public void Victory_EightyPercentBlue_BattleEnds()
         {
             var simulation = WithHeroAside();
-            simulation.FillShare(Side.Player, 690);
+            simulation.FillShare(Side.Player, 790);
             simulation.Step();
             simulation.Result.Should().Be(BattleResult.None);
 
-            simulation.FillShare(Side.Player, 700);
+            simulation.FillShare(Side.Player, 800);
             simulation.Step();
 
             simulation.Result.Should().Be(BattleResult.Victory);
@@ -269,10 +269,10 @@ namespace Tests.BattleSystem.Editor
         }
 
         [Test]
-        public void Defeat_SeventyPercentRed_BattleEnds()
+        public void Defeat_EightyPercentRed_BattleEnds()
         {
             var simulation = WithHeroAside();
-            simulation.FillShare(Side.Enemy, 700);
+            simulation.FillShare(Side.Enemy, 800);
 
             simulation.Step();
 

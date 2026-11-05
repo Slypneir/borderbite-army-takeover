@@ -44,7 +44,9 @@ MonoBehaviour:
   invulnerableSeconds: 3
   enclosureEveryTicks: 1
   maxEnclosureCells: 250
-  victoryShare: 70
+  victoryShare: 80
+  secondChanceShare: 50
+  secondChanceSteal: 51
   goldPortion: 4
   goldEvery: 2
   goldMax: 12

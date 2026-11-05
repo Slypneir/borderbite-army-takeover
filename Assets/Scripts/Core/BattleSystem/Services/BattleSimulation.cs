@@ -143,6 +143,9 @@ namespace Core.BattleSystem.Services
 
         public BattleResult Result => _state.Result;
 
+        /// <summary>The side holding the second chance (task 4.36), Neutral while neither has reached the middle of the map.</summary>
+        public Side SecondChance => _state.ChanceHolder;
+
         public SideState SideOf(Side side) => _state.Sides[(int)side];
 
         public int ArmyOf(Side side) => _state.ArmyOf(side);
@@ -316,6 +319,7 @@ namespace Core.BattleSystem.Services
             hash = Mix(hash, Tick);
             hash = Mix(hash, (int)_state.Random.State);
             hash = Mix(hash, (int)Result);
+            hash = Mix(hash, (int)_state.ChanceHolder);
             foreach (var hero in _state.Heroes)
             {
                 hash = Mix(hash, hero.X);
@@ -608,15 +612,63 @@ namespace Core.BattleSystem.Services
             if (_state.Result != BattleResult.None)
                 return;
 
+            PassChance();
             var victory = _state.Settings.VictoryPermille;
-            if (!_state.Bases[(int)Side.Enemy].Standing)
+            if (Lost(Side.Enemy))
                 _state.Result = BattleResult.Victory;
-            else if (!_state.Bases[(int)Side.Player].Standing)
+            else if (Lost(Side.Player))
                 _state.Result = BattleResult.Defeat;
             else if (Grid.Permille(Side.Player) >= victory)
                 _state.Result = BattleResult.Victory;
             else if (Grid.Permille(Side.Enemy) >= victory)
                 _state.Result = BattleResult.Defeat;
+        }
+
+        /// <summary>
+        /// The second chance (task 4.36, spec 2.6a): the first side at 50% of the map gets it, the other takes it at 51%; one
+        /// event each time it moves.
+        /// </summary>
+        private void PassChance()
+        {
+            var take = _state.Settings.SecondChancePermille;
+            if (take <= 0)
+                return;
+
+            var holder = _state.ChanceHolder;
+            var player = Grid.Permille(Side.Player);
+            var enemy = Grid.Permille(Side.Enemy);
+            var next = holder;
+            if (holder == Side.Neutral)
+                next = player >= take && player >= enemy ? Side.Player : enemy >= take ? Side.Enemy : Side.Neutral;
+            else if ((holder == Side.Player ? enemy : player) >= _state.Settings.SecondChanceStealPermille)
+                next = holder == Side.Player ? Side.Enemy : Side.Player;
+
+            if (next == holder)
+                return;
+
+            _state.ChanceHolder = next;
+            _state.Emit(EventKind.SecondChance, next, 0, (int)holder, 0, 0);
+        }
+
+        /// <summary>
+        /// A side has lost for good: its base fell without the second chance, or it fell with it and then the chance was taken
+        /// away, or nothing of the side is left: no hero (it does not come back without a base) and no soldier (spec 2.6a).
+        /// </summary>
+        private bool Lost(Side side)
+        {
+            if (_state.Bases[(int)side].Standing)
+                return false;
+
+            if (_state.ChanceHolder != side)
+                return true;
+
+            foreach (var hero in _state.Heroes)
+            {
+                if (hero.Side == side && hero.Alive)
+                    return false;
+            }
+
+            return _state.ArmyOf(side) == 0;
         }
 
         private void Fill(Side side, int target, Side from)

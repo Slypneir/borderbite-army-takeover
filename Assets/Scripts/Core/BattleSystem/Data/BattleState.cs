@@ -33,6 +33,8 @@ namespace Core.BattleSystem.Data
         public int WaveFromY;
         /// <summary>The player's hero was alive on the last tick: its fall sends the enemy home.</summary>
         public bool PlayerHeroWasAlive = true;
+        /// <summary>The side holding the second chance (task 4.36), Neutral while neither has reached the middle.</summary>
+        public Side ChanceHolder;
         public DeterministicRandom Random;
         public int Tick;
         public BattleResult Result;

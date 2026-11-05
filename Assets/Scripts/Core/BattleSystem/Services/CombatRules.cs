@@ -60,7 +60,8 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Heroes.Count; i++)
             {
                 var hero = _state.Heroes[i];
-                if (hero.Alive || hero.RespawnTick > _state.Tick)
+                // without its base a hero does not come back (task 4.36, spec 2.6a)
+                if (hero.Alive || hero.RespawnTick > _state.Tick || !_state.Bases[(int)hero.Side].Standing)
                     continue;
 
                 hero.RespawnTick = 0;
