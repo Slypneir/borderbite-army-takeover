@@ -52,6 +52,8 @@ namespace Meta.BattleSystem.Views
 
         [Tooltip("The lowest block of the HUD at the top of the screen (the row of counters): labels stay under it.")]
         [SerializeField] private RectTransform hudBottom;
+        [Tooltip("The banner of the second chance: a part of the HUD, labels under it keep under its edge (task 4.36).")]
+        [SerializeField] private SecondChanceView banner;
 
         [Tooltip("The row of the orders (task 4.18): nothing goes under it.")]
         [SerializeField] private RectTransform orderBar;
@@ -188,7 +190,9 @@ namespace Meta.BattleSystem.Views
                 if (near && !site.Built && heroBarTop > point.y)
                     point.y = heroBarTop;
 
-                if (Inside(point, mark, bounds, ceiling, out var place))
+                var half = Mathf.Max(mark.Row.gameObject.activeSelf ? mark.Row.rect.width : 0f, mark.Pin.rect.width) / 2f;
+                var under = banner != null ? banner.CeilingAt(point.x, half, ceiling, scale) : ceiling;
+                if (Inside(point, mark, bounds, under, out var place))
                 {
                     mark.Root.anchoredPosition = place;
                     var rowShown = mark.Row.gameObject.activeSelf;

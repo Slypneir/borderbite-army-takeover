@@ -36,7 +36,11 @@ namespace Meta.BattleSystem.Views
         private const float PlaqueSeconds = 0.35f;
         private const float RopeLength = 30f;
         private const float RopeEnds = 22f;
+        // the teeth hang under the cloth this far; labels keep this far under them
+        private const float Teeth = 10f;
+        private const float Gap = 8f;
         private static readonly Color Cream = new Color(0.96f, 0.95f, 0.88f, 1f);
+        private readonly Vector3[] _corners = new Vector3[4];
         private static readonly Color Dark = new Color(0.09f, 0.08f, 0.1f, 1f);
 
         [Tooltip("The territory bar: the triangles and the banner hang at its middle.")]
@@ -86,6 +90,9 @@ namespace Meta.BattleSystem.Views
             _bannerLabel = _cloth.Find("Label").GetComponent<TMP_Text>();
             _plaqueLabel = plaque.Find("Label").GetComponent<TMP_Text>();
             _plaqueFlash = plaque.Find("Flash").GetComponent<Image>();
+            // a dark rim of 3 at the size of Body (UI review of 4.36)
+            _plaqueLabel.outlineColor = Dark;
+            _plaqueLabel.outlineWidth = 0.3f;
         }
 
         private void LateUpdate()
@@ -131,6 +138,26 @@ namespace Meta.BattleSystem.Views
             DrawLine(now);
             DrawBanner(now);
             DrawPlaque(now);
+        }
+
+        /// <summary>
+        /// The banner is a part of the HUD (UI review of 4.36): a label or a mark of the world <paramref name="half"/> wide at
+        /// <paramref name="x"/> keeps under its lower edge (its teeth) + 8, canvas units; elsewhere the ceiling stays.
+        /// </summary>
+        public float CeilingAt(float x, float half, float ceiling, float scale)
+        {
+            if (_cloth == null || !_cloth.gameObject.activeInHierarchy)
+                return ceiling;
+
+            // an overlay canvas: world corners are screen pixels
+            _cloth.GetWorldCorners(_corners);
+            var left = Mathf.Min(_corners[0].x, _corners[2].x) / scale;
+            var right = Mathf.Max(_corners[0].x, _corners[2].x) / scale;
+            var bottom = Mathf.Min(_corners[0].y, _corners[2].y) / scale - Teeth;
+            if (x + half < left - Gap || x - half > right + Gap)
+                return ceiling;
+
+            return Mathf.Min(ceiling, bottom - Gap);
         }
 
         private Color ColorOf(Side side) => side == Side.Player ? _view.PlayerColor : _view.EnemyColor;
@@ -284,7 +311,19 @@ namespace Meta.BattleSystem.Views
             var t = Mathf.Clamp01((now - _plaqueAt) / PlaqueSeconds);
             // out from the left with a bounce: past the place by 10%, then back
             var slide = t < 0.75f ? Mathf.Lerp(-1.1f, 0.06f, t / 0.75f) : Mathf.Lerp(0.06f, 0f, (t - 0.75f) / 0.25f);
-            plaque.anchoredPosition = new Vector2(16f + slide * plaque.sizeDelta.x, -10f);
+            // on a narrow screen the banner hangs over the left too: the plaque goes under its teeth, never over it
+            var y = -10f;
+            var left = 16f;
+            if (_cloth.gameObject.activeInHierarchy)
+            {
+                _cloth.GetWorldCorners(_corners);
+                var clothLeft = plate.InverseTransformPoint(_corners[0]).x - plate.rect.xMin;
+                var clothBottom = plate.InverseTransformPoint(_corners[0]).y - plate.rect.yMin;
+                if (left + plaque.sizeDelta.x + Gap > clothLeft)
+                    y = Mathf.Min(y, clothBottom - Teeth - Gap);
+            }
+
+            plaque.anchoredPosition = new Vector2(left + slide * plaque.sizeDelta.x, y);
             var flash = now - _plaqueAt - PlaqueSeconds;
             _plaqueFlash.color = new Color(1f, 1f, 1f, flash >= 0f && flash < 0.12f ? 0.8f * (1f - flash / 0.12f) : 0f);
             var breath = 0.5f - 0.5f * Mathf.Cos(now / 1.6f * 2f * Mathf.PI);

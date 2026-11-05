@@ -303,8 +303,9 @@ namespace Core.EditorTools
             var hud = BuildHud(area, view, out var pauseButton);
             var territory = hud;
             var counters = hud;
-            Wire(labels, ("hudBottom", counters));
-            Wire(icons, ("hudBottom", counters), ("labels", labels));
+            var banner = hud.GetComponent<SecondChanceView>();
+            Wire(labels, ("hudBottom", counters), ("banner", banner));
+            Wire(icons, ("hudBottom", counters), ("labels", labels), ("banner", banner));
             Wire(marks, ("hudBottom", counters));
             var orders = BuildOrders(area);
             BuildResourceFlight(area, hud);
@@ -518,7 +519,7 @@ namespace Core.EditorTools
             banner.pivot = new Vector2(0.5f, 1f);
             banner.sizeDelta = new Vector2(300f, 0f);
             var ropes = Rect(banner, "Ropes", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-            foreach (var (name, x) in new[] { ("Left", -110f), ("Right", 110f) })
+            foreach (var (name, x) in new[] { ("Left", -160f), ("Right", 160f) })
             {
                 var rope = Rect(ropes, name, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
                 rope.pivot = new Vector2(0.5f, 1f);
@@ -530,7 +531,7 @@ namespace Core.EditorTools
 
             var cloth = Rect(banner, "Cloth", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             cloth.pivot = new Vector2(0.5f, 1f);
-            cloth.sizeDelta = new Vector2(300f, 70f);
+            cloth.sizeDelta = new Vector2(420f, 80f);
             cloth.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
             Picture(cloth, null, yellow);
             var rim = cloth.gameObject.AddComponent<Outline>();
@@ -542,7 +543,7 @@ namespace Core.EditorTools
             Picture(pole, null, new Color(0.45f, 0.29f, 0.16f, 1f));
             // the toothed lower edge: dark and yellow teeth by turns
             var teeth = Rect(cloth, "Teeth", new Vector2(0f, 0f), new Vector2(1f, 0f));
-            for (var i = 0; i < 15; i++)
+            for (var i = 0; i < 21; i++)
             {
                 var tooth = Rect(teeth, "Tooth" + i, new Vector2(0f, 0f), new Vector2(0f, 0f));
                 tooth.sizeDelta = Vector2.one * 14f;
@@ -558,18 +559,22 @@ namespace Core.EditorTools
             shield.gameObject.AddComponent<Outline>().effectColor = cream;
             Picture(Rect(shield, "Upright", new Vector2(0.44f, 0.18f), new Vector2(0.56f, 0.82f)), null, cream);
             Picture(Rect(shield, "Bar", new Vector2(0.2f, 0.5f), new Vector2(0.8f, 0.62f)), null, cream);
-            var bannerLabel = Text(cloth, "Label", 30, TextAlignmentOptions.Center);
+            // Heading bold capitals, dark on the yellow (UI review of 4.36)
+            var bannerLabel = Text(cloth, "Label", HeadingSize, TextAlignmentOptions.Center);
             var bannerRect = (RectTransform)bannerLabel.transform;
-            bannerRect.offsetMin = new Vector2(64f, 6f);
-            bannerRect.offsetMax = new Vector2(-10f, 0f);
-            bannerLabel.fontStyle = FontStyles.Bold;
+            bannerRect.offsetMin = new Vector2(72f, 8f);
+            bannerRect.offsetMax = new Vector2(-12f, 0f);
+            bannerLabel.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+            bannerLabel.enableAutoSizing = true;
+            bannerLabel.fontSizeMin = BodySize;
+            bannerLabel.fontSizeMax = HeadingSize;
             bannerLabel.color = dark;
             cloth.gameObject.SetActive(false);
 
             // «Возрождений нет»: an iron rim on dark at the left under the HUD
             var plaque = Rect(plate, "NoRespawns", Vector2.zero, Vector2.zero);
             plaque.pivot = new Vector2(0f, 1f);
-            plaque.sizeDelta = new Vector2(360f, 58f);
+            plaque.sizeDelta = new Vector2(440f, 64f);
             var plaqueBack = Picture(plaque, Hud("hud_frame_256"), Color.white);
             plaqueBack.type = Image.Type.Sliced;
             plaqueBack.pixelsPerUnitMultiplier = 48f / 18f;
@@ -582,9 +587,10 @@ namespace Core.EditorTools
             slash.anchoredPosition = new Vector2(32f, 0f);
             slash.localEulerAngles = new Vector3(0f, 0f, -45f);
             Picture(slash, null, new Color32(0xd8, 0x47, 0x3d, 0xff));
-            var plaqueLabel = Text(plaque, "Label", 30, TextAlignmentOptions.Left);
+            // Body bold capitals with a dark rim of 3 (UI review of 4.36)
+            var plaqueLabel = Text(plaque, "Label", BodySize, TextAlignmentOptions.Left);
             ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(62f, 0f);
-            plaqueLabel.fontStyle = FontStyles.Bold;
+            plaqueLabel.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
             plaqueLabel.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             Picture(Rect(plaque, "Flash", Vector2.zero, Vector2.one), null, new Color(1f, 1f, 1f, 0f));
             plaque.gameObject.SetActive(false);

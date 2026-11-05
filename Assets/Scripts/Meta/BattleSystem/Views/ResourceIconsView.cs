@@ -28,12 +28,16 @@ namespace Meta.BattleSystem.Views
         private const float NearHero = 1.5f;
         private const float NearAlpha = 0.4f;
         private const float HudGap = 8f;
+        // half the width of an icon over a resource, canvas units: the banner of the second chance hides those under it
+        private const float IconHalf = 24f;
 
         [Tooltip("An icon: an Image 48 × 48 with the pivot at its bottom middle.")]
         [SerializeField] private Image template;
 
         [Tooltip("The lowest block of the HUD at the top of the screen: icons under it are hidden.")]
         [SerializeField] private RectTransform hudBottom;
+        [Tooltip("The banner of the second chance: a part of the HUD, icons under it are hidden (task 4.36).")]
+        [SerializeField] private SecondChanceView banner;
 
         [Tooltip("The row of the orders (task 4.18): nothing goes under it.")]
         [SerializeField] private RectTransform orderBar;
@@ -115,7 +119,8 @@ namespace Meta.BattleSystem.Views
                         continue;
 
                     var point = (Vector2)_camera.WorldToScreenPoint(new Vector3(x, (gold ? GoldTop : WoodTop) + Lift, z)) / scale;
-                    if (!bounds.Contains(point) || point.y > ceiling)
+                    var under = banner != null ? banner.CeilingAt(point.x, IconHalf, ceiling, scale) : ceiling;
+                    if (!bounds.Contains(point) || point.y > under)
                         continue;
 
                     _wanted.Add((near, point, gold, fade * (near < NearHero * NearHero ? NearAlpha : 1f)));
