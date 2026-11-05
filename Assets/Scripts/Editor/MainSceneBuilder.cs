@@ -864,6 +864,9 @@ namespace Core.EditorTools
             land.sizeDelta = Vector2.one * 40f;
             land.localRotation = Quaternion.Euler(0f, 0f, 45f);
             Picture(land, null, TextColor);
+            // a wave of the enemy coming (task 4.27): the crossed swords of the order «Бойцы»
+            var wave = Rect(sign, "Wave", new Vector2(0.18f, 0.18f), new Vector2(0.82f, 0.82f));
+            Picture(wave, Icon("icon_order_units_128"), Color.white).preserveAspect = true;
 
             var countdown = Text(marks, "Countdown", CountdownSize, TextAlignmentOptions.Bottom);
             var countdownRect = (RectTransform)countdown.transform;

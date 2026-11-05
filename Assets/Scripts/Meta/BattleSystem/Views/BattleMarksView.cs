@@ -19,6 +19,8 @@ namespace Meta.BattleSystem.Views
     ///   enclosure out of sight: a point to the event with a mark inside (a building or land), red with a dark rim, at the edge
     ///   of the safe area (inset 24, under the HUD + 8 at the top); it pulses twice a second for 3 s, then stays, and goes 2 s
     ///   after the attack or at once when the place comes into the frame; no more than 3, those within 15° merge, the base first;
+    /// - the same sign with crossed swords while a wave of the enemy gathers to leave (task 4.27): it points where the squads of
+    ///   the wave are, from 5 s before they leave, and stays 2 s after;
     /// - «3, 2, 1» over the player's base while its hero waits to come back.
     /// Lives right under the canvas, anchored to its lower left corner; canvas units are pixels / (short side / 720).
     /// </summary>
@@ -36,6 +38,7 @@ namespace Meta.BattleSystem.Views
         private const float LabelGap = 8f;
         // the height of a price label over the player's barracks (WorldLabelsView), canvas units
         private const float LabelHeight = 120f;
+        private const int WaveKey = -1000;
 
         [SerializeField] private RectTransform barTemplate;
         [SerializeField] private RectTransform signTemplate;
@@ -119,6 +122,9 @@ namespace Meta.BattleSystem.Views
                     Threaten(-100 - _captures, capture.CenterX, capture.CenterY, false, true, now);
             }
 
+            if (simulation.WaveComing(out var waveX, out var waveY))
+                Threaten(WaveKey, waveX, waveY, false, false, now, true);
+
             DrawBars(simulation, scale, bounds, ceiling, now);
             DrawSigns(scale, bounds, ceiling, now);
             DrawCountdown(simulation, scale);
@@ -151,7 +157,7 @@ namespace Meta.BattleSystem.Views
                 Threaten(key, battleEvent.X, battleEvent.Y, isBase, false, now);
         }
 
-        private void Threaten(int key, int x, int y, bool isBase, bool land, float now)
+        private void Threaten(int key, int x, int y, bool isBase, bool land, float now, bool wave = false)
         {
             foreach (var known in _threats)
             {
@@ -159,10 +165,12 @@ namespace Meta.BattleSystem.Views
                     continue;
 
                 known.Until = now + SignHoldSeconds;
+                known.X = x;
+                known.Y = y;
                 return;
             }
 
-            _threats.Add(new Threat { Key = key, X = x, Y = y, IsBase = isBase, Land = land, Since = now, Until = now + SignHoldSeconds });
+            _threats.Add(new Threat { Key = key, X = x, Y = y, IsBase = isBase, Land = land, Wave = wave, Since = now, Until = now + SignHoldSeconds });
         }
 
         private void DrawBars(Core.BattleSystem.Services.BattleSimulation simulation, float scale, Rect bounds, float ceiling, float now)
@@ -247,8 +255,10 @@ namespace Meta.BattleSystem.Views
                 sign.Root.sizeDelta = Vector2.one * size;
                 sign.Root.anchoredPosition = Edge(centre, direction, area, size / 2f);
                 sign.Point.localRotation = Quaternion.Euler(0f, 0f, angle - 90f);
-                sign.Building.SetActive(!threat.Land);
-                sign.Land.SetActive(threat.Land);
+                sign.Building.SetActive(!threat.Land && !threat.Wave);
+                sign.Land.SetActive(threat.Land && !threat.Wave);
+                if (sign.Wave != null)
+                    sign.Wave.SetActive(threat.Wave);
                 var age = now - threat.Since;
                 var pulse = age < PulseSeconds ? 0.5f + 0.5f * Mathf.Cos(age * PulseRate * 2f * Mathf.PI) : 1f;
                 sign.Group.alpha = Mathf.Lerp(0.35f, 1f, pulse);
@@ -333,6 +343,7 @@ namespace Meta.BattleSystem.Views
                     Point = (RectTransform)root.Find("Point"),
                     Building = root.Find("Building").gameObject,
                     Land = root.Find("Land").gameObject,
+                    Wave = root.Find("Wave")?.gameObject,
                 });
             }
 
@@ -362,6 +373,7 @@ namespace Meta.BattleSystem.Views
             public int Y;
             public bool IsBase;
             public bool Land;
+            public bool Wave;
             public float Since;
             public float Until;
         }
@@ -373,6 +385,7 @@ namespace Meta.BattleSystem.Views
             public RectTransform Point;
             public GameObject Building;
             public GameObject Land;
+            public GameObject Wave;
         }
 
         private static class ListPool

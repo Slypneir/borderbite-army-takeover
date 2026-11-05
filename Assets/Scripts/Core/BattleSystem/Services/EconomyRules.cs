@@ -219,7 +219,7 @@ namespace Core.BattleSystem.Services
                     continue;
 
                 purse.HireTimer = 0;
-                if (purse.Gold < _settings.SoldierGold || _state.ArmyOf(hero.Side) >= _settings.ArmyMax)
+                if (purse.Gold < _settings.SoldierGold || _state.ArmyOf(hero.Side) >= _state.ArmyCapOf(hero.Side))
                     continue;
 
                 purse.Gold -= _settings.SoldierGold;

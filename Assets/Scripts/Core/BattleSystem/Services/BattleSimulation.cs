@@ -63,6 +63,7 @@ namespace Core.BattleSystem.Services
 
             _playerCommander = new Commander(_state, Side.Player);
             _state.Sides[(int)Side.Player].Gold = settings.PlayerStartGold;
+            _state.NextWaveTick = settings.WaveEveryTicks;
             // a special level may start with barracks standing (layer 5 spec 2.3)
             for (var i = 0; i < map.Sites.Count; i++)
             {
@@ -90,6 +91,37 @@ namespace Core.BattleSystem.Services
 
         /// <summary>The bases by side: [Side.Player] and [Side.Enemy].</summary>
         public IReadOnlyList<BaseState> Bases => _state.Bases;
+
+        /// <summary>The squads of the enemy (task 4.27).</summary>
+        public IReadOnlyList<SquadState> Squads => _state.Squads;
+
+        /// <summary>
+        /// The next wave of the enemy is chosen and leaves soon (task 4.27): where it gathers, in units — for the sign at the edge
+        /// of the screen.
+        /// </summary>
+        public bool WaveComing(out int x, out int y)
+        {
+            x = _state.WaveFromX;
+            y = _state.WaveFromY;
+            return _state.WaveAnnounced;
+        }
+
+        /// <summary>The army of the enemy of a level (task 4.27): truce, squads, waves, the cap; at once, also in a running battle.</summary>
+        public void SetEnemyArmy(int truceTicks, int squadMin, int squadMax, int waveEveryTicks, int waveSquads, int waveWarnTicks,
+            int armySlack, int armyFloor, int defendUnits, int homeReachUnits)
+        {
+            var settings = _state.Settings;
+            settings.TruceTicks = truceTicks;
+            settings.SquadMin = System.Math.Max(1, squadMin);
+            settings.SquadMax = System.Math.Max(settings.SquadMin, squadMax);
+            settings.WaveEveryTicks = System.Math.Max(1, waveEveryTicks);
+            settings.WaveSquads = System.Math.Max(1, waveSquads);
+            settings.WaveWarnTicks = System.Math.Max(0, waveWarnTicks);
+            settings.EnemyArmySlack = armySlack;
+            settings.EnemyArmyFloor = armyFloor;
+            settings.DefendUnits = defendUnits;
+            settings.HomeReachUnits = homeReachUnits;
+        }
 
         /// <summary>The priority the enemy commander follows now (GDD 5.8), 0 when none; for the developer.</summary>
         public int EnemyPriority => _enemyCommander?.Priority ?? 0;
@@ -216,6 +248,14 @@ namespace Core.BattleSystem.Services
             _combat.HitBase(side, _state.Bases[(int)side].Health - health);
         }
 
+        /// <summary>The developer hurts the hero of a side by points, as blows would; enough of them and it falls.</summary>
+        public void HurtHero(Side side, int damage)
+        {
+            var index = _state.HeroOf(side);
+            if (index >= 0 && _state.Heroes[index].Alive)
+                _combat.HurtHero(index, damage);
+        }
+
         /// <summary>The developer puts the hero of a side at a point in units, standing.</summary>
         public void TeleportHero(Side side, int x, int y)
         {
@@ -256,9 +296,13 @@ namespace Core.BattleSystem.Services
                 hash = Mix(hash, hero.RespawnTick);
             }
 
+            foreach (var squad in _state.Squads)
+                hash = Mix(hash, squad.Id * 64 + (int)squad.Role * 8 + squad.Target);
+            hash = Mix(hash, _state.NextWaveTick);
             foreach (var soldier in _state.Soldiers)
             {
                 hash = Mix(hash, soldier.Id);
+                hash = Mix(hash, soldier.Squad);
                 hash = Mix(hash, soldier.X);
                 hash = Mix(hash, soldier.Y);
                 hash = Mix(hash, soldier.Health);
@@ -393,6 +437,9 @@ namespace Core.BattleSystem.Services
                 hero.Y = IntMath.Clamp(hero.Y + (int)(hero.DirectionY * (long)step / length), min, max);
                 // nobody walks into water (layer 5 spec 2.2): along the shore instead
                 _state.Settle(ref hero.X, ref hero.Y, fromX, fromY, settings.HeroRadiusUnits);
+                // the truce: the enemy's hero stays off the player's land (task 4.27)
+                if (hero.Side == Side.Enemy && _state.Truce)
+                    _state.KeepOff(ref hero.X, ref hero.Y, fromX, fromY, Side.Player);
                 _state.Heroes[i] = hero;
             }
         }

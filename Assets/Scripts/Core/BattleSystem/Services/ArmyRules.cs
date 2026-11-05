@@ -17,7 +17,7 @@ namespace Core.BattleSystem.Services
     /// — each to the nearest cell not of its side, neutral first, never two to the same spot. With no target left the order
     /// turns to «Ко мне» by itself (T18). Integers only, in a fixed order: the same army on every device.
     /// </summary>
-    public sealed class ArmyRules
+    public sealed partial class ArmyRules
     {
         private readonly BattleState _state;
         private readonly BattleSettings _settings;
@@ -53,8 +53,12 @@ namespace Core.BattleSystem.Services
 
         public void Step()
         {
-            // where everyone stood: a soldier walked or pushed into water goes back along the shore (layer 5 spec 2.2)
-            var wet = _state.Grid.HasWater;
+            // where everyone stood: a soldier walked or pushed into water goes back along the shore (layer 5 spec 2.2), one of the
+            // enemy at home back off the player's land (task 4.27)
+            var squads = _settings.EnemySquads;
+            if (squads)
+                OrganizeSquads();
+            var wet = _state.Grid.HasWater || squads;
             if (wet)
             {
                 _from.Clear();
@@ -68,6 +72,13 @@ namespace Core.BattleSystem.Services
             for (var i = 0; i < _state.Soldiers.Count; i++)
             {
                 var soldier = _state.Soldiers[i];
+                if (squads && soldier.Side == Side.Enemy)
+                {
+                    SquadWalk(ref soldier);
+                    _state.Soldiers[i] = soldier;
+                    continue;
+                }
+
                 var order = _state.Sides[(int)soldier.Side].Order;
                 if (Follows(soldier.Side) || order == ArmyOrder.Rally)
                 {
@@ -124,6 +135,8 @@ namespace Core.BattleSystem.Services
             {
                 var soldier = _state.Soldiers[i];
                 _state.Settle(ref soldier.X, ref soldier.Y, _from[i].X, _from[i].Y, _settings.SoldierBodyUnits);
+                if (squads && soldier.Side == Side.Enemy && StaysHome(soldier))
+                    _state.KeepOff(ref soldier.X, ref soldier.Y, _from[i].X, _from[i].Y, Side.Player);
                 _state.Soldiers[i] = soldier;
             }
         }

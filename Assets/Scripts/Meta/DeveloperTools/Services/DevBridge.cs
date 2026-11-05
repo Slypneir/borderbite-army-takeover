@@ -142,7 +142,25 @@ namespace Meta.DeveloperTools.Services
                     if (e.Kind == EventKind.HeroDied && back[(int)e.Side] >= 0 && e.Tick - back[(int)e.Side] <= 5 * settings.TicksPerSecond) early[(int)e.Side]++;
                 }
 
-                lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
+                // how soon the player's base fell after the last death of its hero (task 4.27: a mistake must not be the end)
+                var lastDeath = -1;
+                var waves = 0;
+                foreach (var e in simulation.Events)
+                {
+                    if (e.Kind == EventKind.HeroDied && e.Side == Side.Player)
+                        lastDeath = e.Tick;
+                }
+
+                var fell = !simulation.Bases[(int)Side.Player].Standing && lastDeath >= 0
+                    ? $"{(simulation.Tick - lastDeath) / (float)settings.TicksPerSecond:0}s after the last death"
+                    : "-";
+                foreach (var squad in simulation.Squads)
+                {
+                    if (squad.Role == SquadRole.Wave)
+                        waves++;
+                }
+
+                lines.Add($"seed {seed}: {simulation.Tick / (float)settings.TicksPerSecond:0}s {simulation.Result}, base fell {fell}, squads {simulation.Squads.Count} ({waves} in a wave), blue {simulation.Grid.Permille(Side.Player) / 10f:0}% red {simulation.Grid.Permille(Side.Enemy) / 10f:0}%, " +
                           $"bases {simulation.Bases[(int)Side.Player].Health}/{simulation.Bases[(int)Side.Enemy].Health}, built {built[1]}/{built[2]}, hired {hired[1]}/{hired[2]}, hero deaths {died[1]}/{died[2]} (within 5 s of coming back {early[1]}/{early[2]}), army {settings.ArmyMax} at {Seconds(full[1])}/{Seconds(full[2])}");
             }
 

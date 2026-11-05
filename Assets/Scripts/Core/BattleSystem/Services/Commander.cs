@@ -12,7 +12,8 @@ namespace Core.BattleSystem.Services
     /// 2. an empty place of its own colour (or one to paint) and wood for a barracks — go and build;
     /// 3. a barracks, gold for a soldier and room in the army — go and hire;
     /// 4. an army of 8 or more and at least 80% of the other's — to the nearest building of the other side, else its base
-    ///    (the enemy's soldiers follow its hero there, task 4.15);
+    ///    (the enemy's soldiers follow its hero there, task 4.15); with the squads of the enemy (task 4.27) its hero never
+    ///    attacks: the waves of its army do;
     /// 5. else to the nearest pile on neutral land in sight, else to the nearest neutral cell at its own border.
     /// It sees piles only as far as a player sees around the hero, gets nothing beyond the rules, and when its goal comes no
     /// closer for a while it leaves that priority for the next one. Integers only: the same battle on every device.
@@ -151,9 +152,13 @@ namespace Core.BattleSystem.Services
                 case 3:
                     // by the walls, within the reach of hiring, not inside the barracks
                     stop = _settings.HireUnits / 2 + _settings.HeroRadiusUnits + _settings.BarracksHalfUnits;
-                    return purse.Gold >= _settings.SoldierGold && _state.ArmyOf(_side) < _settings.ArmyMax && NearestBarracks(hero, _side, out x, out y);
+                    return purse.Gold >= _settings.SoldierGold && _state.ArmyOf(_side) < _state.ArmyCapOf(_side) && NearestBarracks(hero, _side, out x, out y);
                 case 4:
                 {
+                    // the enemy's attacks are its waves; its hero mines, builds, hires and retreats (task 4.27)
+                    if (_side == Side.Enemy && _settings.EnemySquads)
+                        return false;
+
                     var army = _state.ArmyOf(_side);
                     var theirs = _state.ArmyOf(BattleState.Enemy(_side));
                     if (army < _settings.CommanderAttackArmy || army * 1000L < theirs * (long)_settings.CommanderAttackPermille)

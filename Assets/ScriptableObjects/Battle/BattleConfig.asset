@@ -76,6 +76,7 @@ MonoBehaviour:
   soldierReach: 1
   soldierSight: 8
   enemyArmyFollows: 1
+  enemySquads: 1
   followerSight: 4
   soldierLeash: 8
   slotSpacing: 1
@@ -94,24 +95,64 @@ MonoBehaviour:
     buildFrom: 60
     mineEvery: 0.4
     hireEvery: 0.8
+    truce: 5
+    squadMin: 3
+    squadMax: 5
+    waveEvery: 30
+    waveSquads: 2
+    waveWarn: 5
+    armySlack: 3
+    armyFloor: 5
+    defend: 4
+    homeReach: 10
   - speed: 0.75
     reaction: 1.3
     soldiers: 0.85
     buildFrom: 40
     mineEvery: 0.4
     hireEvery: 0.8
+    truce: 5
+    squadMin: 3
+    squadMax: 5
+    waveEvery: 30
+    waveSquads: 2
+    waveWarn: 5
+    armySlack: 3
+    armyFloor: 5
+    defend: 4
+    homeReach: 10
   - speed: 0.8
     reaction: 1.1
     soldiers: 0.9
     buildFrom: 0
     mineEvery: 0.4
     hireEvery: 0.8
+    truce: 5
+    squadMin: 3
+    squadMax: 5
+    waveEvery: 30
+    waveSquads: 2
+    waveWarn: 5
+    armySlack: 3
+    armyFloor: 5
+    defend: 4
+    homeReach: 10
   - speed: 0.85
     reaction: 1
     soldiers: 0.95
     buildFrom: 0
     mineEvery: 0.4
     hireEvery: 0.8
+    truce: 5
+    squadMin: 3
+    squadMax: 5
+    waveEvery: 30
+    waveSquads: 2
+    waveWarn: 5
+    armySlack: 3
+    armyFloor: 5
+    defend: 4
+    homeReach: 10
   speedStep: {x: 0.03, y: 1}
   reactionStep: {x: 0.05, y: 0.5}
   soldierStep: {x: 0.03, y: 1.1}

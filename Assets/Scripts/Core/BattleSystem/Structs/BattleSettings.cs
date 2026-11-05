@@ -76,6 +76,32 @@ namespace Core.BattleSystem.Structs
         public int SoldierSightUnits = 16000;
         /// <summary>The enemy's soldiers follow their hero (task 4.15: the attack on their own is only for the player's).</summary>
         public bool EnemyArmyFollows = true;
+        /// <summary>
+        /// The enemy's army in squads and waves (owner, 5 November; spec 4.2, «Армия врага», task 4.27) instead of the crowd round
+        /// its hero. Off here, so the checks of the older rules keep them; the battle config turns it on.
+        /// </summary>
+        public bool EnemySquads;
+        /// <summary>The first this many ticks no unit of the enemy steps on the land of the player.</summary>
+        public int TruceTicks = 150;
+        public int SquadMin = 3;
+        public int SquadMax = 5;
+        /// <summary>Squads that keep by the base and the barracks of the enemy.</summary>
+        public int GuardSquads = 1;
+        /// <summary>A wave leaves every this many ticks, the first one this long after the start.</summary>
+        public int WaveEveryTicks = 900;
+        public int WaveSquads = 2;
+        /// <summary>The sign of a wave shows this long before it leaves.</summary>
+        public int WaveWarnTicks = 150;
+        /// <summary>A squad of a wave with fewer soldiers than this goes home.</summary>
+        public int WaveLeaveBelow = 2;
+        /// <summary>The enemy's army is at most the player's and this many more…</summary>
+        public int EnemyArmySlack = 3;
+        /// <summary>…but never held under this many.</summary>
+        public int EnemyArmyFloor = 5;
+        /// <summary>The enemy's soldiers turn on a unit of the player this close: at home only on their own land, in a wave anywhere.</summary>
+        public int DefendUnits = 8000;
+        /// <summary>Soldiers at home paint the neutral land by their own only this far from the base or a barracks of the enemy.</summary>
+        public int HomeReachUnits = 20000;
         /// <summary>A soldier that follows its hero sees enemies, and buildings to strike, this far.</summary>
         public int FollowerSightUnits = 8000;
         /// <summary>Further than this from its hero a following soldier drops the enemy and catches up.</summary>

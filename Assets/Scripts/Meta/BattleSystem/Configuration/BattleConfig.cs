@@ -204,6 +204,10 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The enemy's soldiers follow their hero (task 4.15); off — they attack on their own like the player's. Starting value: on.")]
         [SerializeField] private bool enemyArmyFollows = true;
 
+        [Tooltip("The enemy's army in squads and waves (owner, 5 November; spec 4.2, «Армия врага», task 4.27); off — the crowd " +
+                 "round its hero of task 4.15. Its numbers are in the table of the enemy levels.")]
+        [SerializeField] private bool enemySquads = true;
+
         [Tooltip("A soldier that follows its hero sees enemy units, and buildings to strike, this far, meters. Starting value: 4.")]
         [Min(0.1f)] [SerializeField] private float followerSight = 4f;
 
@@ -280,10 +284,14 @@ namespace Meta.BattleSystem.Configuration
         [Tooltip("The enemy of levels 1, 2, 3, … (GDD 5.9); past the last row the steps below go on.")]
         [SerializeField] private EnemyLevel[] enemyLevels =
         {
-            new EnemyLevel { speed = 0.7f, reaction = 1.5f, soldiers = 0.8f, buildFrom = 60f, mineEvery = 0.4f, hireEvery = 0.8f },
-            new EnemyLevel { speed = 0.75f, reaction = 1.3f, soldiers = 0.85f, buildFrom = 40f, mineEvery = 0.4f, hireEvery = 0.8f },
-            new EnemyLevel { speed = 0.8f, reaction = 1.1f, soldiers = 0.9f, buildFrom = 0f, mineEvery = 0.4f, hireEvery = 0.8f },
-            new EnemyLevel { speed = 0.85f, reaction = 1f, soldiers = 0.95f, buildFrom = 0f, mineEvery = 0.4f, hireEvery = 0.8f },
+            new EnemyLevel { speed = 0.7f, reaction = 1.5f, soldiers = 0.8f, buildFrom = 60f, mineEvery = 0.4f, hireEvery = 0.8f,
+                truce = 5f, squadMin = 3, squadMax = 5, waveEvery = 30f, waveSquads = 2, waveWarn = 5f, armySlack = 3, armyFloor = 5, defend = 4f, homeReach = 10f },
+            new EnemyLevel { speed = 0.75f, reaction = 1.3f, soldiers = 0.85f, buildFrom = 40f, mineEvery = 0.4f, hireEvery = 0.8f,
+                truce = 5f, squadMin = 3, squadMax = 5, waveEvery = 30f, waveSquads = 2, waveWarn = 5f, armySlack = 3, armyFloor = 5, defend = 4f, homeReach = 10f },
+            new EnemyLevel { speed = 0.8f, reaction = 1.1f, soldiers = 0.9f, buildFrom = 0f, mineEvery = 0.4f, hireEvery = 0.8f,
+                truce = 5f, squadMin = 3, squadMax = 5, waveEvery = 30f, waveSquads = 2, waveWarn = 5f, armySlack = 3, armyFloor = 5, defend = 4f, homeReach = 10f },
+            new EnemyLevel { speed = 0.85f, reaction = 1f, soldiers = 0.95f, buildFrom = 0f, mineEvery = 0.4f, hireEvery = 0.8f,
+                truce = 5f, squadMin = 3, squadMax = 5, waveEvery = 30f, waveSquads = 2, waveWarn = 5f, armySlack = 3, armyFloor = 5, defend = 4f, homeReach = 10f },
         };
 
         [Tooltip("Past the table, each level: speed +, up to the most. Starting values: +0.03, up to ×1.0.")]
@@ -318,7 +326,7 @@ namespace Meta.BattleSystem.Configuration
         {
             level = Mathf.Max(1, level);
             if (enemyLevels.Length == 0)
-                return new EnemyLevel { speed = 1f, reaction = 1f, soldiers = 1f, mineEvery = 0.25f, hireEvery = 0.5f };
+                return new EnemyLevel { speed = 1f, reaction = 1f, soldiers = 1f, mineEvery = 0.25f, hireEvery = 0.5f, truce = 5f, squadMin = 3, squadMax = 5, waveEvery = 30f, waveSquads = 2, waveWarn = 5f, armySlack = 3, armyFloor = 5, defend = 4f, homeReach = 10f };
             if (level <= enemyLevels.Length)
                 return enemyLevels[level - 1];
 
@@ -332,6 +340,16 @@ namespace Meta.BattleSystem.Configuration
                 buildFrom = 0f,
                 mineEvery = last.mineEvery,
                 hireEvery = last.hireEvery,
+                truce = last.truce,
+                squadMin = last.squadMin,
+                squadMax = last.squadMax,
+                waveEvery = last.waveEvery,
+                waveSquads = last.waveSquads,
+                waveWarn = last.waveWarn,
+                armySlack = last.armySlack,
+                armyFloor = last.armyFloor,
+                defend = last.defend,
+                homeReach = last.homeReach,
             };
         }
 
@@ -341,6 +359,8 @@ namespace Meta.BattleSystem.Configuration
             var enemy = EnemyOf(level);
             simulation.SetEnemyStrength(Mathf.RoundToInt(enemy.speed * 1000f), Ticks(enemy.reaction), Mathf.RoundToInt(enemy.buildFrom * ticksPerSecond));
             simulation.SetEnemyPace(PaceTicks(enemy.mineEvery, mineEvery), PaceTicks(enemy.hireEvery, hireEvery));
+            simulation.SetEnemyArmy(Ticks(enemy.truce), enemy.squadMin, enemy.squadMax, Ticks(enemy.waveEvery), enemy.waveSquads,
+                Ticks(enemy.waveWarn), enemy.armySlack, enemy.armyFloor, Units(enemy.defend), Units(enemy.homeReach));
         }
 
         [System.Serializable]
@@ -358,6 +378,28 @@ namespace Meta.BattleSystem.Configuration
             public float mineEvery;
             [Tooltip("The enemy barracks hire a soldier every this many seconds (task 4.23; the player's is hireEvery). 0 — as the player.")]
             public float hireEvery;
+
+            [Header("Army (task 4.27)")]
+            [Tooltip("The first this many seconds no unit of the enemy steps on the player's land. Starting value: 5.")]
+            public float truce;
+            [Tooltip("The least soldiers of a squad. Starting value: 3.")]
+            public int squadMin;
+            [Tooltip("The most soldiers of a squad. Starting value: 5.")]
+            public int squadMax;
+            [Tooltip("A wave every this many seconds, the first this long after the start. Starting value: 30.")]
+            public float waveEvery;
+            [Tooltip("Squads in a wave; one squad stays on guard. Starting value: 2.")]
+            public int waveSquads;
+            [Tooltip("The sign of a wave shows this many seconds before it leaves. Starting value: 5.")]
+            public float waveWarn;
+            [Tooltip("The enemy's army is at most the player's and this many more. Starting value: 3.")]
+            public int armySlack;
+            [Tooltip("…but never held under this many. Starting value: 5.")]
+            public int armyFloor;
+            [Tooltip("The enemy's soldiers strike a unit of the player this close, meters (at home only on their land). Starting value: 4.")]
+            public float defend;
+            [Tooltip("At home they paint the neutral land by theirs only this far from the base or a barracks of the enemy, meters. Starting value: 10.")]
+            public float homeReach;
         }
 
         public BattleSettings ToSettings(uint seed)
@@ -415,6 +457,17 @@ namespace Meta.BattleSystem.Configuration
                 SoldierReachUnits = Units(soldierReach),
                 SoldierSightUnits = Units(soldierSight),
                 EnemyArmyFollows = enemyArmyFollows,
+                EnemySquads = enemySquads,
+                TruceTicks = Ticks(enemy.truce),
+                SquadMin = Mathf.Max(1, enemy.squadMin),
+                SquadMax = Mathf.Max(1, enemy.squadMax),
+                WaveEveryTicks = Ticks(enemy.waveEvery),
+                WaveSquads = Mathf.Max(1, enemy.waveSquads),
+                WaveWarnTicks = Ticks(enemy.waveWarn),
+                EnemyArmySlack = enemy.armySlack,
+                EnemyArmyFloor = enemy.armyFloor,
+                DefendUnits = Units(enemy.defend),
+                HomeReachUnits = Units(enemy.homeReach),
                 FollowerSightUnits = Units(followerSight),
                 SoldierLeashUnits = Units(soldierLeash),
                 SlotSpacingUnits = Units(slotSpacing),

@@ -24,6 +24,8 @@ namespace Core.BattleSystem.Structs
         /// <summary>Where it was put; a follower of a side without a hero keeps to it (the checks of the rules).</summary>
         public int AnchorX;
         public int AnchorY;
+        /// <summary>The squad of a soldier of the enemy (task 4.27), 0 while it has none; the player's have none.</summary>
+        public int Squad;
         public int FacingX;
         public int FacingY;
     }

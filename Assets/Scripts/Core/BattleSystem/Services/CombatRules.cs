@@ -161,6 +161,9 @@ namespace Core.BattleSystem.Services
             }
         }
 
+        /// <summary>The developer hurts a hero as a blow would; it may fall.</summary>
+        public void HurtHero(int index, int damage) => Hurt(new Target { Kind = TargetKind.Hero, Index = index }, damage);
+
         /// <summary>Deals damage; true when a soldier died and left the list.</summary>
         private bool Hurt(Target target, int damage)
         {
@@ -314,6 +317,11 @@ namespace Core.BattleSystem.Services
         /// <summary>The nearest enemy barracks within reach of its walls, else the enemy base within reach of its walls.</summary>
         private static bool NearestBuilding(BattleState state, Side side, int x, int y, int reach, int body, out Target target)
         {
+            // while the player's hero is dead or unhurtable after coming back, the enemy spares its buildings (task 4.27)
+            target = default;
+            if (side == Side.Enemy && state.Settings.EnemySquads && state.PlayerHeroDown)
+                return false;
+
             if (NearestBarracks(state, side, x, y, reach, body, out target))
                 return true;
 
