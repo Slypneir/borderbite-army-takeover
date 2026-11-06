@@ -24,8 +24,8 @@ namespace Meta.BattleSystem.Views
     /// - a side without a base holding the chance: its triangles beat like a heart, a double push of 1.18 every 1.2 s;
     /// - «Возрождений нет» from the fall of the player's base: a plaque at the left under the HUD, an iron rim on dark, a grey
     ///   hero with a crossed arrow and the text in calm scarlet with a dark rim breathing (#c23d34 ↔ #e0574b, scale 1 ↔ 1.03 in
-    ///   1.6 s); it slides in from the left in 0.35 s with a bounce and a white flash. On a tall screen the banner is at 0.8 and
-    ///   the plaque centred under it, as wide.
+    ///   1.6 s); it slides in from the left in 0.35 s with a bounce and a white flash. On a tall screen the banner is at 0.85 and
+    ///   the plaque centred under it, as wide (sizes: battle-hud card, «Размер знамени»).
     /// </summary>
     public sealed class SecondChanceView : MonoBehaviour
     {
@@ -35,12 +35,13 @@ namespace Meta.BattleSystem.Views
         private const float BreakSeconds = 0.7f;
         private const float BeatEvery = 1.2f;
         private const float PlaqueSeconds = 0.35f;
-        private const float RopeLength = 30f;
+        // the banner hangs this far under the lower rim (owner, 6 November: was 22–30)
+        private const float RopeLength = 12f;
         private const float RopeEnds = 22f;
         // the ropes hang this far from the middle on a wide screen
-        private const float RopeApart = 160f;
+        private const float RopeApart = 110f;
         // the teeth hang under the cloth this far; labels keep this far under them
-        private const float Teeth = 10f;
+        private const float Teeth = 12f;
         private const float Gap = 8f;
         private static readonly Color Cream = new Color(0.96f, 0.95f, 0.88f, 1f);
         private readonly Vector3[] _corners = new Vector3[4];
@@ -81,13 +82,13 @@ namespace Meta.BattleSystem.Views
         private float _plaqueHeight;
 
         // a tall screen keeps the stack of the HUD, the banner and the plaque within a quarter of its height (UI review of 4.36)
-        private static float Hang => Narrow ? 18f : RopeLength;
+        private static float Hang => RopeLength;
         private const float NarrowPlaqueHeight = 48f;
 
-        /// <summary>A tall screen: the banner at 0.8 and the plaque centred under it, the stack within a quarter of the height.</summary>
+        /// <summary>A tall screen: the banner at 0.85 and the plaque centred under it, the stack within a quarter of the height.</summary>
         private static bool Narrow => Screen.height > Screen.width;
 
-        private static float BannerScale => Narrow ? 0.8f : 1f;
+        private static float BannerScale => Narrow ? 0.85f : 1f;
 
         [Inject]
         public void Construct(IBattleDriver battle, BattleViewConfig view)

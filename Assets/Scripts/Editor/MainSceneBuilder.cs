@@ -519,21 +519,22 @@ namespace Core.EditorTools
             // the banner on two ropes from the lower rim of the plate
             var banner = Rect(bar, "Banner", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             banner.pivot = new Vector2(0.5f, 1f);
+            // the size of the banner (owner, 6 November: smaller): cloth 300 × 60, 72 with the teeth, a shield of 36, Body text
             banner.sizeDelta = new Vector2(300f, 0f);
             var ropes = Rect(banner, "Ropes", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-            foreach (var (name, x) in new[] { ("Left", -160f), ("Right", 160f) })
+            foreach (var (name, x) in new[] { ("Left", -110f), ("Right", 110f) })
             {
                 var rope = Rect(ropes, name, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
                 rope.pivot = new Vector2(0.5f, 1f);
                 rope.anchoredPosition = new Vector2(x, 0f);
-                rope.sizeDelta = new Vector2(5f, 22f);
+                rope.sizeDelta = new Vector2(4f, 12f);
                 Picture(rope, null, new Color(0.86f, 0.78f, 0.6f, 1f));
                 rope.gameObject.AddComponent<Outline>().effectColor = dark;
             }
 
             var cloth = Rect(banner, "Cloth", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             cloth.pivot = new Vector2(0.5f, 1f);
-            cloth.sizeDelta = new Vector2(420f, 80f);
+            cloth.sizeDelta = new Vector2(300f, 60f);
             cloth.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
             Picture(cloth, null, yellow);
             var rim = cloth.gameObject.AddComponent<Outline>();
@@ -545,7 +546,7 @@ namespace Core.EditorTools
             Picture(pole, null, new Color(0.45f, 0.29f, 0.16f, 1f));
             // the toothed lower edge: dark and yellow teeth by turns
             var teeth = Rect(cloth, "Teeth", new Vector2(0f, 0f), new Vector2(1f, 0f));
-            for (var i = 0; i < 21; i++)
+            for (var i = 0; i < 15; i++)
             {
                 var tooth = Rect(teeth, "Tooth" + i, new Vector2(0f, 0f), new Vector2(0f, 0f));
                 tooth.sizeDelta = Vector2.one * 14f;
@@ -555,21 +556,21 @@ namespace Core.EditorTools
             }
 
             var shield = Rect(cloth, "Shield", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-            shield.sizeDelta = Vector2.one * 44f;
-            shield.anchoredPosition = new Vector2(38f, 2f);
+            shield.sizeDelta = Vector2.one * 36f;
+            shield.anchoredPosition = new Vector2(30f, 3f);
             Picture(shield, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), Color.white);
             shield.gameObject.AddComponent<Outline>().effectColor = cream;
             Picture(Rect(shield, "Upright", new Vector2(0.44f, 0.18f), new Vector2(0.56f, 0.82f)), null, cream);
             Picture(Rect(shield, "Bar", new Vector2(0.2f, 0.5f), new Vector2(0.8f, 0.62f)), null, cream);
-            // Heading bold capitals, dark on the yellow (UI review of 4.36)
-            var bannerLabel = Text(cloth, "Label", HeadingSize, TextAlignmentOptions.Center);
+            // Body bold capitals, dark on the yellow, fitting down to 26 (the banner at 0.85 on a tall screen)
+            var bannerLabel = Text(cloth, "Label", BodySize, TextAlignmentOptions.Center);
             var bannerRect = (RectTransform)bannerLabel.transform;
-            bannerRect.offsetMin = new Vector2(72f, 8f);
-            bannerRect.offsetMax = new Vector2(-12f, 0f);
+            bannerRect.offsetMin = new Vector2(54f, 6f);
+            bannerRect.offsetMax = new Vector2(-10f, 0f);
             bannerLabel.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
             bannerLabel.enableAutoSizing = true;
-            bannerLabel.fontSizeMin = BodySize;
-            bannerLabel.fontSizeMax = HeadingSize;
+            bannerLabel.fontSizeMin = 26f;
+            bannerLabel.fontSizeMax = BodySize;
             bannerLabel.color = dark;
             cloth.gameObject.SetActive(false);
 
