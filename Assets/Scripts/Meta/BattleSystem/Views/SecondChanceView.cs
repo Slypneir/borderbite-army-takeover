@@ -84,11 +84,10 @@ namespace Meta.BattleSystem.Views
         private RectTransform _cloth;
         private RectTransform _ropes;
         private float _plaqueWidth;
-        private float _plaqueRoom = -1f;
         private string _plaqueText;
+        private float _plaqueTextWidth;
         private const float PlaqueSize = 36f;
-        // the plaque as wide as the banner on a tall screen (about 255) holds the text only at about 18
-        private const float PlaqueSizeMin = 18f;
+        private const float NarrowPlaqueSize = 26f;
         private float _plaqueHeight;
 
         // a tall screen keeps the stack of the HUD, the banner and the plaque within a quarter of its height (UI review of 4.36)
@@ -388,19 +387,26 @@ namespace Meta.BattleSystem.Views
             var t = Mathf.Clamp01((now - _plaqueAt) / PlaqueSeconds);
             // out from the left with a bounce: past the place by 10%, then back
             var slide = t < 0.75f ? Mathf.Lerp(-1.1f, 0.06f, t / 0.75f) : Mathf.Lerp(0.06f, 0f, (t - 0.75f) / 0.25f);
-            // on a tall screen the plaque stands centred under the teeth of the banner, as wide, one block with it; on a wide one
-            // at the left under the HUD
+            // on a tall screen the plaque is as wide as its content (the icon, 8, the text at 26, fields of 12), centred under the
+            // teeth of the banner; on a wide one at the left under the HUD (UI review of 4.36)
+            _plaqueLabel.text = Loc.Get("battle.no_respawns");
             var y = -10f;
             var left = 16f;
-            var width = _plaqueWidth;
-            if (Narrow && _cloth.gameObject.activeInHierarchy)
+            var width = Mathf.Max(_plaqueWidth, PlaqueContent(PlaqueSize));
+            if (Narrow)
             {
-                _cloth.GetWorldCorners(_corners);
-                var a = plate.InverseTransformPoint(_corners[0]);
-                var b = plate.InverseTransformPoint(_corners[2]);
-                width = Mathf.Abs(b.x - a.x);
-                left = Mathf.Min(a.x, b.x) - plate.rect.xMin;
-                y = Mathf.Min(a.y, b.y) - plate.rect.yMin - Teeth * BannerScale - Gap;
+                width = PlaqueContent(NarrowPlaqueSize);
+                var middle = plate.rect.width / 2f;
+                if (_cloth.gameObject.activeInHierarchy)
+                {
+                    _cloth.GetWorldCorners(_corners);
+                    var a = plate.InverseTransformPoint(_corners[0]);
+                    var b = plate.InverseTransformPoint(_corners[2]);
+                    middle = (a.x + b.x) / 2f - plate.rect.xMin;
+                    y = Mathf.Min(a.y, b.y) - plate.rect.yMin - Teeth * BannerScale - Gap;
+                }
+
+                left = middle - width / 2f;
             }
 
             plaque.sizeDelta = new Vector2(width, Narrow ? NarrowPlaqueHeight : _plaqueHeight);
@@ -411,29 +417,25 @@ namespace Meta.BattleSystem.Views
             // the pulse is of colour, not of alpha: a paler letter reads worse (UI review of 4.36)
             _plaqueLabel.color = Color.Lerp(new Color32(0xc2, 0x3d, 0x34, 0xff), new Color32(0xe0, 0x57, 0x4b, 0xff), breath);
             _plaqueLabel.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 1.03f, breath);
-            _plaqueLabel.text = Loc.Get("battle.no_respawns");
-            FitPlaqueText();
         }
 
         /// <summary>
-        /// The text of the plaque at 36, smaller down to 22 when the plaque is narrower (as wide as the banner on a tall screen):
-        /// the fit of TMP misses a width the view sets at run time, so the size is counted here, with 10% to spare for the dilate
-        /// of the face and the breath of 1.03.
+        /// The width of the plaque with its text at <paramref name="size"/>: the room left of the text (the icon and 8), the
+        /// text with 6% for the dilate of the face and the breath of 1.03, and the field on the right. The size is set here, not
+        /// by the fit of TMP, which misses a width the view sets at run time.
         /// </summary>
-        private void FitPlaqueText()
+        private float PlaqueContent(float size)
         {
-            // the room of the text from the width the view gave the plaque this frame (the rect of the label lags a frame)
-            var label = _plaqueLabel.rectTransform;
-            var room = plaque.sizeDelta.x + label.offsetMax.x - label.offsetMin.x;
-            if (Mathf.Approximately(room, _plaqueRoom) && _plaqueLabel.text == _plaqueText)
-                return;
-
-            _plaqueRoom = room;
-            _plaqueText = _plaqueLabel.text;
             _plaqueLabel.enableAutoSizing = false;
-            _plaqueLabel.fontSize = PlaqueSize;
-            var wide = _plaqueLabel.GetPreferredValues(_plaqueLabel.text.ToUpperInvariant(), float.PositiveInfinity, float.PositiveInfinity).x * 1.1f;
-            _plaqueLabel.fontSize = Mathf.Clamp(PlaqueSize * room / Mathf.Max(1f, wide), PlaqueSizeMin, PlaqueSize);
+            if (!Mathf.Approximately(_plaqueLabel.fontSize, size) || _plaqueText != _plaqueLabel.text)
+            {
+                _plaqueLabel.fontSize = size;
+                _plaqueText = _plaqueLabel.text;
+                _plaqueTextWidth = _plaqueLabel.GetPreferredValues(_plaqueText.ToUpperInvariant(), float.PositiveInfinity, float.PositiveInfinity).x * 1.06f;
+            }
+
+            var label = _plaqueLabel.rectTransform;
+            return label.offsetMin.x + _plaqueTextWidth - label.offsetMax.x;
         }
 
         private static float Bump(float phase, float start, float length)

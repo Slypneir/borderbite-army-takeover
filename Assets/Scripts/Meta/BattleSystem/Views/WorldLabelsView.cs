@@ -52,6 +52,9 @@ namespace Meta.BattleSystem.Views
 
         [Tooltip("The lowest block of the HUD at the top of the screen (the row of counters): labels stay under it.")]
         [SerializeField] private RectTransform hudBottom;
+        // labels that lie on each other part by this much (UI review of 4.36)
+        private const float LabelGap = 8f;
+        private readonly List<Placed> _placed = new List<Placed>();
         [Tooltip("The banner of the second chance: a part of the HUD, labels under it keep under its edge (task 4.36).")]
         [SerializeField] private SecondChanceView banner;
 
@@ -194,16 +197,74 @@ namespace Meta.BattleSystem.Views
                 var under = banner != null ? banner.CeilingAt(point.x, half, ceiling, scale) : ceiling;
                 if (Inside(point, mark, bounds, under, out var place))
                 {
-                    mark.Root.anchoredPosition = place;
                     var rowShown = mark.Row.gameObject.activeSelf;
-                    var width = Mathf.Max(rowShown ? mark.Row.rect.width : 0f, mark.Pin.gameObject.activeSelf ? mark.Pin.rect.width : 0f);
-                    var bottom = rowShown ? place.y + mark.Row.anchoredPosition.y : place.y;
-                    var top = mark.Pin.gameObject.activeSelf ? place.y + mark.Pin.rect.height : place.y + mark.Row.rect.height;
-                    _shown.Add(new Rect(place.x - width / 2f, bottom, width, top - bottom));
+                    _placed.Add(new Placed
+                    {
+                        Mark = mark,
+                        Place = place,
+                        Width = Mathf.Max(rowShown ? mark.Row.rect.width : 0f, mark.Pin.gameObject.activeSelf ? mark.Pin.rect.width : 0f),
+                        Bottom = rowShown ? mark.Row.anchoredPosition.y : 0f,
+                        Top = mark.Pin.gameObject.activeSelf ? mark.Pin.rect.height : mark.Row.rect.height,
+                        Distance = (new Vector2(x, z) - hero).sqrMagnitude,
+                    });
                 }
                 else
                     mark.Root.gameObject.SetActive(false);
             }
+
+            Separate(bounds);
+        }
+
+        /// <summary>
+        /// Labels that would lie on each other (UI review of 4.36): the ones nearer the hero stand first, a later one over an
+        /// earlier goes under it by its own height + 8, and one with no room left under goes hidden — the farther from the hero.
+        /// </summary>
+        private void Separate(Rect bounds)
+        {
+            _placed.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+            foreach (var placed in _placed)
+            {
+                var place = placed.Place;
+                for (var tries = 0; tries < 8; tries++)
+                {
+                    var moved = false;
+                    foreach (var other in _shown)
+                    {
+                        if (!Box(placed, place).Overlaps(other))
+                            continue;
+
+                        place.y = other.yMin - LabelGap - placed.Top;
+                        moved = true;
+                    }
+
+                    if (!moved)
+                        break;
+                }
+
+                if (place.y + placed.Bottom < bounds.yMin + EdgeInset)
+                {
+                    placed.Mark.Root.gameObject.SetActive(false);
+                    continue;
+                }
+
+                placed.Mark.Root.anchoredPosition = place;
+                _shown.Add(Box(placed, place));
+            }
+
+            _placed.Clear();
+        }
+
+        private static Rect Box(Placed placed, Vector2 place) =>
+            new Rect(place.x - placed.Width / 2f, place.y + placed.Bottom, placed.Width, placed.Top - placed.Bottom);
+
+        private struct Placed
+        {
+            public Mark Mark;
+            public Vector2 Place;
+            public float Width;
+            public float Bottom;
+            public float Top;
+            public float Distance;
         }
 
         /// <summary>Short of the resource: the numbers grey, the icons half seen; the dark backing stays as it is.</summary>

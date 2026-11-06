@@ -593,8 +593,9 @@ namespace Core.EditorTools
             // capitals at 36, thick by the dilate of the face that the view sets, with a dark rim (UI review of 4.36)
             var plaqueLabel = Text(plaque, "Label", 36, TextAlignmentOptions.Left);
             // fields of 12 from the rim, and 4 more for the dilate of the face and the breath of 1.03
-            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(62f, 0f);
-            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-14f, 0f);
+            // the icon 48 from 12, then 8 to the text; a field of 12 on the right
+            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(68f, 0f);
+            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-12f, 0f);
             plaqueLabel.fontStyle = FontStyles.UpperCase;
             plaqueLabel.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             Picture(Rect(plaque, "Flash", Vector2.zero, Vector2.one), null, new Color(1f, 1f, 1f, 0f));
