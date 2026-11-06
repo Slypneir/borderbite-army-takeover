@@ -39,9 +39,11 @@ namespace Meta.BattleSystem.Views
         private const float RopeLength = 12f;
         private const float RopeEnds = 22f;
         // the ropes hang this far from the middle on a wide screen
-        private const float RopeApart = 110f;
+        // the ropes leave the rim this far from the middle, inward of the rings of the pole (the sheet of the art)
+        private const float RopeApart = 100f;
         // the teeth hang under the cloth this far; labels keep this far under them
-        private const float Teeth = 12f;
+        // the cloth of the art holds its teeth: labels keep under its own edge
+        private const float Teeth = 0f;
         private const float Gap = 8f;
         private static readonly Color Cream = new Color(0.96f, 0.95f, 0.88f, 1f);
         private readonly Vector3[] _corners = new Vector3[4];
@@ -60,6 +62,9 @@ namespace Meta.BattleSystem.Views
         [SerializeField] private RectTransform banner;
         [Tooltip("«Возрождений нет»: the plaque with Flash and Label.")]
         [SerializeField] private RectTransform plaque;
+        [Tooltip("The shield on the banner: the player's, and the same shield recoloured red for the enemy.")]
+        [SerializeField] private Sprite playerShield;
+        [SerializeField] private Sprite enemyShield;
 
         private IBattleDriver _battle;
         private BattleViewConfig _view;
@@ -79,6 +84,11 @@ namespace Meta.BattleSystem.Views
         private RectTransform _cloth;
         private RectTransform _ropes;
         private float _plaqueWidth;
+        private float _plaqueRoom = -1f;
+        private string _plaqueText;
+        private const float PlaqueSize = 36f;
+        // the plaque as wide as the banner on a tall screen (about 255) holds the text only at about 18
+        private const float PlaqueSizeMin = 18f;
         private float _plaqueHeight;
 
         // a tall screen keeps the stack of the HUD, the banner and the plaque within a quarter of its height (UI review of 4.36)
@@ -232,7 +242,10 @@ namespace Meta.BattleSystem.Views
                 triangle.anchoredPosition = new Vector2(0f, up * (13f + away));
                 triangle.localScale = new Vector3(width * beat, beat, 1f);
                 var held = shown != Side.Neutral;
-                triangle.Find("Rim").GetComponent<Image>().color = held ? Cream : Dark;
+                // taken: the rim of the art over the fill, untinted, keeps cream
+                var rimImage = triangle.Find("Rim").GetComponent<Image>();
+                rimImage.enabled = held;
+                rimImage.color = Color.white;
                 var fill = triangle.Find("Fill").GetComponent<Image>();
                 fill.enabled = held;
                 fill.color = held ? ColorOf(shown) : Color.white;
@@ -259,12 +272,16 @@ namespace Meta.BattleSystem.Views
 
         private void DrawLine(float now)
         {
+            // the edges of the line: dark under the dashes, cream round the solid line of the side
+            var edges = solidLine.transform.parent.GetComponent<Image>();
             if (_holder == Side.Neutral)
             {
                 solidLine.enabled = false;
+                edges.color = Dark;
                 return;
             }
 
+            edges.color = Cream;
             solidLine.enabled = true;
             solidLine.color = ColorOf(_holder);
             solidLine.fillAmount = Mathf.Clamp01((now - _passAt) / PassSeconds);
@@ -276,7 +293,7 @@ namespace Meta.BattleSystem.Views
             var corners = new Vector3[4];
             plate.GetWorldCorners(corners);
             var rim = bar.InverseTransformPoint(corners[0]).y - bar.rect.yMin;
-            banner.anchoredPosition = new Vector2(0f, rim + 6f);
+            banner.anchoredPosition = new Vector2(0f, rim);
 
             var broken = now - _breakAt;
             if (_holder == Side.Neutral && broken >= BreakSeconds)
@@ -284,7 +301,7 @@ namespace Meta.BattleSystem.Views
                 // only the ends of the ropes peep out from under the plate, swaying
                 _cloth.gameObject.SetActive(false);
                 _ropes.gameObject.SetActive(true);
-                SetRopes(RopeEnds, 4f * Mathf.Sin(now * 2.4f));
+                HangRopeEnds(4f * Mathf.Sin(now * 2.4f));
                 banner.localRotation = Quaternion.identity;
                 return;
             }
@@ -296,7 +313,7 @@ namespace Meta.BattleSystem.Views
                 // the ropes break: the banner falls turning and fades
                 var t = broken / BreakSeconds;
                 _ropes.gameObject.SetActive(false);
-                _cloth.anchoredPosition = new Vector2(0f, -Hang - 140f * t * t);
+                _cloth.anchoredPosition = new Vector2(0f, -ClothTop(Hang) - 140f * t * t);
                 _cloth.localRotation = Quaternion.Euler(0f, 0f, -40f * t);
                 SetAlpha(_cloth, 1f - t);
                 return;
@@ -311,8 +328,7 @@ namespace Meta.BattleSystem.Views
             // the fall with a bounce on the ropes at its end
             var bounce = drop > DropSeconds && drop < DropSeconds + 0.25f ? 8f * Mathf.Sin((drop - DropSeconds) / 0.25f * Mathf.PI) : 0f;
             var hang = Mathf.Lerp(0f, Hang, fall * fall) + bounce;
-            SetRopes(Mathf.Max(RopeEnds, hang), 0f);
-            _cloth.anchoredPosition = new Vector2(0f, -hang);
+            _cloth.anchoredPosition = new Vector2(0f, -ClothTop(hang));
             var swing = drop > DropSeconds ? 6f * Mathf.Exp(-3f * (drop - DropSeconds) / SwingSeconds) *
                                              Mathf.Sin((drop - DropSeconds) * 2f * Mathf.PI / 0.6f) : 0f;
             _cloth.localRotation = Quaternion.Euler(0f, 0f, swing);
@@ -321,17 +337,45 @@ namespace Meta.BattleSystem.Views
             var turn = (now - _turnAt) / PassSeconds;
             var turning = turn < 1f;
             _cloth.localScale = new Vector3((turning ? Mathf.Abs(Mathf.Cos(turn * Mathf.PI)) : 1f) * BannerScale, BannerScale, 1f);
-            _shield.color = ColorOf(turning && turn < 0.5f && _from != Side.Neutral ? _from : _holder);
+            var shown = turning && turn < 0.5f && _from != Side.Neutral ? _from : _holder;
+            if (playerShield != null && enemyShield != null)
+                _shield.sprite = shown == Side.Player ? playerShield : enemyShield;
+            else
+                _shield.color = ColorOf(shown);
             _bannerLabel.text = Loc.Get("battle.second_chance");
+            TieRopes();
         }
 
-        private void SetRopes(float length, float sway)
+        /// <summary>The top of the cloth under the rim: the pole hangs <paramref name="hang"/> under it and stands 13 over the cloth.</summary>
+        private static float ClothTop(float hang) => hang + 13f * BannerScale;
+
+        /// <summary>Each rope from its point on the lower rim to the ring of the pole on its side, along the line between them.</summary>
+        private void TieRopes()
         {
             foreach (RectTransform rope in _ropes)
             {
-                rope.anchoredPosition = new Vector2(Mathf.Sign(rope.anchoredPosition.x) * RopeApart * BannerScale, 0f);
-                rope.sizeDelta = new Vector2(rope.sizeDelta.x, length);
-                rope.localRotation = Quaternion.Euler(0f, 0f, sway);
+                var left = rope.name == "Left";
+                var hook = _cloth.Find(left ? "Pole/LeftHook" : "Pole/RightHook");
+                var from = new Vector2((left ? -1f : 1f) * RopeApart * BannerScale, 0f);
+                var to = (Vector2)_ropes.InverseTransformPoint(hook.position);
+                var line = to - from;
+                rope.anchoredPosition = from;
+                rope.sizeDelta = new Vector2(line.magnitude, rope.sizeDelta.y);
+                rope.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(line.y, line.x) * Mathf.Rad2Deg);
+                rope.Find("End").gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>No banner: the ends of the ropes hang 22 down from the rim with their rings, swaying.</summary>
+        private void HangRopeEnds(float sway)
+        {
+            foreach (RectTransform rope in _ropes)
+            {
+                var left = rope.name == "Left";
+                rope.anchoredPosition = new Vector2((left ? -1f : 1f) * RopeApart * BannerScale, 0f);
+                rope.sizeDelta = new Vector2(RopeEnds, rope.sizeDelta.y);
+                rope.localRotation = Quaternion.Euler(0f, 0f, -90f + sway);
+                rope.Find("End").gameObject.SetActive(true);
             }
         }
 
@@ -368,6 +412,28 @@ namespace Meta.BattleSystem.Views
             _plaqueLabel.color = Color.Lerp(new Color32(0xc2, 0x3d, 0x34, 0xff), new Color32(0xe0, 0x57, 0x4b, 0xff), breath);
             _plaqueLabel.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 1.03f, breath);
             _plaqueLabel.text = Loc.Get("battle.no_respawns");
+            FitPlaqueText();
+        }
+
+        /// <summary>
+        /// The text of the plaque at 36, smaller down to 22 when the plaque is narrower (as wide as the banner on a tall screen):
+        /// the fit of TMP misses a width the view sets at run time, so the size is counted here, with 10% to spare for the dilate
+        /// of the face and the breath of 1.03.
+        /// </summary>
+        private void FitPlaqueText()
+        {
+            // the room of the text from the width the view gave the plaque this frame (the rect of the label lags a frame)
+            var label = _plaqueLabel.rectTransform;
+            var room = plaque.sizeDelta.x + label.offsetMax.x - label.offsetMin.x;
+            if (Mathf.Approximately(room, _plaqueRoom) && _plaqueLabel.text == _plaqueText)
+                return;
+
+            _plaqueRoom = room;
+            _plaqueText = _plaqueLabel.text;
+            _plaqueLabel.enableAutoSizing = false;
+            _plaqueLabel.fontSize = PlaqueSize;
+            var wide = _plaqueLabel.GetPreferredValues(_plaqueLabel.text.ToUpperInvariant(), float.PositiveInfinity, float.PositiveInfinity).x * 1.1f;
+            _plaqueLabel.fontSize = Mathf.Clamp(PlaqueSize * room / Mathf.Max(1f, wide), PlaqueSizeMin, PlaqueSize);
         }
 
         private static float Bump(float phase, float start, float length)

@@ -463,25 +463,27 @@ namespace Core.EditorTools
         private static Sprite Placeholder(string name) => AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/Placeholder/" + name + ".png");
 
         /// <summary>
-        /// The second chance on the bar (task 4.36, battle-hud card «Второй шанс на полосе»), placeholders until the art of the
-        /// 3D artist: the dashed line in the groove under the percents, two triangles on the rims at the middle, 8 voxels, the
-        /// banner on two ropes under the plate and the plaque «Возрождений нет» at the left under the HUD.
+        /// The second chance on the bar (task 4.36, battle-hud card «Второй шанс на полосе», art of the 3D artist a27eb41, the
+        /// large set at half a unit a pixel): the dashed line in the groove under the percents, two triangles on the rims at the
+        /// middle, 8 voxels, the banner — a tiled cloth 288 × 72 with its teeth under a sliced pole 20 wider, on two ropes from
+        /// the lower rim to the rings of the pole — and the plaque «Возрождений нет» at the left under the HUD.
         /// </summary>
         private static void BuildSecondChance(RectTransform plate, RectTransform bar, RectTransform inner, int labelsAt)
         {
             var dark = new Color(0.09f, 0.08f, 0.1f, 1f);
-            var cream = new Color(0.96f, 0.95f, 0.88f, 1f);
-            var yellow = new Color(0.95f, 0.77f, 0.16f, 1f);
 
-            // the line in the groove: dark edges, yellow and dark strokes 7 / 5, a solid one of the side over them
+            // the line in the groove: dark edges (cream while the chance is held), the dashes 7 / 5 of the art, a solid one of the
+            // side over them
             var middle = Rect(inner, "Middle", new Vector2(0.5f, 0f), new Vector2(0.5f, 1f));
             middle.sizeDelta = new Vector2(10f, 0f);
             middle.SetSiblingIndex(labelsAt);
             Picture(middle, Placeholder("chance_white"), dark);
             var dashes = Rect(middle, "Dashes", Vector2.zero, Vector2.one);
-            dashes.offsetMin = new Vector2(2f, 0f);
-            dashes.offsetMax = new Vector2(-2f, 0f);
-            Picture(dashes, Placeholder("chance_line_dash"), Color.white).type = Image.Type.Tiled;
+            dashes.offsetMin = new Vector2(1f, 0f);
+            dashes.offsetMax = new Vector2(-1f, 0f);
+            var dashImage = Picture(dashes, Hud("chance_mid_dash_16x24"), Color.white);
+            dashImage.type = Image.Type.Tiled;
+            dashImage.pixelsPerUnitMultiplier = 2f;
             var solid = Rect(middle, "Solid", Vector2.zero, Vector2.one);
             solid.offsetMin = new Vector2(2f, 0f);
             solid.offsetMax = new Vector2(-2f, 0f);
@@ -491,7 +493,8 @@ namespace Core.EditorTools
             solidImage.fillOrigin = (int)Image.OriginVertical.Top;
             solidImage.enabled = false;
 
-            // the triangles on the rims, tips to the groove; the lower one turned over
+            // the triangles on the rims, tips to the groove; the lower one turned over. Taken: the fill in the colour of the side
+            // and the rim over it untinted, so the rim stays cream
             var triangles = new RectTransform[2];
             for (var i = 0; i < 2; i++)
             {
@@ -500,10 +503,10 @@ namespace Core.EditorTools
                 triangle.sizeDelta = new Vector2(34f, 26f);
                 if (i == 1)
                     triangle.localEulerAngles = new Vector3(0f, 0f, 180f);
-                Picture(Rect(triangle, "Rim", Vector2.zero, Vector2.one), Placeholder("chance_tri_rim"), dark);
-                Picture(Rect(triangle, "Fill", Vector2.zero, Vector2.one), Placeholder("chance_tri_fill"), Color.white).enabled = false;
-                Picture(Rect(triangle, "Hazard", Vector2.zero, Vector2.one), Placeholder("chance_tri_hazard"), Color.white);
-                Picture(Rect(triangle, "Flash", Vector2.zero, Vector2.one), Placeholder("chance_tri_rim"), new Color(1f, 1f, 1f, 0f));
+                Picture(Rect(triangle, "Fill", Vector2.zero, Vector2.one), Hud("chance_mid_tri_fill_68x52"), Color.white).enabled = false;
+                Picture(Rect(triangle, "Rim", Vector2.zero, Vector2.one), Hud("chance_mid_tri_rim_68x52"), Color.white).enabled = false;
+                Picture(Rect(triangle, "Hazard", Vector2.zero, Vector2.one), Hud("chance_mid_tri_neutral_68x52"), Color.white);
+                Picture(Rect(triangle, "Flash", Vector2.zero, Vector2.one), Hud("chance_mid_tri_white_68x52"), new Color(1f, 1f, 1f, 0f));
                 triangles[i] = triangle;
             }
 
@@ -516,57 +519,59 @@ namespace Core.EditorTools
                 voxel.gameObject.SetActive(false);
             }
 
-            // the banner on two ropes from the lower rim of the plate
+            // the banner hangs from the lower rim of the plate; the view lays the ropes from the rim to the rings of the pole
             var banner = Rect(bar, "Banner", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             banner.pivot = new Vector2(0.5f, 1f);
-            // the size of the banner (owner, 6 November: smaller): cloth 300 × 60, 72 with the teeth, a shield of 36, Body text
-            banner.sizeDelta = new Vector2(300f, 0f);
+            banner.sizeDelta = new Vector2(288f, 0f);
             var ropes = Rect(banner, "Ropes", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-            foreach (var (name, x) in new[] { ("Left", -110f), ("Right", 110f) })
+            foreach (var name in new[] { "Left", "Right" })
             {
                 var rope = Rect(ropes, name, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-                rope.pivot = new Vector2(0.5f, 1f);
-                rope.anchoredPosition = new Vector2(x, 0f);
-                rope.sizeDelta = new Vector2(4f, 12f);
-                Picture(rope, null, new Color(0.86f, 0.78f, 0.6f, 1f));
-                rope.gameObject.AddComponent<Outline>().effectColor = dark;
+                rope.pivot = new Vector2(0f, 0.5f);
+                rope.sizeDelta = new Vector2(22f, 6f);
+                var ropeImage = Picture(rope, Hud("chance_rope_64x12"), Color.white);
+                ropeImage.type = Image.Type.Tiled;
+                ropeImage.pixelsPerUnitMultiplier = 2f;
+                // the ring at the end of a rope with no banner on it
+                var end = Rect(rope, "End", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f));
+                end.sizeDelta = Vector2.one * 16f;
+                Picture(end, Hud("chance_rope_ring_32"), Color.white);
             }
 
             var cloth = Rect(banner, "Cloth", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             cloth.pivot = new Vector2(0.5f, 1f);
-            cloth.sizeDelta = new Vector2(300f, 60f);
+            // 48 + 20·n wide, so the teeth on the right are whole (the art repeats every 20 units): 288
+            cloth.sizeDelta = new Vector2(288f, 72f);
             cloth.gameObject.AddComponent<CanvasGroup>().blocksRaycasts = false;
-            Picture(cloth, null, yellow);
-            var rim = cloth.gameObject.AddComponent<Outline>();
-            rim.effectColor = dark;
-            rim.effectDistance = new Vector2(3f, -3f);
+            var clothImage = Picture(cloth, Hud("chance_banner_cloth_256x144"), Color.white);
+            clothImage.type = Image.Type.Tiled;
+            clothImage.pixelsPerUnitMultiplier = 2f;
+            // the pole 20 wider than the cloth, its top 13 over the top of the cloth; the rings 6 in from its ends
             var pole = Rect(cloth, "Pole", new Vector2(0f, 1f), new Vector2(1f, 1f));
-            pole.pivot = new Vector2(0.5f, 0.5f);
-            pole.sizeDelta = new Vector2(24f, 10f);
-            Picture(pole, null, new Color(0.45f, 0.29f, 0.16f, 1f));
-            // the toothed lower edge: dark and yellow teeth by turns
-            var teeth = Rect(cloth, "Teeth", new Vector2(0f, 0f), new Vector2(1f, 0f));
-            for (var i = 0; i < 15; i++)
+            pole.pivot = new Vector2(0.5f, 1f);
+            pole.offsetMin = new Vector2(-10f, 0f);
+            pole.offsetMax = new Vector2(10f, 0f);
+            pole.anchoredPosition = new Vector2(0f, 13f);
+            pole.sizeDelta = new Vector2(20f, 20f);
+            var poleImage = Picture(pole, Hud("chance_banner_pole_256x40"), Color.white);
+            poleImage.type = Image.Type.Sliced;
+            poleImage.pixelsPerUnitMultiplier = 2f;
+            foreach (var (name, x, a) in new[] { ("LeftHook", 6f, 0f), ("RightHook", -6f, 1f) })
             {
-                var tooth = Rect(teeth, "Tooth" + i, new Vector2(0f, 0f), new Vector2(0f, 0f));
-                tooth.sizeDelta = Vector2.one * 14f;
-                tooth.anchoredPosition = new Vector2(10f + i * 20f, 0f);
-                tooth.localEulerAngles = new Vector3(0f, 0f, 45f);
-                Picture(tooth, null, i % 2 == 0 ? dark : yellow);
+                var hook = Rect(pole, name, new Vector2(a, 0.5f), new Vector2(a, 0.5f));
+                hook.anchoredPosition = new Vector2(x, 0f);
+                hook.sizeDelta = Vector2.zero;
             }
 
             var shield = Rect(cloth, "Shield", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
             shield.sizeDelta = Vector2.one * 36f;
-            shield.anchoredPosition = new Vector2(30f, 3f);
-            Picture(shield, AssetDatabase.LoadAssetAtPath<Sprite>(ProjectSetup.CirclePath), Color.white);
-            shield.gameObject.AddComponent<Outline>().effectColor = cream;
-            Picture(Rect(shield, "Upright", new Vector2(0.44f, 0.18f), new Vector2(0.56f, 0.82f)), null, cream);
-            Picture(Rect(shield, "Bar", new Vector2(0.2f, 0.5f), new Vector2(0.8f, 0.62f)), null, cream);
+            shield.anchoredPosition = new Vector2(44f, 6f);
+            Picture(shield, Icon("icon_shield_home_64"), Color.white).preserveAspect = true;
             // Body bold capitals, dark on the yellow, fitting down to 26 (the banner at 0.85 on a tall screen)
             var bannerLabel = Text(cloth, "Label", BodySize, TextAlignmentOptions.Center);
             var bannerRect = (RectTransform)bannerLabel.transform;
-            bannerRect.offsetMin = new Vector2(54f, 6f);
-            bannerRect.offsetMax = new Vector2(-10f, 0f);
+            bannerRect.offsetMin = new Vector2(66f, 14f);
+            bannerRect.offsetMax = new Vector2(-24f, -2f);
             bannerLabel.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
             bannerLabel.enableAutoSizing = true;
             bannerLabel.fontSizeMin = 26f;
@@ -574,37 +579,30 @@ namespace Core.EditorTools
             bannerLabel.color = dark;
             cloth.gameObject.SetActive(false);
 
-            // «Возрождений нет»: an iron rim on dark at the left under the HUD
+            // «Возрождений нет»: the iron frame of the HUD on dark at the left under the HUD, the icon 48 at the left
             var plaque = Rect(plate, "NoRespawns", Vector2.zero, Vector2.zero);
             plaque.pivot = new Vector2(0f, 1f);
             plaque.sizeDelta = new Vector2(440f, 64f);
-            var plaqueBack = Picture(plaque, Hud("hud_frame_256"), Color.white);
+            var plaqueBack = Picture(plaque, Hud("hud_frame_128"), Color.white);
             plaqueBack.type = Image.Type.Sliced;
-            plaqueBack.pixelsPerUnitMultiplier = 48f / 18f;
-            var hero = Rect(plaque, "Hero", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-            hero.sizeDelta = new Vector2(26f, 34f);
-            hero.anchoredPosition = new Vector2(32f, 0f);
-            Picture(hero, null, new Color(0.55f, 0.55f, 0.58f, 1f));
-            var slash = Rect(plaque, "Slash", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-            slash.sizeDelta = new Vector2(44f, 6f);
-            slash.anchoredPosition = new Vector2(32f, 0f);
-            slash.localEulerAngles = new Vector3(0f, 0f, -45f);
-            Picture(slash, null, new Color32(0xd8, 0x47, 0x3d, 0xff));
+            plaqueBack.pixelsPerUnitMultiplier = 24f / 14f;
+            var icon = Rect(plaque, "Icon", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+            icon.sizeDelta = Vector2.one * 48f;
+            icon.anchoredPosition = new Vector2(36f, 0f);
+            Picture(icon, Hud("icon_no_respawn_64"), Color.white).preserveAspect = true;
             // capitals at 36, thick by the dilate of the face that the view sets, with a dark rim (UI review of 4.36)
             var plaqueLabel = Text(plaque, "Label", 36, TextAlignmentOptions.Left);
-            // fields of 12 from the rim, and 4 more for the dilate of the face and the breath of 1.03 that the fit does not see
-            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(58f, 0f);
-            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-16f, 0f);
+            // fields of 12 from the rim, and 4 more for the dilate of the face and the breath of 1.03
+            ((RectTransform)plaqueLabel.transform).offsetMin = new Vector2(62f, 0f);
+            ((RectTransform)plaqueLabel.transform).offsetMax = new Vector2(-14f, 0f);
             plaqueLabel.fontStyle = FontStyles.UpperCase;
-            plaqueLabel.enableAutoSizing = true;
-            plaqueLabel.fontSizeMin = 28f;
-            plaqueLabel.fontSizeMax = 36f;
             plaqueLabel.fontSharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(ProjectSetup.OutlineFontMaterial);
             Picture(Rect(plaque, "Flash", Vector2.zero, Vector2.one), null, new Color(1f, 1f, 1f, 0f));
             plaque.gameObject.SetActive(false);
 
             var view = plate.gameObject.AddComponent<SecondChanceView>();
-            Wire(view, ("bar", bar), ("plate", plate), ("solidLine", solidImage), ("voxels", voxels), ("banner", banner), ("plaque", plaque));
+            Wire(view, ("bar", bar), ("plate", plate), ("solidLine", solidImage), ("voxels", voxels), ("banner", banner), ("plaque", plaque),
+                ("playerShield", Icon("icon_shield_home_64")), ("enemyShield", Icon("icon_shield_home_enemy_64")));
             var serialized = new SerializedObject(view);
             var list = serialized.FindProperty("triangles");
             list.arraySize = 2;

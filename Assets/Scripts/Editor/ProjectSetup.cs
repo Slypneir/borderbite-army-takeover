@@ -437,6 +437,12 @@ namespace Core.EditorTools
                 { "bar_track_128x64", 24 }, { "bar_track_64x32", 12 },
                 { "bar_mask_128x64", 24 }, { "bar_mask_64x32", 12 },
             };
+            // the banner of the second chance (art request of task 4.36): its cloth and pole are cut at the left and the right only
+            var sides = new Dictionary<string, int>
+            {
+                { "chance_banner_cloth_256x144", 48 }, { "chance_banner_cloth_128x72", 24 },
+                { "chance_banner_pole_256x40", 40 }, { "chance_banner_pole_128x20", 20 },
+            };
             foreach (var path in System.IO.Directory.GetFiles(folder, "*.png"))
             {
                 var asset = path.Replace('\\', '/');
@@ -444,8 +450,11 @@ namespace Core.EditorTools
                     continue;
 
                 var name = System.IO.Path.GetFileNameWithoutExtension(asset);
-                var fill = name.StartsWith("bar_fill_");
-                var border = borders.TryGetValue(name, out var b) ? new Vector4(b, b, b, b) : Vector4.zero;
+                // repeated along: the fills of the bar, the rope and the dashes of the second chance
+                var fill = name.StartsWith("bar_fill_") || name.StartsWith("chance_rope_") && !name.StartsWith("chance_rope_ring") ||
+                           name.StartsWith("chance_mid_dash_");
+                var border = borders.TryGetValue(name, out var b) ? new Vector4(b, b, b, b)
+                    : sides.TryGetValue(name, out var side) ? new Vector4(side, 0f, side, 0f) : Vector4.zero;
                 var wrap = fill ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
                 if (importer.textureType == TextureImporterType.Sprite && importer.spriteBorder == border && importer.wrapMode == wrap
                     && !importer.mipmapEnabled && importer.filterMode == FilterMode.Bilinear)
@@ -481,10 +490,11 @@ namespace Core.EditorTools
                     plain.Add($"icon_shield_home_shard_{shard}_{size}");
             }
 
+            plain.AddRange(new[] { "icon_shield_home_enemy_64" });
             plain.AddRange(new[] { "mark_wave_chevron_64", "mark_wave_chevron_32", "mark_wave_pip_on_32x16", "mark_wave_pip_on_16x8",
                 "mark_wave_pip_off_32x16", "mark_wave_pip_off_16x8" });
-            // the triangles of the middle of the territory bar, placeholders of the second chance (task 4.36)
-            foreach (var name in new[] { "chance_tri_rim", "chance_tri_fill", "chance_tri_hazard", "chance_line_dash", "chance_white" })
+            // the white of the line in the middle of the territory bar (task 4.36): the art has the triangles and the dashes
+            foreach (var name in new[] { "chance_white" })
                 plain.Add("Assets/Sprites/UI/Placeholder/" + name + ".png");
             foreach (var name in plain)
             {
